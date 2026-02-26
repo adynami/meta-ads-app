@@ -442,6 +442,35 @@
   padding: 2px;
 }
 
+/* Markdown prose styles for chat */
+.prose-chat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.prose-chat-table th {
+  background: rgba(124, 58, 237, 0.15);
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.prose-chat-table td {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prose-chat-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.prose-chat-table tbody tr:hover {
+  background: rgba(124, 58, 237, 0.08);
+}
+
 /* Progress bar fill transition */
 .progress-bar-fill {
   transition: width 0.5s ease;
