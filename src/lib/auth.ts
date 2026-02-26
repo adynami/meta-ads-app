@@ -13,7 +13,7 @@ export const authConfig: NextAuthConfig = {
       authorization: {
         url: 'https://www.facebook.com/v25.0/dialog/oauth',
         params: {
-          scope: 'ads_management,ads_read,business_management,read_insights,pages_read_engagement,pages_show_list',
+          scope: 'email,ads_management,ads_read,business_management,read_insights,pages_read_engagement,pages_show_list',
         },
       },
       token: 'https://graph.facebook.com/v25.0/oauth/access_token',
@@ -35,27 +35,31 @@ export const authConfig: NextAuthConfig = {
     async signIn({ user, account }) {
       if (!user.email) return false;
 
-      // Upsert user in our database
-      const existing = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, user.email))
-        .limit(1);
+      try {
+        const existing = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, user.email))
+          .limit(1);
 
-      if (existing.length === 0) {
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+        if (existing.length === 0) {
+          const trialEndsAt = new Date();
+          trialEndsAt.setDate(trialEndsAt.getDate() + 7);
 
-        await db.insert(users).values({
-          email: user.email,
-          name: user.name ?? null,
-          image: user.image ?? null,
-          plan: 'trial',
-          trialEndsAt,
-        });
+          await db.insert(users).values({
+            email: user.email,
+            name: user.name ?? null,
+            image: user.image ?? null,
+            plan: 'trial',
+            trialEndsAt,
+          });
+        }
+
+        return true;
+      } catch (error) {
+        console.error('SignIn callback error:', error);
+        return false;
       }
-
-      return true;
     },
 
     async session({ session }) {
