@@ -87,7 +87,7 @@ export async function fetchAccountInsights(
   params: Record<string, any>,
 ): Promise<any[]> {
   return rateLimitedCall(() =>
-    graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params }),
+    graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','), ...params }),
   ).then(r => r.data ?? []);
 }
 

@@ -617,6 +617,8 @@ async function getInsights(ctx: TenantContext, args: any): Promise<any> {
     }
     return {
       name,
+      campaign_name: row.campaign_name ?? null,
+      adset_name: row.adset_name ?? null,
       period: `${row.date_start} to ${row.date_stop}`,
       spend: m.spend, impressions: m.impressions, clicks: m.clicks,
       ctr: m.ctr, cpc: m.cpc, cpm: m.cpm,

@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 
 export interface DashboardRow {
   name: string;
+  campaign_name: string | null;
+  adset_name: string | null;
   id: string | null;
   status: string | null;
   objective: string | null;
@@ -69,6 +71,8 @@ function formatBudget(v: any): string {
 
 const COLUMNS: Column[] = [
   { key: 'name', label: 'Name', align: 'left', levels: ['campaign', 'adset', 'ad'], format: (v) => v ?? '—' },
+  { key: 'campaign_name', label: 'Campaign', align: 'left', levels: ['adset', 'ad'], format: (v) => v ?? '—' },
+  { key: 'adset_name', label: 'Ad Set', align: 'left', levels: ['ad'], format: (v) => v ?? '—' },
   { key: 'status', label: 'Status', align: 'left', levels: ['campaign', 'adset', 'ad'], format: (v) => v ?? '—' },
   { key: 'objective', label: 'Objective', align: 'left', levels: ['campaign'], format: (v) => v ?? '—' },
   { key: 'daily_budget', label: 'Daily Budget', align: 'right', levels: ['campaign', 'adset'], format: formatBudget },

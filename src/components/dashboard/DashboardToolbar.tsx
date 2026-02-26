@@ -5,15 +5,18 @@ import { RefreshCw, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Level = 'campaign' | 'adset' | 'ad';
-type TimeRange = 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month';
+type TimeRange = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'custom';
 
 const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  today: 'Today',
+  yesterday: 'Yesterday',
   last_7d: 'Last 7 days',
   last_14d: 'Last 14 days',
   last_30d: 'Last 30 days',
   last_90d: 'Last 90 days',
   this_month: 'This month',
   last_month: 'Last month',
+  custom: 'Custom range',
 };
 
 interface DashboardToolbarProps {
@@ -21,6 +24,7 @@ interface DashboardToolbarProps {
   timeRange: TimeRange;
   onLevelChange: (level: Level) => void;
   onTimeRangeChange: (range: TimeRange) => void;
+  onCustomRange: (since: string, until: string) => void;
   onRefresh: () => void;
   isLoading: boolean;
 }
@@ -30,16 +34,21 @@ export function DashboardToolbar({
   timeRange,
   onLevelChange,
   onTimeRangeChange,
+  onCustomRange,
   onRefresh,
   isLoading,
 }: DashboardToolbarProps) {
   const [timeOpen, setTimeOpen] = useState(false);
+  const [customSince, setCustomSince] = useState('');
+  const [customUntil, setCustomUntil] = useState('');
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setTimeOpen(false);
+        setShowCustomPicker(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -51,6 +60,18 @@ export function DashboardToolbar({
     { key: 'adset', label: 'Ad Set' },
     { key: 'ad', label: 'Ad' },
   ];
+
+  const handleCustomApply = () => {
+    if (customSince && customUntil) {
+      onCustomRange(customSince, customUntil);
+      setTimeOpen(false);
+      setShowCustomPicker(false);
+    }
+  };
+
+  const buttonLabel = timeRange === 'custom' && customSince && customUntil
+    ? `${customSince} — ${customUntil}`
+    : TIME_RANGE_LABELS[timeRange];
 
   return (
     <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
@@ -79,30 +100,75 @@ export function DashboardToolbar({
             onClick={() => setTimeOpen(!timeOpen)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-sm text-gray-300 hover:text-white transition-colors"
           >
-            {TIME_RANGE_LABELS[timeRange]}
+            {buttonLabel}
             <ChevronDown className="w-4 h-4" />
           </button>
 
           {timeOpen && (
-            <div className="absolute top-full left-0 mt-1 z-50 glass-card rounded-lg py-1 min-w-[160px]">
+            <div className="absolute top-full left-0 mt-1 z-50 glass-card rounded-lg py-1 min-w-[200px]">
               {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(
-                ([key, label]) => (
+                ([key, label]) => {
+                  if (key === 'custom') {
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setShowCustomPicker(true)}
+                        className={cn(
+                          'w-full text-left px-3 py-2 text-sm transition-colors',
+                          timeRange === 'custom'
+                            ? 'text-white bg-white/10'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        onTimeRangeChange(key);
+                        setTimeOpen(false);
+                        setShowCustomPicker(false);
+                      }}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-sm transition-colors',
+                        timeRange === key
+                          ? 'text-white bg-white/10'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                },
+              )}
+
+              {showCustomPicker && (
+                <div className="border-t border-white/10 px-3 py-3 flex flex-col gap-2">
+                  <label className="text-xs text-gray-400">Since</label>
+                  <input
+                    type="date"
+                    value={customSince}
+                    onChange={(e) => setCustomSince(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                  />
+                  <label className="text-xs text-gray-400">Until</label>
+                  <input
+                    type="date"
+                    value={customUntil}
+                    onChange={(e) => setCustomUntil(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                  />
                   <button
-                    key={key}
-                    onClick={() => {
-                      onTimeRangeChange(key);
-                      setTimeOpen(false);
-                    }}
-                    className={cn(
-                      'w-full text-left px-3 py-2 text-sm transition-colors',
-                      timeRange === key
-                        ? 'text-white bg-white/10'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5',
-                    )}
+                    onClick={handleCustomApply}
+                    disabled={!customSince || !customUntil}
+                    className="mt-1 px-3 py-1.5 rounded bg-white/10 text-sm text-white hover:bg-white/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {label}
+                    Apply
                   </button>
-                ),
+                </div>
               )}
             </div>
           )}

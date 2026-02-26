@@ -13,12 +13,14 @@ export async function POST(req: NextRequest) {
     const session = await auth();
 
     const body = await req.json();
-    const { accountId, level, timeRange, statusFilter, limit } = body as {
+    const { accountId, level, timeRange, statusFilter, limit, since, until } = body as {
       accountId: string;
       level: 'campaign' | 'adset' | 'ad';
-      timeRange: 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month';
+      timeRange: 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'today' | 'yesterday' | 'custom';
       statusFilter?: string[];
       limit?: number;
+      since?: string;
+      until?: string;
     };
 
     if (!accountId || !level || !timeRange) {
@@ -110,6 +112,10 @@ export async function POST(req: NextRequest) {
       limit: 25,
       response_format: 'detailed',
     };
+    if (timeRange === 'custom' && since && until) {
+      insightsArgs.since = since;
+      insightsArgs.until = until;
+    }
 
     // Execute both tools in parallel
     const [entitiesRaw, insightsRaw] = await Promise.all([
@@ -133,18 +139,21 @@ export async function POST(req: NextRequest) {
       entityMap.set(e.name, e);
     }
 
-    // Normalize insights to array
-    const insightRows: any[] = Array.isArray(insights)
+    // Normalize insights to array and filter out "Account" fallback rows
+    const insightRows: any[] = (Array.isArray(insights)
       ? insights
       : insights.error
         ? []
-        : [insights];
+        : [insights]
+    ).filter((row: any) => row.name && row.name !== 'Account');
 
     // Merge: enrich insight rows with entity metadata
     const rows = insightRows.map((row: any) => {
       const entity = entityMap.get(row.name);
       return {
         name: row.name ?? '—',
+        campaign_name: row.campaign_name ?? null,
+        adset_name: row.adset_name ?? null,
         id: entity?.id ?? null,
         status: entity?.status ?? null,
         objective: entity?.objective ?? null,
@@ -166,6 +175,8 @@ export async function POST(req: NextRequest) {
       if (!insightRows.some((r: any) => r.name === e.name)) {
         rows.push({
           name: e.name,
+          campaign_name: null,
+          adset_name: null,
           id: e.id,
           status: e.status,
           objective: e.objective ?? null,

@@ -5,7 +5,7 @@ import { DashboardToolbar } from './DashboardToolbar';
 import { DashboardTable, type DashboardRow } from './DashboardTable';
 
 type Level = 'campaign' | 'adset' | 'ad';
-type TimeRange = 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month';
+type TimeRange = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'custom';
 type SortDir = 'asc' | 'desc';
 
 interface DashboardPanelProps {
@@ -15,6 +15,8 @@ interface DashboardPanelProps {
 export function DashboardPanel({ accountId }: DashboardPanelProps) {
   const [level, setLevel] = useState<Level>('campaign');
   const [timeRange, setTimeRange] = useState<TimeRange>('last_7d');
+  const [since, setSince] = useState<string | null>(null);
+  const [until, setUntil] = useState<string | null>(null);
   const [rows, setRows] = useState<DashboardRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,10 +27,16 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
     setIsLoading(true);
     setError(null);
     try {
+      const payload: Record<string, any> = { accountId, level, timeRange };
+      if (timeRange === 'custom' && since && until) {
+        payload.since = since;
+        payload.until = until;
+      }
+
       const res = await fetch('/api/dashboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, level, timeRange }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -44,7 +52,7 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [accountId, level, timeRange]);
+  }, [accountId, level, timeRange, since, until]);
 
   useEffect(() => {
     fetchData();
@@ -56,6 +64,20 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
     } else {
       setSortBy(key);
       setSortDir('desc');
+    }
+  };
+
+  const handleCustomRange = (newSince: string, newUntil: string) => {
+    setTimeRange('custom');
+    setSince(newSince);
+    setUntil(newUntil);
+  };
+
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+    if (range !== 'custom') {
+      setSince(null);
+      setUntil(null);
     }
   };
 
@@ -83,7 +105,8 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
         level={level}
         timeRange={timeRange}
         onLevelChange={setLevel}
-        onTimeRangeChange={setTimeRange}
+        onTimeRangeChange={handleTimeRangeChange}
+        onCustomRange={handleCustomRange}
         onRefresh={fetchData}
         isLoading={isLoading}
       />
