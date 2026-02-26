@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Send, Plus, Check, Zap, BarChart3, Users, Shield, Search, Layers, ArrowRight } from 'lucide-react';
+import { ChevronDown, Send, Plus, Check, Zap, BarChart3, Users, Shield, Search, Layers, ArrowRight, LayoutDashboard, ImagePlus } from 'lucide-react';
 
 export default function Home() {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
@@ -196,6 +196,18 @@ export default function Home() {
 
               {/* Chat Area */}
               <div className="flex-1 flex flex-col min-h-[500px] md:min-h-[550px]">
+                {/* Tab Indicator */}
+                <div className="flex border-b border-white/5">
+                  <div className="flex items-center gap-1.5 px-5 py-3 border-b-2 border-purple-500 text-sm font-medium text-white">
+                    <Send className="w-3.5 h-3.5" />
+                    Chat
+                  </div>
+                  <div className="flex items-center gap-1.5 px-5 py-3 text-sm text-gray-500">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    Dashboard
+                  </div>
+                </div>
+
                 <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                   {/* User Message 1 */}
                   <div className="flex justify-end">
@@ -354,14 +366,16 @@ export default function Home() {
           </h2>
           <p className="text-gray-400 text-center mb-10 text-lg">Everything Ads Manager does, without the clicking.</p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { icon: Zap, title: "Campaign Operations", desc: "Launch, pause, duplicate, and optimize campaigns from a single instruction. Full creation including targeting, creative, budget, and UTM tracking." },
               { icon: BarChart3, title: "Performance Diagnostics", desc: "Zero conversions? Ask Adynami to run the full diagnostic: pixel funnel audit, creative scoring by engagement, demographic breakdown, placement analysis, frequency check." },
               { icon: Layers, title: "Creative Testing & DCO", desc: "Score creatives by CTR and outbound clicks before purchase data arrives. Run Dynamic Creative Optimization tests across headline and image combinations." },
               { icon: Users, title: "Audience Building", desc: "Website retargeting, video view audiences, page engagement segments, customer list lookalikes. Built on demand, with reach estimates before you spend." },
               { icon: Shield, title: "Signal Recovery (iOS 14+)", desc: "Send server-side conversion events via CAPI to recover attribution lost to iOS opt-outs. Full funnel: ViewContent, AddToCart, InitiateCheckout, Purchase." },
-              { icon: Search, title: "Competitive Intelligence", desc: "Search the Meta Ads Library for competitor creatives. See what's been running for 90+ days. Those are the ones worth studying." }
+              { icon: Search, title: "Competitive Intelligence", desc: "Search the Meta Ads Library for competitor creatives. See what's been running for 90+ days. Those are the ones worth studying." },
+              { icon: LayoutDashboard, title: "Visual Dashboard", desc: "Browse campaigns, ad sets, and ads in a sortable table. Filter by date range, sort by any metric — spend, ROAS, CPA, CTR — and spot your winners and losers at a glance." },
+              { icon: ImagePlus, title: "Creative Analysis", desc: "Upload ad images and videos directly into chat. Get AI-powered visual feedback on your creatives — analyze hooks, compositions, and copy before spending a dollar." }
             ].map((item, i) => (
               <div key={i} className="glass-card glass-card-hover rounded-2xl p-8 group">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors">
@@ -456,7 +470,7 @@ export default function Home() {
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-3 mb-8 text-sm">
-                {["1 Meta ad account", "Unlimited conversations & commands", "Campaign creation & management", "Performance reporting & breakdowns", "Audience builder", "Automated rules", "Email support"].map((feature, i) => (
+                {["1 Meta ad account", "Unlimited conversations & commands", "Campaign creation & management", "Performance reporting & breakdowns", "Visual campaign dashboard", "Audience builder", "Automated rules", "Email support"].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {feature}
@@ -485,7 +499,7 @@ export default function Home() {
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-3 mb-8 text-sm">
-                {["Up to 5 Meta ad accounts", "Everything in Starter", "Bulk operations across accounts", "Zero-conversion diagnostic workflows", "Creative performance analysis", "Advanced demographic & placement breakdowns", "Priority support"].map((feature, i) => (
+                {["Up to 5 Meta ad accounts", "Everything in Starter", "Bulk operations across accounts", "Zero-conversion diagnostic workflows", "Creative performance analysis", "Image & video creative analysis", "Advanced demographic & placement breakdowns", "Priority support"].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {feature}

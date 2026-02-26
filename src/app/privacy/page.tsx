@@ -49,7 +49,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
               <p>
-                Adynami (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is a Meta Ads management tool that lets you control your advertising accounts through a conversational AI interface. This Privacy Policy explains how we collect, use, store, and protect your information when you use our service at adynami.com (the &quot;Service&quot;).
+                Adynami (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is a Meta Ads management tool that lets you control your advertising accounts through a conversational AI interface. This Privacy Policy explains how we collect, use, store, and protect your information when you use our service at adynami.ai (the &quot;Service&quot;).
               </p>
             </section>
 
@@ -219,7 +219,7 @@ export default function PrivacyPolicy() {
                 If you have questions about this Privacy Policy or wish to exercise your data rights, contact us at:
               </p>
               <p className="mt-2 text-white font-medium">
-                privacy@adynami.com
+                privacy@adynami.ai
               </p>
             </section>
           </div>

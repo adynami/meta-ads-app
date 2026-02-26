@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     const confirmationCode = `adynami_del_${metaUserId}_${Date.now()}`;
 
     // Meta expects a JSON response with a status URL and confirmation code
-    const appUrl = process.env.AUTH_URL || 'https://adynami.com';
+    const appUrl = process.env.AUTH_URL || 'https://adynami.ai';
     return NextResponse.json({
       url: `${appUrl}/deletion-status?code=${confirmationCode}`,
       confirmation_code: confirmationCode,

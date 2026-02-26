@@ -177,7 +177,7 @@ export default function TermsOfService() {
                 For questions about these Terms, contact us at:
               </p>
               <p className="mt-2 text-white font-medium">
-                legal@adynami.com
+                legal@adynami.ai
               </p>
             </section>
           </div>
