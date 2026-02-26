@@ -3,7 +3,7 @@ import { resolveRange } from '../utils/date-ranges.js';
 export const pixelTools = [
     {
         name: 'meta_list_pixels',
-        description: 'List Meta Pixels associated with the ad account. Returns pixel ID, name, last-fired time, and availability status. Use when the user needs to find a pixel ID, check if tracking is set up, or verify a pixel is firing.',
+        description: 'List Meta Pixels: ID, name, last-fired time, status.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -13,7 +13,7 @@ export const pixelTools = [
     },
     {
         name: 'meta_get_pixel_events',
-        description: `Get event counts fired by a Meta Pixel, broken down by event name. Use when the user asks "is my pixel working?", wants to see what conversion events are being tracked, or needs to debug why conversions aren't showing in Ads Manager. Returns events sorted by volume.`,
+        description: 'Get event counts by event name for a pixel. For debugging tracking.',
         inputSchema: {
             type: 'object',
             properties: {

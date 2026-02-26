@@ -3,15 +3,7 @@ import { rateLimitedCall } from '../utils/rate-limiter.js';
 export const conversionsTools = [
     {
         name: 'meta_send_conversions_event',
-        description: `Send a server-side conversion event to Meta via the Conversions API (CAPI). Use to supplement or replace browser-based pixel events — critical for iOS 14+ where signal is lost due to ATT opt-outs. All PII (email, phone, name) is SHA-256 hashed before sending.
-
-IMPORTANT — always confirm with the user before calling:
-1. Which pixel? (pixel_id from meta_list_pixels)
-2. What event? (Purchase, Lead, ViewContent, etc.)
-3. What user signals are available? (email, phone — more = better match rate)
-4. Is there a matching browser pixel event to deduplicate? (use same event_id in both)
-
-This is a write operation — confirm all details before calling.`,
+        description: 'Send server-side conversion event via CAPI. PII is SHA-256 hashed. Write op — confirm first.',
         inputSchema: {
             type: 'object',
             properties: {

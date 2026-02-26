@@ -22,7 +22,7 @@ import type { CampaignSummary, AdSetSummary, AdSummary, InsightsSummary } from '
 export const managementTools = [
   {
     name: 'meta_list_campaigns',
-    description: 'List campaigns in the Meta ad account. Returns name, status, objective, and budget for each. Use when the user wants to see what campaigns exist, check statuses, or find a campaign ID. Use status_filter to narrow results (e.g., only ACTIVE). Default limit is 5 to save tokens — increase if the user needs more.',
+    description: 'List campaigns with name, status, objective, budget. Default limit 5.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -43,7 +43,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_campaign',
-    description: 'Get details for a single campaign by its ID. Use when the user asks about a specific campaign or you need budget/objective/dates for one campaign. Returns budget, objective, bid strategy, and schedule.',
+    description: 'Get single campaign details: budget, objective, bid strategy, schedule.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -54,7 +54,7 @@ export const managementTools = [
   },
   {
     name: 'meta_list_adsets',
-    description: 'List ad sets in the account. Use when the user asks about targeting, budgets at the ad set level, or wants to drill into a campaign. Filter by campaign_id to see ad sets within a specific campaign.',
+    description: 'List ad sets. Filter by campaign_id.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -75,7 +75,7 @@ export const managementTools = [
   },
   {
     name: 'meta_list_ads',
-    description: 'List ads in the account. Use when the user wants to see individual ads or needs an ad ID for debugging. Filter by adset_id or campaign_id to narrow results.',
+    description: 'List ads. Filter by adset_id or campaign_id.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -87,7 +87,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_insights',
-    description: 'Get performance metrics for the account or a specific campaign. All key metrics are pre-calculated server-side: CTR, CPC, CPM, CPA, ROAS. Use when the user asks about performance, spend, or ROI. Set level to "campaign" to see per-campaign breakdown sorted by spend.',
+    description: 'Get performance metrics (CTR, CPC, CPM, CPA, ROAS). Set level to campaign/adset/ad for per-entity breakdown sorted by spend.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -115,7 +115,7 @@ export const managementTools = [
   },
   {
     name: 'meta_update_campaign_status',
-    description: 'Change a campaign status to ACTIVE, PAUSED, or ARCHIVED. Use when the user wants to pause, resume, or archive a campaign. This is a write operation — confirm with the user before calling.',
+    description: 'Change campaign status. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -127,12 +127,12 @@ export const managementTools = [
   },
   {
     name: 'meta_get_account',
-    description: 'Get ad account metadata: name, currency, timezone, and account status. Use when you need to know the currency for displaying budgets or to verify the connected account.',
+    description: 'Get ad account metadata: name, currency, timezone, status.',
     inputSchema: { type: 'object' as const, properties: {} },
   },
   {
     name: 'meta_search_targeting',
-    description: `Search for interest or behavior targeting options by keyword. Returns IDs and names you can use in the targeting spec of meta_deploy_campaign and meta_update_adset. Use when the user wants to target people interested in "fitness", "travel", "luxury goods", etc., or use specific behaviors like "frequent travelers" or "online shoppers".`,
+    description: 'Search interest or behavior targeting by keyword. Returns IDs for targeting specs.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -148,7 +148,7 @@ export const managementTools = [
   },
   {
     name: 'meta_search_interests',
-    description: `Search for Facebook interest targeting options by keyword. Returns IDs, names, and audience size estimates you can pass into targeting.interests when calling meta_deploy_campaign or meta_update_adset. Example: search "fitness" to find interests like "Fitness and wellness", "Gym", etc.`,
+    description: 'Search interest targeting by keyword. Returns IDs, names, audience size estimates.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -160,7 +160,7 @@ export const managementTools = [
   },
   {
     name: 'meta_search_behaviors',
-    description: `Search for behavior targeting options by keyword. Behaviors include purchase patterns, device usage, travel habits, and more. Returns IDs you can pass into targeting.behaviors when calling meta_deploy_campaign or meta_update_adset.`,
+    description: 'Search behavior targeting by keyword (purchase patterns, device usage, travel).',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -172,7 +172,7 @@ export const managementTools = [
   },
   {
     name: 'meta_search_demographics',
-    description: `Search for demographic targeting options such as life events, industries, income levels, device types, and more. Returns IDs for use in targeting.flexible_spec. Choose the class that matches your targeting need.`,
+    description: 'Search demographic targeting by class (life events, industries, income, devices). Returns IDs for flexible_spec.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -189,7 +189,7 @@ export const managementTools = [
   },
   {
     name: 'meta_search_geo_locations',
-    description: `Search for geographic targeting options: countries, regions, cities, zip codes, and more. Returns keys to pass into targeting.geo_locations when calling meta_deploy_campaign or meta_update_adset. Use location_types to filter by type.`,
+    description: 'Search geographic targeting (countries, regions, cities, zips). Returns keys for geo_locations.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -206,7 +206,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_interest_suggestions',
-    description: `Given one or more interest IDs, return related/similar interest suggestions from Meta. Useful for expanding a seed interest list. Returns IDs and names with audience size estimates.`,
+    description: 'Get related interest suggestions from seed interest IDs.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -222,7 +222,7 @@ export const managementTools = [
   },
   {
     name: 'meta_estimate_audience_size',
-    description: `Estimate the potential reach of a targeting configuration before spending money. Accepts the same targeting shape as meta_deploy_campaign. Returns lower/upper bound daily reach and monthly active users (MAU). Use before creating a campaign to validate audience size.`,
+    description: 'Estimate reach of a targeting spec. Returns lower/upper bound daily reach and MAU.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -253,7 +253,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_ad_image',
-    description: `Fetch and display the creative image for an ad or creative inline in Claude. Provide either an ad_id or creative_id. Downloads the thumbnail and returns it as an image so you can see what the ad looks like without leaving the conversation.`,
+    description: 'Fetch and display an ad creative image inline. Provide ad_id or creative_id.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -264,7 +264,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_ad_details',
-    description: 'Get full details for a single ad including its creative spec, status, bid, tracking, and parent IDs. Use when debugging an ad or inspecting its creative setup.',
+    description: 'Get full ad details: creative spec, status, bid, tracking, parent IDs.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -275,7 +275,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_adset_details',
-    description: 'Get full details for a single ad set including targeting, budget, bid strategy, optimization goal, schedule, and promoted object. Use when you need the complete targeting spec or budget details for one ad set.',
+    description: 'Get full ad set details: targeting, budget, bid strategy, optimization goal, schedule.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -286,7 +286,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_creative_details',
-    description: 'Get the full creative spec for an ad creative by ID. Returns object_story_spec (page + link/video data), asset_feed_spec for DCO creatives, and thumbnail URL. Use to inspect or audit a creative without downloading the image.',
+    description: 'Get full creative spec: object_story_spec, asset_feed_spec (DCO), thumbnail URL.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -297,7 +297,7 @@ export const managementTools = [
   },
   {
     name: 'meta_list_pages',
-    description: 'List Facebook Pages that the connected access token has access to. Returns page ID, name, category, and follower count. Use to discover page IDs before creating lead forms, page-post ads, or engagement audiences.',
+    description: 'List Facebook Pages accessible to the token. Returns ID, name, category, followers.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -307,7 +307,7 @@ export const managementTools = [
   },
   {
     name: 'meta_predict_reach',
-    description: 'Predict the daily reach and impression curve for a targeting spec at a given budget. Returns estimated daily active users, MAU, and a spend/reach curve so you can see the trade-off before launching. Use before creating a campaign to validate audience size and budget efficiency.',
+    description: 'Predict daily reach/impression curve for a targeting spec at a given budget.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -342,7 +342,7 @@ export const managementTools = [
   },
   {
     name: 'meta_bulk_update_status',
-    description: 'Update the status of multiple campaigns, ad sets, or ads in a single call. More efficient than calling meta_update_campaign_status one by one. This is a write operation — confirm the IDs and target status with the user before calling.',
+    description: 'Bulk update status for multiple entities in one call. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -364,7 +364,7 @@ export const managementTools = [
   },
   {
     name: 'meta_get_ad_preview',
-    description: 'Generate a preview URL and iframe snippet for an ad in a given format. Use to visually review an ad before it goes live, or to share a preview with a client. Returns a shareable_link URL that can be opened in a browser.',
+    description: 'Generate a preview URL for an ad in a given format. Returns shareable_link.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -380,12 +380,12 @@ export const managementTools = [
   },
   {
     name: 'meta_get_account_billing',
-    description: 'Get billing and spend information for the ad account: total amount spent, remaining spend cap, current balance, and funding source. Use to check account health, remaining budget, or payment method before launching campaigns.',
+    description: 'Get account billing: total spend, remaining cap, balance, funding source.',
     inputSchema: { type: 'object' as const, properties: {} },
   },
   {
     name: 'meta_get_recommendations',
-    description: 'Get Meta\'s automated optimization recommendations for the ad account. Returns suggestions like enabling Advantage+ audience, fixing rejected ads, increasing budgets on high-performing campaigns, or fixing delivery issues. Use when auditing the account or preparing optimization reports.',
+    description: 'Get Meta optimization recommendations for the account.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -395,7 +395,7 @@ export const managementTools = [
   },
   {
     name: 'meta_add_ad',
-    description: `Create a new ad inside an existing ad set. Use when adding additional ad variations (different images/copy) to an ad set that already exists — e.g., A/B testing creatives within one ad set. Requires an image_hash from meta_upload_image. For creating a full campaign from scratch, use meta_deploy_campaign instead.`,
+    description: 'Create a new ad in an existing ad set. Requires image_hash from meta_upload_image. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

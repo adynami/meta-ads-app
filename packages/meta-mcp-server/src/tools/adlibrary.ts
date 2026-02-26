@@ -6,11 +6,7 @@ import { rateLimitedCall } from '../utils/rate-limiter.js';
 export const adLibraryTools = [
   {
     name: 'meta_search_ad_library',
-    description: `Search the Meta Ad Library for competitor or market ads. Returns ad copy, headlines, formats, estimated run duration, and platform placements — ready to paste into meta_generate_creative_brief (signal_type: from_competitor).
-
-The Ad Library is public data. Use it to map competitor messaging, identify dominant hooks, find format gaps, and discover how long ads have been running (run duration is a strong proxy for spend/performance — ads that run 30+ days are almost always profitable).
-
-No additional permissions required — uses your existing access token.`,
+    description: 'Search Meta Ad Library for competitor ads. Returns copy, headlines, formats, run duration.',
     inputSchema: {
       type: 'object' as const,
       properties: {

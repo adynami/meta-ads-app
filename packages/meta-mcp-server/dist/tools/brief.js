@@ -2,14 +2,7 @@
 export const briefTools = [
     {
         name: 'meta_generate_creative_brief',
-        description: `Generate a structured creative brief from any signal: account performance data, competitor ads, or a plain-text prompt. The brief object is the canonical input format for meta_generate_ad_copy and imagen_generate_ad — everything downstream consumes it.
-
-Three signal modes:
-- from_analytics: paste the JSON output of meta_account_intelligence or meta_get_breakdown_insights. Analyses what's working, identifies untested angles, and recommends the next creative hypothesis.
-- from_competitor: paste the JSON output of meta_search_ad_library. Maps the competitive landscape, finds gaps, and recommends a differentiation angle.
-- from_prompt: write a plain-text brief. Structures it into the canonical format and fills in gaps using best-practice defaults.
-
-The loop activation point: meta_analyze_creative_performance also returns a next_brief object in this same format, ready to pass straight back here to close the iteration loop.`,
+        description: 'Generate structured creative brief from analytics data, competitor ads, or a text prompt. Output feeds into meta_generate_ad_copy and imagen.',
         inputSchema: {
             type: 'object',
             properties: {

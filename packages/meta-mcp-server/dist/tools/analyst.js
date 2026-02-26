@@ -4,7 +4,7 @@ import { computeMetrics, pctChange } from '../utils/metrics.js';
 export const analystTools = [
     {
         name: 'meta_get_breakdown_insights',
-        description: `Get performance metrics broken down by a dimension (age, gender, country, platform, placement, device) and/or a time series (daily, weekly). Use when the user asks "which country is performing best?", "what age group has the best ROAS?", "show me performance by placement", or "how did results trend day by day?". Dimensions and time series can be combined — e.g. breakdown=country with time_series=daily gives daily performance by country.`,
+        description: `Get metrics broken down by dimension (age, gender, country, platform, placement, device) and/or time series (daily, weekly). Dimensions and time can be combined.`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -48,15 +48,7 @@ export const analystTools = [
     },
     {
         name: 'meta_request_insights_report',
-        description: `Run a deep insights report asynchronously. Use when you need large date ranges (90+ days), many rows, or cross-breakdown analysis that would time out with the synchronous meta_get_breakdown_insights. The report starts a background job, polls until complete, and returns all results.
-
-Best for:
-- Date ranges > 30 days
-- High-granularity breakdowns (placement x device x country)
-- Exporting large campaigns with 100+ ad sets or ads
-- Time series over long periods (daily data for last 90 days)
-
-If the user hasn't specified what breakdown or date range they want, ask them before running — this job can take 1-3 minutes.`,
+        description: `Run async insights report for large date ranges (90+ days) or high-granularity breakdowns. Takes 1-3 min.`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -91,14 +83,7 @@ If the user hasn't specified what breakdown or date range they want, ask them be
     },
     {
         name: 'meta_account_intelligence',
-        description: `Generate a high-density intelligence report for the ad account. Use this when the user asks "how are my ads doing?", wants a performance overview, or needs to identify problems.
-
-Returns a pre-built text summary (not raw data) containing:
-- Period-over-period trends (spend, CPA, ROAS, CTR changes vs previous period)
-- Top 3 campaigns by ROAS (best performers)
-- Top 3 "bleeder" campaigns (spending with zero conversions)
-
-Use response_format="concise" if you only need the summary text. Use "detailed" if you also need the raw trend numbers for follow-up calculations.`,
+        description: `Generate intelligence report: period-over-period trends, top campaigns by ROAS, bleeder campaigns with zero conversions.`,
         inputSchema: {
             type: 'object',
             properties: {

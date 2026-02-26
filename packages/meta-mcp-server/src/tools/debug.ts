@@ -6,14 +6,7 @@ import { computeMetrics, type RawInsightRow } from '../utils/metrics.js';
 export const debugTools = [
   {
     name: 'meta_debug_ad',
-    description: `Diagnose why an ad is not delivering or underperforming. Use when the user asks "why isn't my ad spending?" or "what's wrong with this ad?". Checks the full hierarchy (ad -> ad set -> campaign) for:
-- Ad review status (rejected/pending/approved) with human-readable rejection reasons
-- Learning phase status (Learning Limited detection)
-- Budget exhaustion at ad set and campaign level
-- Paused parent entities blocking delivery
-- Recent performance red flags (zero impressions, low CTR)
-
-Returns a health score (HEALTHY/NEEDS_ATTENTION/CRITICAL) and actionable fix suggestions.`,
+    description: 'Diagnose ad delivery issues: review status, learning phase, budget exhaustion, paused parents. Returns health score and fixes.',
     inputSchema: {
       type: 'object' as const,
       properties: {

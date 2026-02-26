@@ -5,15 +5,7 @@ import { resolveRange } from '../utils/date-ranges.js';
 export const performanceTools = [
     {
         name: 'meta_analyze_creative_performance',
-        description: `Analyse ad-level performance for a campaign and produce a structured creative scorecard. Identifies the winning creative, losing creatives, and returns all data needed to synthesise a learning report and next creative brief.
-
-This is the loop closure tool. After a campaign has run for 3–7+ days with meaningful spend, call this to turn raw metrics into the next creative direction.
-
-Returns:
-- Ranked creative scorecard (all ads sorted by primary metric)
-- Per-ad computed metrics (CTR, CPC, CPA, ROAS, quality rankings)
-- Analysis context (thresholds, rules) for synthesising winner/loser hypotheses
-- next_brief schema to pass to meta_generate_creative_brief`,
+        description: 'Analyse ad-level performance for a campaign. Returns ranked creative scorecard, per-ad metrics, and next_brief for iteration.',
         inputSchema: {
             type: 'object',
             properties: {

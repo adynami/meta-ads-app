@@ -4,7 +4,7 @@ import { graphGet, graphPost } from '../utils/graph.js';
 export const duplicatorTools = [
     {
         name: 'meta_duplicate_adset',
-        description: `Deep-copy a single ad set (with its ads) into the same campaign or a different campaign. All copied entities are created in PAUSED status by default. Use when you want to test the same ad set structure in multiple campaigns, or clone an ad set with minor changes.`,
+        description: 'Clone an ad set with its ads into same or different campaign. Created as PAUSED.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -23,7 +23,7 @@ export const duplicatorTools = [
     },
     {
         name: 'meta_duplicate_creative',
-        description: `Clone an ad creative and optionally override the body text, headline, call-to-action type, or destination URL. Returns the new creative ID. Use when you want to A/B test copy variations without recreating the entire creative from scratch.`,
+        description: 'Clone a creative with optional overrides (body, headline, CTA, URL).',
         inputSchema: {
             type: 'object',
             properties: {
@@ -43,7 +43,7 @@ export const duplicatorTools = [
     },
     {
         name: 'meta_duplicate_campaign',
-        description: 'Deep-copy a campaign (clones all ad sets and ads). All copied entities are created in PAUSED status. Optionally swap funnel URLs and set a new budget per ad set. Use when cloning a proven campaign structure with different landing pages, budgets, or for A/B testing.',
+        description: 'Deep-copy a campaign with all ad sets and ads. Created as PAUSED.',
         inputSchema: {
             type: 'object',
             properties: {

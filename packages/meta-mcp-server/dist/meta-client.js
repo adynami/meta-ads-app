@@ -32,9 +32,8 @@ export function clearAccountCache(adAccountId) {
 const INSIGHT_FIELDS = [
     'impressions', 'clicks', 'spend', 'cpm', 'frequency', 'reach',
     'actions', 'action_values',
-    'unique_clicks', 'unique_ctr', 'unique_link_clicks_ctr',
-    'outbound_clicks', 'outbound_clicks_ctr',
-    'inline_link_clicks', 'inline_link_click_ctr',
+    'unique_clicks', 'unique_ctr',
+    'outbound_clicks',
     'video_p25_watched_actions', 'video_p50_watched_actions',
     'video_p75_watched_actions', 'video_p100_watched_actions',
     'video_avg_time_watched_actions',
@@ -50,7 +49,7 @@ export async function fetchAds(ctx, fields, params) {
     return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
 }
 export async function fetchAccountInsights(ctx, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','), ...params })).then(r => r.data ?? []);
 }
 export async function fetchCampaignInsights(ctx, campaignId, params) {
     return rateLimitedCall(() => graphGet(ctx, `${campaignId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params })).then(r => r.data ?? []);

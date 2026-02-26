@@ -3,9 +3,7 @@ import type { TenantContext } from '../tenant-context.js';
 export const copyTools = [
   {
     name: 'meta_generate_ad_copy',
-    description: `Generate structured ad copy inputs for Meta campaigns. Returns product info, hook frameworks, character constraints, and CTA recommendations that Claude uses to produce final ad copy variants with proper character limits and DCO-ready output.
-
-Use before deploying campaigns to get headlines, body copy, and CTA recommendations optimised for Meta feed.`,
+    description: 'Generate structured ad copy: headlines, body, CTA recommendations with character limits.',
     inputSchema: {
       type: 'object' as const,
       properties: {

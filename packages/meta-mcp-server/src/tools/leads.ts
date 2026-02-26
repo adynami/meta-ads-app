@@ -7,7 +7,7 @@ import { graphGet, graphPost } from '../utils/graph.js';
 export const leadsTools = [
   {
     name: 'meta_list_lead_forms',
-    description: 'List lead generation forms for the ad account. Returns form name, status, and lead count. Use before creating a lead ad to find an existing form ID, or to check how many leads a form has collected. Use response_format=concise when you only need IDs and names.',
+    description: 'List lead generation forms: name, status, lead count.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -22,16 +22,7 @@ export const leadsTools = [
   },
   {
     name: 'meta_create_lead_form',
-    description: `Create a native Meta lead generation form attached to a Facebook Page. The form collects user info (name, email, phone, etc.) without leaving Facebook/Instagram. Use for OUTCOME_LEADS campaigns with lead_gen_type=INSTANT_FORM.
-
-IMPORTANT — always confirm these details with the user before calling:
-1. Which Facebook Page to attach the form to (page_id)?
-2. What fields to collect? (email, phone, full_name, first_name, last_name, company_name, job_title, etc.)
-3. Privacy policy URL (required by Meta)?
-4. Any custom questions?
-5. An intro/context card title and description (recommended for higher conversion)?
-
-This is a write operation — confirm all details before calling.`,
+    description: 'Create a lead form on a Facebook Page for OUTCOME_LEADS campaigns. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -103,7 +94,7 @@ This is a write operation — confirm all details before calling.`,
   },
   {
     name: 'meta_get_leads',
-    description: 'Retrieve leads (submissions) from a lead generation form. Returns each lead\'s field values (email, phone, name, etc.) and submission timestamp. Use after running a lead generation campaign to export the collected leads.',
+    description: 'Retrieve lead submissions from a form: field values and timestamps.',
     inputSchema: {
       type: 'object' as const,
       properties: {

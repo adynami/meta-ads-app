@@ -4,11 +4,7 @@ import { graphGet, graphPost, graphDelete } from '../utils/graph.js';
 export const budgetScheduleTools = [
     {
         name: 'meta_list_budget_schedules',
-        description: `List High Demand Period budget schedules for a CBO campaign. This is an ADVANCED optional feature — only use when the user explicitly asks about budget schedules or high demand periods.
-
-High Demand Periods (budget schedules) let you pre-schedule a budget boost for specific time windows — Black Friday, Cyber Monday, flash sales, product launches, etc. — without manually editing the campaign at 3am. The boost automatically activates and expires on schedule.
-
-This only works on campaigns with Campaign Budget Optimization (CBO) enabled. Use this tool to review existing schedules before creating new ones, or to find an ID for deletion.`,
+        description: 'List High Demand Period budget schedules for a CBO campaign. Advanced feature.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -22,24 +18,7 @@ This only works on campaigns with Campaign Budget Optimization (CBO) enabled. Us
     },
     {
         name: 'meta_create_budget_schedule',
-        description: `Create a High Demand Period budget schedule on a CBO campaign — automatically boosts spend during a specific time window (e.g. Black Friday, a weekend flash sale, product launch day). This is an ADVANCED optional feature — only call when the user explicitly asks.
-
-How it works: Meta temporarily increases the campaign's effective budget to the specified value (ABSOLUTE) or multiplies it by the specified factor (MULTIPLIER) during the scheduled window. The budget returns to normal automatically when the period ends.
-
-Meta constraints:
-- Campaign must have Campaign Budget Optimization (CBO) enabled
-- Period must be at least 3 hours long
-- ABSOLUTE budget cannot exceed 8× the campaign's daily budget
-- Maximum 50 schedules per campaign
-- Schedules cannot overlap
-
-Confirm the following with the user before calling:
-1. Which campaign? (must be CBO)
-2. Start and end time (date + time + timezone)
-3. Budget type: ABSOLUTE (fixed spend cap in account currency) or MULTIPLIER (e.g. 2.0 = double the budget)
-4. Budget value (cents for ABSOLUTE, decimal for MULTIPLIER)
-
-This is a write operation — confirm all details before calling.`,
+        description: 'Create scheduled budget boost for a CBO campaign (e.g. Black Friday). Advanced feature. Write op — confirm first.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -70,11 +49,7 @@ This is a write operation — confirm all details before calling.`,
     },
     {
         name: 'meta_delete_budget_schedule',
-        description: `Delete (cancel) a High Demand Period budget schedule. Use this to cancel a scheduled budget boost before it activates, or to remove one that is no longer needed. This is an ADVANCED optional feature — only call when the user explicitly asks.
-
-If the period has already started, deleting it will end the boost immediately. Cannot be undone.
-
-Always confirm with the user before deleting.`,
+        description: 'Delete a budget schedule. Write op — confirm first.',
         inputSchema: {
             type: 'object',
             properties: {

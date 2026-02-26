@@ -9,7 +9,7 @@ import { buildTargetingSpec } from '../utils/targeting.js';
 export const creatorTools = [
   {
     name: 'meta_deploy_campaign',
-    description: `Create a complete campaign in one step: Campaign + Ad Set + Ad. Supports all Meta budget modes (CBO/ABO), bid strategies (lowest cost, bid cap, cost cap, min ROAS), and daily/lifetime budgets. This is an atomic operation — if any step fails, all previous steps are rolled back automatically (no zombie campaigns). Requires an image_hash from meta_upload_image. This is a write operation — confirm details with the user before calling.`,
+    description: 'Create complete Campaign + Ad Set + Ad atomically (rolled back on failure). Requires image_hash. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -222,22 +222,7 @@ export const creatorTools = [
   },
   {
     name: 'meta_deploy_dco_campaign',
-    description: `Create a Dynamic Creative Optimization (DCO) campaign. Meta automatically tests all combinations of your images, headlines, and body texts and delivers the best-performing mix to each user.
-
-Best for:
-- Testing creative variants without creating separate campaigns
-- Finding the winning image/copy combination faster
-- Maximizing performance with limited budget
-
-IMPORTANT — always confirm with the user before calling:
-1. Which images to test? (provide 2-10 image hashes from meta_upload_image — each will be tested)
-2. Which headlines to test? (2-5 variations)
-3. Which body texts to test? (2-5 variations)
-4. Campaign objective and budget?
-5. Which Facebook Page to run from?
-6. Destination URL?
-
-This is a write operation — confirm all details before calling.`,
+    description: 'Create DCO campaign that tests combinations of images, headlines, body texts. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

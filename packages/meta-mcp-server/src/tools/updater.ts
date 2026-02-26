@@ -4,7 +4,7 @@ import { updateCampaign, updateAdSet, updateAd } from '../meta-client.js';
 export const updaterTools = [
   {
     name: 'meta_update_campaign',
-    description: 'Update an existing campaign. Only provide fields you want to change — all others are left untouched. Can rename, change status, adjust budget, or change bid strategy. This is a write operation — confirm with the user before calling.',
+    description: 'Update campaign fields (name, status, budget, bid strategy). Only changed fields needed. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -37,7 +37,7 @@ export const updaterTools = [
   },
   {
     name: 'meta_update_adset',
-    description: 'Update an existing ad set. Only provide fields you want to change. Can adjust budget, bid, targeting, end date, or status. Targeting replacement is full — provide the complete targeting object. This is a write operation — confirm with the user before calling.',
+    description: 'Update ad set fields (budget, bid, targeting, schedule). Targeting is full replacement. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -141,7 +141,7 @@ export const updaterTools = [
   },
   {
     name: 'meta_update_ad',
-    description: 'Update an existing ad — rename it or change its status. Creative changes (image, copy, URL) require creating a new ad — Meta creatives are immutable. This is a write operation — confirm with the user before calling.',
+    description: 'Update ad name or status. Creative changes require a new ad. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

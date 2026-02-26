@@ -7,7 +7,7 @@ import { graphGet, graphPost, graphDelete } from '../utils/graph.js';
 export const rulesTools = [
   {
     name: 'meta_list_rules',
-    description: 'List automated rules configured in the ad account. Returns rule name, status, action type, conditions, and schedule. Use to review what automation is currently running before creating or deleting rules. Use response_format=concise when you only need IDs and names.',
+    description: 'List automated rules: name, status, action, conditions, schedule.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -22,17 +22,7 @@ export const rulesTools = [
   },
   {
     name: 'meta_create_rule',
-    description: `Create an automated rule that monitors ad performance and executes actions automatically (pause, resume, adjust budget/bid) when conditions are met.
-
-IMPORTANT — before calling, always confirm all of the following with the user:
-1. Which entity type to monitor: CAMPAIGN, ADSET, or AD?
-2. What metric to watch and what threshold? (e.g. cost_per_result > 50, spend > 1000, roas < 1.5)
-3. What action to take when triggered? (PAUSE, UNPAUSE, INCREASE_DAILY_BUDGET, DECREASE_DAILY_BUDGET, INCREASE_BID, DECREASE_BID)
-4. For budget/bid actions: by what percentage?
-5. How often to evaluate: SEMI_HOURLY, HOURLY, EVERY_6_HOURS, EVERY_12_HOURS, DAILY, or WEEKLY?
-6. Over what time window: TODAY, LAST_7_DAYS, LAST_14_DAYS, LAST_30_DAYS?
-
-This is a write operation — confirm all details before calling.`,
+    description: 'Create automated rule (pause/scale/adjust based on metrics). Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -91,7 +81,7 @@ This is a write operation — confirm all details before calling.`,
   },
   {
     name: 'meta_update_rule',
-    description: 'Enable, disable, or rename an automated rule. Use to pause/resume a rule without permanently deleting it.',
+    description: 'Enable, disable, or rename an automated rule.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -108,7 +98,7 @@ This is a write operation — confirm all details before calling.`,
   },
   {
     name: 'meta_delete_rule',
-    description: 'Permanently delete an automated rule. The rule stops executing immediately. Cannot be undone. Always confirm with the user before calling.',
+    description: 'Permanently delete an automated rule. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

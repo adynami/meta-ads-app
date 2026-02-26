@@ -10,7 +10,7 @@ import {
 export const audienceTools = [
   {
     name: 'meta_list_audiences',
-    description: 'List custom audiences in the ad account. Returns name, type, approximate size, and delivery status. Use when the user asks what audiences exist, wants to find an audience ID for targeting, or needs to check audience health. Use response_format=concise when you only need IDs and names.',
+    description: 'List custom audiences with name, type, size, delivery status.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -26,7 +26,7 @@ export const audienceTools = [
   },
   {
     name: 'meta_create_customer_audience',
-    description: `Create a custom audience from a customer list (emails or phone numbers). Provide plaintext values — the server normalises and SHA-256 hashes them before sending to Meta. Use to retarget existing customers or build a seed audience for lookalikes. Minimum 100 matched users for delivery; 1,000+ recommended for best results.`,
+    description: 'Create custom audience from customer emails/phones. Server handles SHA-256 hashing. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -48,7 +48,7 @@ export const audienceTools = [
   },
   {
     name: 'meta_create_lookalike_audience',
-    description: `Create a Lookalike Audience — Meta finds users similar to a seed audience using machine learning. Requires an existing custom audience as the seed (1,000–5,000 users recommended). Use when the user wants to expand reach to new people who resemble existing customers.`,
+    description: 'Create Lookalike Audience from a seed custom audience (1k-5k users recommended). Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -72,7 +72,7 @@ export const audienceTools = [
   },
   {
     name: 'meta_create_website_audience',
-    description: `Create a custom audience of website visitors tracked by a Meta Pixel. Use for retargeting — e.g., "people who visited /checkout but didn't purchase", "all site visitors in last 30 days", "people who triggered the Purchase event". Use meta_list_pixels to find your pixel_id.`,
+    description: 'Create retargeting audience from pixel website visitors. Use meta_list_pixels to find pixel_id. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -124,20 +124,7 @@ export const audienceTools = [
   },
   {
     name: 'meta_create_engagement_audience',
-    description: `Create a custom audience of people who engaged with your Facebook Page or Instagram profile. Captures users who liked, commented, shared, clicked, or otherwise interacted — without needing a pixel. Great for warm retargeting audiences.
-
-Common engagement_type values for Pages:
-- page_engaged: any engagement (most inclusive)
-- page_liked: liked/followed the Page
-- page_post_engaged: engaged with any post
-- page_call_to_action_clicked: clicked a CTA button
-
-Common engagement_type values for Instagram:
-- ig_business_profile_all: any Instagram engagement
-- ig_business_profile_engaged: saved/commented/liked/replied
-- ig_business_profile_visited: visited the profile
-
-Always ask the user which Page or Instagram account and which engagement type before calling.`,
+    description: 'Create audience from Page/Instagram engagement (likes, comments, shares, visits). Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -168,16 +155,7 @@ Always ask the user which Page or Instagram account and which engagement type be
   },
   {
     name: 'meta_create_video_audience',
-    description: `Create a custom audience of people who watched a percentage of one of your videos. Use for video-view retargeting — reach people who showed interest (e.g. watched 50%+) but didn't convert yet.
-
-Retention window: up to 365 days from the view.
-
-Ask the user:
-1. Which video? (provide the video_id from meta_list_ad_videos or the ad's video_id)
-2. What engagement threshold? (25%, 50%, 75%, 95% watched, or just opened/clicked)
-3. How far back to look? (retention_days, default 30)
-
-This is a write operation — confirm before calling.`,
+    description: 'Create audience from video viewers at a % threshold (25/50/75/95%). Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -201,7 +179,7 @@ This is a write operation — confirm before calling.`,
   },
   {
     name: 'meta_delete_audience',
-    description: 'Permanently delete a custom audience. Cannot be undone. The audience will be removed from any active ad sets using it. Confirm with the user before calling.',
+    description: 'Permanently delete a custom audience. Cannot be undone. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

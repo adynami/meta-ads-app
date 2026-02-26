@@ -7,7 +7,7 @@ import { graphGet, graphPostMultipart } from '../utils/graph.js';
 export const libraryTools = [
   {
     name: 'meta_list_ad_images',
-    description: 'Browse the ad image library for the account. Returns image hash, name, dimensions, URL, and status. Use to find existing image hashes to reuse in new ads (via meta_add_ad or meta_deploy_campaign) without re-uploading.',
+    description: 'Browse ad image library: hash, name, dimensions, URL.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -18,7 +18,7 @@ export const libraryTools = [
   },
   {
     name: 'meta_list_ad_videos',
-    description: 'Browse the ad video library for the account. Returns video ID, title, length, status, and thumbnail. Use to find existing video IDs to reuse in new video ads without re-uploading.',
+    description: 'Browse ad video library: ID, title, length, status, thumbnail.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -29,7 +29,7 @@ export const libraryTools = [
   },
   {
     name: 'meta_upload_image',
-    description: 'Upload an image attachment to the ad account image library. Returns an image hash that can be used with meta_deploy_campaign or meta_add_ad. The attachment must have been provided by the user in the current conversation.',
+    description: 'Upload an attached image to the ad library. Returns image hash.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -41,7 +41,7 @@ export const libraryTools = [
   },
   {
     name: 'meta_upload_video',
-    description: 'Upload a video attachment to the ad account video library. Returns a video_id that can be used with meta_deploy_campaign or meta_add_ad. The attachment must have been provided by the user in the current conversation.',
+    description: 'Upload an attached video to the ad library. Returns video_id.',
     inputSchema: {
       type: 'object' as const,
       properties: {

@@ -5,7 +5,7 @@ import { graphGet, graphPost } from '../utils/graph.js';
 export const testingTools = [
   {
     name: 'meta_list_ab_tests',
-    description: 'List A/B split tests (ad studies) on the ad account. Returns test name, status, type, and cell information. Use to review active experiments or check whether a test has reached statistical significance.',
+    description: 'List A/B split tests: name, status, type, cells.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -15,21 +15,7 @@ export const testingTools = [
   },
   {
     name: 'meta_create_ab_test',
-    description: `Create an A/B split test comparing two campaigns on a single variable. Meta divides a shared audience 50/50 between the two campaigns and measures which performs better on the chosen metric.
-
-Test variables:
-- CREATIVE: same targeting/budget, different ad creatives
-- PLACEMENT: same creative/budget, different placements
-- TARGETING: same creative/budget, different audience targeting
-- BUDGET_OPTIMIZATION: CBO vs ABO comparison
-
-IMPORTANT — always confirm before calling:
-1. Which two PAUSED campaigns to compare?
-2. What are you testing (CREATIVE/PLACEMENT/TARGETING/BUDGET_OPTIMIZATION)?
-3. What metric determines the winner (COST_PER_RESULT or ROAS)?
-4. Test end date? (7–14 days minimum recommended)
-
-This is a write operation — confirm all details before calling.`,
+    description: 'Create A/B test comparing two campaigns on a single variable. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {

@@ -5,7 +5,7 @@ import { graphGet } from '../utils/graph.js';
 export const catalogTools = [
   {
     name: 'meta_list_product_catalogs',
-    description: 'List product catalogs linked to the ad account. Returns catalog ID, name, vertical, and product count. Required before creating Dynamic Product Ads (DPA) — you need a catalog_id and product_set_id for the promoted_object.',
+    description: 'List product catalogs. Needed for Dynamic Product Ads.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -15,7 +15,7 @@ export const catalogTools = [
   },
   {
     name: 'meta_get_catalog',
-    description: 'Get details for a specific product catalog including product count, feed count, and vertical. Use to verify you have the right catalog before listing products.',
+    description: 'Get catalog details: product count, feed count, vertical.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -26,7 +26,7 @@ export const catalogTools = [
   },
   {
     name: 'meta_list_catalog_products',
-    description: 'Browse products in a catalog. Returns product ID, name, price, availability, and image URL. Use to verify products are syncing correctly or to audit catalog health before running Dynamic Product Ads.',
+    description: 'Browse products in a catalog: ID, name, price, availability, image.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -44,7 +44,7 @@ export const catalogTools = [
   },
   {
     name: 'meta_list_product_sets',
-    description: 'List product sets (filtered subsets) in a catalog. Product sets are used as promoted_object.product_set_id when creating Dynamic Product Ad sets — they define which products to show (e.g. "shoes under $100", "all in-stock items").',
+    description: 'List product sets for Dynamic Product Ads targeting.',
     inputSchema: {
       type: 'object' as const,
       properties: {

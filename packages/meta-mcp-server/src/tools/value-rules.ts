@@ -7,11 +7,7 @@ import { graphGet, graphPost, graphDelete } from '../utils/graph.js';
 export const valueRulesTools = [
   {
     name: 'meta_list_value_rules',
-    description: `List Value Rules configured for the ad account. Value Rules are an ADVANCED optional feature — only use when the user explicitly asks for them.
-
-Value Rules tell Meta's bidding algorithm how much a conversion from a particular audience segment, placement, device, or location is worth to your business. They modify bids in real time during the auction — a conversion from iOS users might be worth 2× a conversion from Android, for example. They are NOT the same as Automated Rules (which pause or scale campaigns after the fact).
-
-Use this tool to review existing rules before creating new ones, or to find a rule ID for update/delete.`,
+    description: 'List Value Rules (bid multipliers by audience segment). Advanced feature.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -21,21 +17,7 @@ Use this tool to review existing rules before creating new ones, or to find a ru
   },
   {
     name: 'meta_create_value_rule',
-    description: `Create a Value Rule that adjusts Meta's bidding for a specific audience segment, device, placement, or location. This is an ADVANCED optional feature — only call when the user explicitly asks to create a value rule.
-
-Value Rules are bid multipliers applied in real time during the auction. They tell Meta "conversions from this segment are worth X× more (or less) to my business." Meta then bids more or less aggressively for those impressions.
-
-IMPORTANT — Meta's official guidance states that overall CPA may increase when using Value Rules. They are best suited for businesses that have genuine differences in customer lifetime value across segments (e.g. a customer from New York is historically worth 3× a customer from a rural market).
-
-Rules are evaluated in priority order. When multiple rules match the same user, only the first matching rule is applied. Order rules from most specific to least specific.
-
-Always confirm all of the following with the user before calling:
-1. What condition to match? (OS, country, placement, age, gender, or a combination)
-2. What multiplier? (e.g. 1.5 = bid 50% more, 0.7 = bid 30% less)
-3. What priority vs existing rules?
-4. Which campaign should this apply to (if campaign-specific)?
-
-This is a write operation — confirm details before calling.`,
+    description: 'Create a Value Rule bid multiplier for a specific audience segment. Advanced feature. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -113,9 +95,7 @@ This is a write operation — confirm details before calling.`,
   },
   {
     name: 'meta_update_value_rule',
-    description: `Update an existing Value Rule — change its multiplier, conditions, priority, status, or name. Only provide the fields you want to change. This is an ADVANCED optional feature — only call when the user explicitly asks.
-
-This is a write operation — confirm with the user before calling.`,
+    description: 'Update a Value Rule. Advanced feature. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -158,9 +138,7 @@ This is a write operation — confirm with the user before calling.`,
   },
   {
     name: 'meta_delete_value_rule',
-    description: `Permanently delete a Value Rule. The rule stops influencing bids immediately. Cannot be undone. This is an ADVANCED optional feature — only call when the user explicitly asks.
-
-Always confirm with the user before deleting.`,
+    description: 'Delete a Value Rule. Advanced feature. Write op — confirm first.',
     inputSchema: {
       type: 'object' as const,
       properties: {
