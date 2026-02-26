@@ -5,6 +5,7 @@ import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     {
       id: 'facebook',
