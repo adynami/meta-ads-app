@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Send, Search, TrendingUp, BarChart3, Target } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 
 interface ToolCall {
@@ -19,27 +17,32 @@ interface Message {
   toolCalls?: ToolCall[];
 }
 
+const suggestions = [
+  { icon: Search, text: 'Which campaigns are spending but not converting?' },
+  { icon: TrendingUp, text: 'How did my campaigns perform last week?' },
+  { icon: BarChart3, text: 'Break down last 30 days by age and gender' },
+  { icon: Target, text: 'Build a lookalike audience from my purchasers' },
+];
+
 export function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  // Focus input on mount
   useEffect(() => {
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
   }, []);
 
-  const sendMessage = async () => {
-    const trimmed = input.trim();
+  const sendMessage = async (text?: string) => {
+    const trimmed = (text || input).trim();
     if (!trimmed || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: trimmed };
@@ -48,8 +51,12 @@ export function ChatWindow() {
     setInput('');
     setIsLoading(true);
 
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
     try {
-      // Build Anthropic-format messages (text-only, no tool calls in history)
       const apiMessages = updated.map((m) => ({
         role: m.role,
         content: m.content,
@@ -83,7 +90,7 @@ export function ChatWindow() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   };
 
@@ -94,71 +101,94 @@ export function ChatWindow() {
     }
   };
 
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // Auto-resize
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <ScrollArea className="flex-1 px-4 py-6" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-8" ref={scrollRef}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-32">
-            <h2 className="text-2xl font-semibold text-foreground mb-2">
-              Meta Ads AI
-            </h2>
-            <p className="max-w-md">
-              Ask about your campaigns, analyse performance, create ads, or
-              manage your Meta ad account. Try:
+          <div className="max-w-4xl mx-auto flex flex-col items-center justify-center h-full text-center pt-16">
+            <div className="mb-8">
+              <span className="text-4xl font-bold">
+                <span className="text-white">Ady</span>
+                <span className="gradient-text">nami</span>
+              </span>
+            </div>
+            <p className="text-gray-400 max-w-md mb-8">
+              Ask about your campaigns, analyse performance, create ads, or manage your Meta ad account.
             </p>
-            <div className="mt-4 space-y-2 text-sm">
-              {[
-                'List my active campaigns',
-                'How did my campaigns perform last week?',
-                'Create a new conversion campaign',
-                'What audiences should I test?',
-              ].map((suggestion) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+              {suggestions.map((suggestion, i) => (
                 <button
-                  key={suggestion}
-                  onClick={() => {
-                    setInput(suggestion);
-                    inputRef.current?.focus();
-                  }}
-                  className="block mx-auto px-4 py-2 rounded-full border hover:bg-muted transition-colors"
+                  key={i}
+                  onClick={() => sendMessage(suggestion.text)}
+                  className="glass-card glass-card-hover rounded-xl p-4 flex items-center gap-3 text-left"
                 >
-                  {suggestion}
+                  <suggestion.icon className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                  <span className="text-sm text-gray-300">{suggestion.text}</span>
                 </button>
               ))}
             </div>
           </div>
         ) : (
-          messages.map((msg, i) => <MessageBubble key={i} message={msg} />)
+          <div className="max-w-4xl mx-auto space-y-6">
+            {messages.map((msg, i) => (
+              <MessageBubble key={i} message={msg} />
+            ))}
+          </div>
         )}
 
         {isLoading && (
-          <div className="flex justify-start mb-4">
-            <div className="bg-muted/40 rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex gap-1.5">
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
+          <div className="max-w-4xl mx-auto mt-6">
+            <div className="flex justify-start">
+              <div className="message-assistant px-5 py-4">
+                <div className="loading-dots text-purple-400 text-lg">
+                  <span>&#x25CF;</span> <span>&#x25CF;</span> <span>&#x25CF;</span>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </ScrollArea>
+      </div>
 
-      {/* Input bar */}
-      <div className="border-t px-4 py-3">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <Input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about your Meta ads..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
-            Send
-          </Button>
+      {/* Input Bar */}
+      <div className="border-t border-white/5 bg-[#0d0d1a] p-4 shrink-0">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-end gap-3 bg-white/5 border border-white/10 rounded-xl p-3">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleTextareaInput}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything about your Meta ads..."
+              rows={1}
+              disabled={isLoading}
+              className="flex-1 bg-transparent text-white placeholder-gray-500 resize-none outline-none text-sm"
+              style={{ minHeight: '24px', maxHeight: '120px' }}
+            />
+            <button
+              onClick={() => sendMessage()}
+              disabled={isLoading || !input.trim()}
+              className="gradient-bg p-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center justify-between mt-2 px-1">
+            <p className="text-xs text-gray-500">
+              Adynami reads and writes your live Meta account. Actions execute immediately.
+            </p>
+            <p className="text-xs text-gray-600 hidden sm:block">
+              Enter to send · Shift+Enter for new line
+            </p>
+          </div>
         </div>
       </div>
     </div>

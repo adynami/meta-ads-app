@@ -1,0 +1,393 @@
+# Meta MCP Server
+
+**MCP server for the Meta Marketing API — integrates with Claude Desktop and Claude Code.**
+
+Ask Claude to manage your Facebook, Instagram, and Threads ad campaigns using plain language. No marketing dashboard needed.
+
+---
+
+## What You Can Do
+
+- **Query** — campaign performance, insights by breakdown (age, country, placement, device), period-over-period intelligence reports, full pixel funnel breakdown (view_content → add_to_cart → initiate_checkout → purchase) on every insights response
+- **Create** — full campaigns (Campaign + Ad Set + Ad) in one atomic call with automatic rollback on failure; supports special ad categories, UTM tags, custom conversion events, and destination types
+- **DCO** — Dynamic Creative Optimization: give Claude 2–10 images and 2–5 headlines/bodies, Meta tests all combinations automatically
+- **Duplicate** — deep-copy campaigns, ad sets, and creatives with overrides via Meta's async API
+- **Automate** — create, enable/disable automated rules that pause high-CPA ad sets, scale winning budgets, or send alerts
+- **Audiences** — customer list, lookalike, website pixel, Page/Instagram engagement, and video view retargeting audiences
+- **Lead forms** — create native Facebook lead gen forms (with multiple-choice questions, locale, quality optimization) and retrieve lead submissions
+- **Conversions API** — send server-side events with automatic SHA-256 PII hashing for iOS 14+ signal recovery
+- **Catalogs** — list product catalogs, products, and product sets for Dynamic Product Ads
+- **A/B Testing** — create 50/50 split tests comparing campaigns on creative, placement, targeting, or budget optimization
+- **Targeting research** — search interests, behaviors, demographics, and geo locations; estimate audience size before spending
+- **Pixels** — list pixels and view event statistics
+- **Library** — browse the Meta Ads Library for competitive intelligence; manage ad image and video assets
+- **Debug** — diagnose why an ad isn't delivering
+- **Attribution** — configure attribution windows per-breakdown or per-report (1d/7d/28d click + 1d/7d view)
+- **Value Rules** *(optional, advanced)* — tell Meta's auction how much a conversion from a specific segment (iOS, country, placement, age, gender) is worth to your business; adjusts bids in real time without separate campaigns
+- **High Demand Periods** *(optional, advanced)* — pre-schedule automatic budget boosts for specific time windows (Black Friday, flash sales, product launches) on CBO campaigns; boost activates and expires on schedule with no manual intervention
+- **Creative Intelligence** — generate ad copy with Meta-specific character limits and hook frameworks; research competitors via the Ad Library; turn account analytics or competitor data into a structured creative brief; close the iteration loop with AI-powered creative performance analysis (requires `GEMINI_API_KEY`)
+
+All write operations support **DRY_RUN mode** — simulate any action without touching live data.
+
+---
+
+## Quick Start
+
+### 1. Clone and build
+
+```bash
+git clone https://github.com/adynami/meta-mcp-server.git
+cd meta-mcp-server
+npm install
+npm run build
+```
+
+### 2. Authenticate
+
+```bash
+npm run setup
+```
+
+This opens a browser window for Facebook login, obtains a 60-day access token, and writes it to your Claude Desktop config automatically.
+
+For a non-expiring System User token (recommended for production):
+
+```bash
+npm run setup-system-user
+```
+
+### 3. Configure Claude Desktop
+
+After running `npm run setup`, the config is written automatically. Restart Claude Desktop to activate the tools.
+
+Manual config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "meta-marketing": {
+      "command": "node",
+      "args": ["/path/to/meta-mcp-server/dist/index.js"],
+      "env": {
+        "META_ACCESS_TOKEN": "your_token",
+        "META_AD_ACCOUNT_ID": "act_123456789",
+        "META_API_VERSION": "v25.0",
+        "DRY_RUN": "false"
+      }
+    }
+  }
+}
+```
+
+### 4. Start using it
+
+Ask Claude:
+
+**Reporting**
+- *"Give me an account intelligence report for last 30 days"*
+- *"Break down performance by country for the last 14 days — which markets have the best ROAS?"*
+- *"Compare our 7-day click vs 1-day click attribution on the Sales campaign"*
+
+**Campaigns**
+- *"Search for yoga and meditation interests, estimate the audience size for US women 25–44, then launch a $50/day awareness campaign"*
+- *"Create an A/B test comparing campaign A vs B on creative for 14 days"*
+- *"Duplicate campaign 120215... with a new landing page URL and $75/day budget"*
+
+**Automation & Audiences**
+- *"Create a rule that pauses any ad set with CPA over $80 after $200 spent"*
+- *"Build a retargeting audience of people who watched 50%+ of our product video"*
+- *"Create a lookalike from our purchaser list and launch a $100/day campaign targeting US"*
+
+**E-commerce & Leads**
+- *"Send a server-side Purchase event for order #4521, $149, customer email john@example.com"*
+- *"List our product catalogs and show the first 10 products in the main catalog"*
+- *"Create a lead form with name, email, and a multiple-choice question asking budget range"*
+
+> See **[Use Cases & Workflows](docs/use-cases.md)** for 20+ detailed end-to-end examples.
+
+---
+
+## Common Workflows
+
+| Workflow | What to ask Claude |
+|---|---|
+| Weekly performance review | *"Account intelligence report for last 7 days, show me bleeders and top performers"* |
+| Launch a new campaign | *"Search [topic] interests, estimate reach, then deploy a $50/day sales campaign"* |
+| Creative A/B test | *"Create an A/B test: campaign A vs B on creative, end in 14 days, winner by ROAS"* |
+| Retargeting funnel | *"Build website audiences for cart abandoners and purchasers, then create a lookalike from purchasers"* |
+| Budget automation | *"Create a rule: pause ad sets with CPA > $60 after $150 spend, check daily"* |
+| Signal recovery | *"Send a Purchase event to our pixel — order #8821, $199, email: user@example.com"* |
+| DPA / e-commerce | *"List our product catalog and show out-of-stock products"* |
+| Competitive research | *"Search the Ads Library for [competitor], show what creatives they're running in the US"* |
+| Generate on-brief ad copy | *"Generate 3 copy variants for a leads campaign targeting marketing managers, stat hook"* |
+| Competitor brief | *"Search the Ad Library for [brand], then generate a creative brief based on the gap in their messaging"* |
+| Account-data brief | *"Pull last 30 days of data and generate a creative brief for what to test next"* |
+| Close the loop | *"Analyse creative performance for campaign [ID] and give me the brief for the next iteration"* |
+
+→ [Full Use Cases & Workflows guide](docs/use-cases.md)
+
+---
+
+## Tools Overview (76 tools)
+
+### Account & Campaign Management
+
+| Tool | Description |
+|---|---|
+| `meta_get_account` | Account metadata (currency, timezone, status) |
+| `meta_get_account_billing` | Spend cap, amount spent, balance, and funding source |
+| `meta_get_recommendations` | Meta's optimization recommendations for the account |
+| `meta_list_campaigns` | List campaigns with status and budget |
+| `meta_get_campaign` | Full details for one campaign |
+| `meta_list_adsets` | List ad sets, optionally by campaign |
+| `meta_get_adset_details` | Full ad set details including targeting spec, budget, and bid strategy |
+| `meta_list_ads` | List ads by ad set or campaign |
+| `meta_get_ad_details` | Full ad details including creative spec and tracking |
+| `meta_get_creative_details` | Full creative spec (object_story_spec, asset_feed_spec for DCO) |
+| `meta_get_ad_preview` | Shareable preview URL + iframe for any ad format |
+| `meta_list_pages` | List Facebook Pages connected to the access token |
+| `meta_update_campaign_status` | Quick status change (ACTIVE/PAUSED/ARCHIVED) |
+| `meta_bulk_update_status` | Update status of multiple entities in one call |
+
+### Analytics & Insights
+
+| Tool | Description |
+|---|---|
+| `meta_get_insights` | Performance metrics (CTR, CPC, ROAS, CPA) with custom date ranges |
+| `meta_get_breakdown_insights` | Metrics by age, gender, country, platform, placement, device + attribution windows |
+| `meta_request_insights_report` | Async deep report for 60–365 day ranges + attribution windows |
+| `meta_account_intelligence` | AI-ready period-over-period summary + top/bottom campaigns |
+| `meta_debug_ad` | Diagnose delivery issues (review status, learning phase, budget) |
+
+### Targeting Research
+
+| Tool | Description |
+|---|---|
+| `meta_search_targeting` | Search interest and behavior IDs (legacy combined) |
+| `meta_search_interests` | Search interest targeting options with audience sizes |
+| `meta_search_behaviors` | Search behavior targeting options |
+| `meta_search_demographics` | Search life events, industries, income, device, OS, and more |
+| `meta_search_geo_locations` | Search countries, regions, cities, and zip codes |
+| `meta_get_interest_suggestions` | Expand a seed interest list with related suggestions |
+| `meta_estimate_audience_size` | Estimate reach before spending — validates targeting before launch |
+| `meta_predict_reach` | Model daily reach curve at a given budget |
+
+### Campaign Creation
+
+| Tool | Description |
+|---|---|
+| `meta_upload_image` | Upload image file → returns `image_hash` |
+| `meta_upload_video` | Upload video file → returns `video_id` |
+| `meta_deploy_campaign` | Create Campaign + Ad Set + Ad atomically; supports `special_ad_categories`, `destination_type`, `url_tags`, `custom_event_type` |
+| `meta_deploy_dco_campaign` | Dynamic Creative Optimization — test multiple images × headlines × bodies |
+| `meta_add_ad` | Add creative variation to an existing ad set |
+
+### Duplication
+
+| Tool | Description |
+|---|---|
+| `meta_duplicate_campaign` | Deep-copy campaign with optional URL and budget overrides |
+| `meta_duplicate_adset` | Deep-copy a single ad set into the same or a different campaign |
+| `meta_duplicate_creative` | Clone a creative with text/headline/CTA/URL overrides |
+
+### Updates
+
+| Tool | Description |
+|---|---|
+| `meta_update_campaign` | Update name, status, budget, bid strategy, or `special_ad_categories` |
+| `meta_update_adset` | Update budget, bid, targeting, schedule, `destination_type`, or `attribution_spec` |
+| `meta_update_ad` | Update name or status |
+
+### Audiences
+
+| Tool | Description |
+|---|---|
+| `meta_list_audiences` | List custom audiences |
+| `meta_create_customer_audience` | Custom audience from email/phone list (SHA-256 hashed automatically) |
+| `meta_create_lookalike_audience` | Lookalike from a seed audience |
+| `meta_create_website_audience` | Pixel-based URL/event retargeting audience |
+| `meta_create_engagement_audience` | Page/Instagram engagement retargeting (liked, commented, etc.) |
+| `meta_create_video_audience` | Video view retargeting by watch percentage (25/50/75/95%) |
+| `meta_delete_audience` | Permanently delete a custom audience |
+
+### Automated Rules
+
+| Tool | Description |
+|---|---|
+| `meta_list_rules` | List automated rules |
+| `meta_create_rule` | Create rule (pause, scale budget, adjust bid, send alert) |
+| `meta_update_rule` | Enable, disable, or rename a rule |
+| `meta_delete_rule` | Delete an automated rule |
+
+### Lead Generation
+
+| Tool | Description |
+|---|---|
+| `meta_list_lead_forms` | List lead generation forms |
+| `meta_create_lead_form` | Create native lead gen form with standard fields, custom questions, multiple-choice, locale, and quality optimization |
+| `meta_get_leads` | Retrieve lead submissions from a form |
+
+### Conversions API (CAPI)
+
+| Tool | Description |
+|---|---|
+| `meta_send_conversions_event` | Send server-side events (Purchase, Lead, etc.) with automatic SHA-256 PII hashing for iOS 14+ signal recovery |
+
+### Product Catalogs (DPA)
+
+| Tool | Description |
+|---|---|
+| `meta_list_product_catalogs` | List product catalogs in the ad account |
+| `meta_get_catalog` | Get catalog details (product count, vertical) |
+| `meta_list_catalog_products` | Browse products in a catalog with search |
+| `meta_list_product_sets` | List product sets (subsets) within a catalog |
+
+### A/B Testing
+
+| Tool | Description |
+|---|---|
+| `meta_list_ab_tests` | List A/B split tests (ad studies) |
+| `meta_create_ab_test` | Create 50/50 split test on CREATIVE / PLACEMENT / TARGETING / BUDGET_OPTIMIZATION |
+
+### Pixels
+
+| Tool | Description |
+|---|---|
+| `meta_list_pixels` | List Meta Pixels |
+| `meta_get_pixel_events` | Pixel event statistics |
+
+### Creative Library & Ads Library
+
+| Tool | Description |
+|---|---|
+| `meta_list_ad_images` | Browse uploaded ad images in the account |
+| `meta_list_ad_videos` | Browse uploaded ad videos in the account |
+| `meta_get_ad_image` | Fetch and display ad creative image inline in Claude |
+| `meta_search_ads_library` | Search Meta Ads Library for competitor intelligence |
+
+### Value Rules *(optional, advanced)*
+
+> Not applied by default. Claude only uses these tools when you explicitly ask.
+
+| Tool | Description |
+|---|---|
+| `meta_list_value_rules` | List Value Rules configured in the account |
+| `meta_create_value_rule` | Create a rule that adjusts Meta's auction bid for a specific segment (OS, country, placement, age, gender) |
+| `meta_update_value_rule` | Update multiplier, conditions, priority, or status |
+| `meta_delete_value_rule` | Permanently delete a Value Rule |
+
+### High Demand Periods *(optional, advanced)*
+
+> Not applied by default. Claude only uses these tools when you explicitly ask.
+
+| Tool | Description |
+|---|---|
+| `meta_list_budget_schedules` | List scheduled budget boosts for a CBO campaign |
+| `meta_create_budget_schedule` | Schedule an automatic budget boost for a time window (e.g. Black Friday) |
+| `meta_delete_budget_schedule` | Cancel a scheduled budget boost |
+
+### Creative Intelligence *(requires GEMINI_API_KEY)*
+
+> Add `GEMINI_API_KEY` to the server env. Tools return a graceful error if the key is missing — the rest of the server is unaffected.
+
+| Tool | Description |
+|---|---|
+| `meta_generate_ad_copy` | Generate Meta ad copy with character limits (27 ideal / 40 max headline, 125 body), 6 hook frameworks, and DCO-ready headline/body arrays |
+| `meta_generate_creative_brief` | Convert any signal (account analytics, competitor ads, or plain text) into a structured brief ready for the full creative pipeline |
+| `meta_search_ad_library` | Search the Meta Ad Library for competitor ads — returns copy, run duration (spend proxy), platforms, and performance signals |
+| `meta_analyze_creative_performance` | Rank ad creatives by metric, produce winner hypothesis and loser diagnosis, output `next_brief` for the next iteration |
+
+---
+
+## Configuration
+
+| Variable | Required | Description |
+|---|---|---|
+| `META_ACCESS_TOKEN` | Yes | Meta user or system user access token |
+| `META_AD_ACCOUNT_ID` | Yes | Ad account ID in `act_XXXXXXXXX` format |
+| `META_API_VERSION` | No | Graph API version (default: `v25.0`) |
+| `META_APP_ID` | No | App ID (for token refresh) |
+| `META_APP_SECRET` | No | App secret (for token refresh) |
+| `DRY_RUN` | No | Set to `true` to simulate all write operations |
+| `GEMINI_API_KEY` | No | Enables `meta_generate_ad_copy`, `meta_generate_creative_brief`, `meta_search_ad_library`, `meta_analyze_creative_performance` — server starts without it |
+
+---
+
+## Integration with image-gen-mcp
+
+Pair this server with [image-gen-mcp](https://github.com/adynami/image-gen-mcp) to run the full autonomous creative loop — from signal to live ad — in a single Claude conversation:
+
+**Full loop (signal → brief → creative → deploy → measure → iterate):**
+
+1. *"Pull last 30 days of data and generate a creative brief"* → `meta_account_intelligence` → `meta_generate_creative_brief`
+2. *"Generate 3 ad image variations from the brief"* → `imagen_generate_ad` (4:5, 1:1, 9:16)
+3. *"Add our product photo to the background of the first image"* → `imagen_composite_asset`
+4. *"Add a text overlay with our headline"* → `imagen_add_text_overlay`
+5. *"Upload all images and deploy a DCO campaign"* → `meta_upload_image` × N → `meta_deploy_dco_campaign`
+6. *"After 7 days: analyse creative performance and tell me what to test next"* → `meta_analyze_creative_performance` → `meta_generate_creative_brief` → repeat from step 2
+
+**Minimal path (prompt → live ad in 4 steps):**
+
+1. *"Generate a fitness ad for women 25–40"* → `imagen_generate_ad`
+2. *"Upload and launch a $50/day sales campaign"* → `meta_upload_image` → `meta_deploy_campaign`
+3. *"Now run DCO with 3 images and 2 headline variants"* → `meta_deploy_dco_campaign`
+
+---
+
+## Project Structure
+
+```
+src/
+  index.ts          — MCP server entry, tool routing
+  config.ts         — Environment config
+  meta-client.ts    — Meta Graph API client (SDK + fetch)
+  tools/
+    management.ts   — Campaign/ad set/ad read, status, preview, billing, recommendations
+    analyst.ts      — Insights, breakdown, intelligence, async reports, attribution windows
+    creator.ts      — Image/video upload, deploy campaign (DCO + regular)
+    debug.ts        — Ad delivery diagnostics
+    duplicator.ts   — Async campaign, ad set, and creative copy
+    audience.ts     — Custom audiences (customer, lookalike, website, engagement, video)
+    updater.ts      — Campaign/ad set/ad update tools
+    pixels.ts       — Pixel list and event stats
+    rules.ts        — Automated rules (list, create, update, delete)
+    leads.ts        — Lead forms and lead retrieval
+    library.ts      — Ad images, ad videos, Ads Library search
+    conversions.ts  — Conversions API (server-side events with PII hashing)
+    catalogs.ts     — Product catalogs, products, and product sets
+    testing.ts      — A/B split tests (ad studies)
+    value-rules.ts  — Value Rules (bid adjustment by segment)
+    budget-schedules.ts — High Demand Period budget boosts
+    copy.ts         — meta_generate_ad_copy (Gemini-powered, Meta char limits + hook frameworks)
+    brief.ts        — meta_generate_creative_brief (account analytics, competitor ads, or text signal)
+    adlibrary.ts    — meta_search_ad_library (competitor intelligence via /ads_archive)
+    performance.ts  — meta_analyze_creative_performance (winner/loser analysis + next_brief)
+  utils/
+    rate-limiter.ts — Score-based rate limit + exponential backoff retry
+    metrics.ts      — Computed metrics (CTR, CPC, ROAS, CPA, video, conversion funnel, unique clicks)
+    date-ranges.ts  — Time range resolution
+    batch.ts        — Graph API batch request utility
+    schemas.ts      — Shared TypeScript types
+    targeting.ts    — Shared targeting spec builder
+scripts/
+  get-token.ts           — OAuth setup wizard (npm run setup)
+  setup-system-user.ts   — System User token wizard (npm run setup-system-user)
+docs/                   — Full documentation
+```
+
+---
+
+## Docs
+
+Full documentation is in the [`docs/`](docs/) folder:
+
+- [Overview](docs/overview.md)
+- [Installation](docs/installation.md)
+- [Authentication](docs/authentication.md)
+- [Configuration](docs/configuration.md)
+- [Tools Reference](docs/tools.md)
+- [**Use Cases & Workflows**](docs/use-cases.md) ← practical end-to-end examples
+- [DRY RUN Mode](docs/dry-run.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+See also [TOOLS.md](TOOLS.md) for the full tool parameter reference.

@@ -8,6 +8,7 @@ import {
   bigint,
   serial,
   jsonb,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
@@ -51,7 +52,9 @@ export const usage = pgTable('usage', {
   inputTokens: bigint('input_tokens', { mode: 'number' }).default(0).notNull(),
   outputTokens: bigint('output_tokens', { mode: 'number' }).default(0).notNull(),
   estimatedCostCents: integer('estimated_cost_cents').default(0).notNull(),
-});
+}, (table) => [
+  uniqueIndex('usage_user_month_idx').on(table.userId, table.month),
+]);
 
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').primaryKey().defaultRandom(),

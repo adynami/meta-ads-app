@@ -5,7 +5,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Public routes — no auth required
-  const publicRoutes = ['/', '/login', '/api/auth'];
+  const publicRoutes = ['/', '/login', '/register', '/onboarding', '/docs', '/api/auth', '/api/billing/webhook'];
   if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'))) {
     return NextResponse.next();
   }

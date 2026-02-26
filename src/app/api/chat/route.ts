@@ -5,10 +5,10 @@ import { ALL_TOOLS, executeTool } from '@/lib/tool-executor';
 import { mcpToAnthropic } from '@/lib/tools-schema';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { users, adAccounts } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { users, adAccounts, conversations, usage } from '@/lib/db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { decrypt } from '@/lib/crypto';
-import { isTrialExpired } from '@/lib/plans';
+import { isTrialExpired, PLAN_LIMITS, type Plan } from '@/lib/plans';
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
 
 const anthropicTools = mcpToAnthropic(ALL_TOOLS);
@@ -37,7 +37,27 @@ export async function POST(req: NextRequest) {
       if (isTrialExpired(user.plan, user.trialEndsAt)) {
         return Response.json({
           error: 'Your trial has expired. Please subscribe to continue.',
+          code: 'TRIAL_EXPIRED',
         }, { status: 403 });
+      }
+
+      // Check monthly API call limit
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const planLimits = PLAN_LIMITS[user.plan as Plan] ?? PLAN_LIMITS.trial;
+
+      const [monthUsage] = await db
+        .select({ apiCalls: usage.apiCalls })
+        .from(usage)
+        .where(and(eq(usage.userId, user.id), eq(usage.month, month)))
+        .limit(1);
+
+      if (monthUsage && monthUsage.apiCalls >= planLimits.monthlyApiCalls) {
+        return Response.json({
+          error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade for more.`,
+          code: 'RATE_LIMITED',
+          usage: { current: monthUsage.apiCalls, limit: planLimits.monthlyApiCalls },
+        }, { status: 429 });
       }
 
       // Get the user's active ad account (use account_id from request or first active)
@@ -74,7 +94,11 @@ export async function POST(req: NextRequest) {
         dryRun: false,
       };
 
-      return await runChat(ctx, messages);
+      return await runChat(ctx, messages, {
+        userId: user.id,
+        adAccountId: account.id,
+        conversationId: body.conversationId,
+      });
     }
 
     // Fallback: env var credentials (dev/demo mode)
@@ -113,14 +137,23 @@ export async function POST(req: NextRequest) {
   }
 }
 
+interface PersistenceContext {
+  userId: string;
+  adAccountId: string;
+  conversationId?: string;
+}
+
 async function runChat(
   ctx: TenantContext,
   messages: Anthropic.MessageParam[],
+  persist?: PersistenceContext,
 ): Promise<Response> {
   const client = getAnthropicClient();
 
   let currentMessages: Anthropic.MessageParam[] = [...messages];
   let finalText = '';
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
   const toolCalls: { id: string; name: string; input: any; result: string }[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -131,6 +164,9 @@ async function runChat(
       tools: anthropicTools,
       messages: currentMessages,
     });
+
+    totalInputTokens += response.usage.input_tokens;
+    totalOutputTokens += response.usage.output_tokens;
 
     const textParts: string[] = [];
     const toolUseBlocks: Anthropic.ContentBlockParam[] = [];
@@ -179,5 +215,94 @@ async function runChat(
     ];
   }
 
+  // Persist conversation and usage to DB (fire-and-forget, don't block response)
+  if (persist) {
+    persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens).catch(
+      (err) => console.error('[chat/route] Persistence error:', err),
+    );
+  }
+
   return Response.json({ text: finalText, toolCalls });
+}
+
+async function persistChatData(
+  persist: PersistenceContext,
+  messages: Anthropic.MessageParam[],
+  assistantText: string,
+  inputTokens: number,
+  outputTokens: number,
+) {
+  const now = new Date();
+
+  // 1. Upsert conversation
+  const userMessage = messages[messages.length - 1];
+  const userText =
+    typeof userMessage?.content === 'string'
+      ? userMessage.content
+      : Array.isArray(userMessage?.content)
+        ? userMessage.content
+            .filter((b: any) => b.type === 'text')
+            .map((b: any) => b.text)
+            .join(' ')
+        : '';
+
+  const newMessages = [
+    { role: 'user', content: userText, timestamp: now.toISOString() },
+    { role: 'assistant', content: assistantText, timestamp: now.toISOString() },
+  ];
+
+  if (persist.conversationId) {
+    // Append to existing conversation
+    await db
+      .update(conversations)
+      .set({
+        messages: sql`${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(conversations.id, persist.conversationId),
+          eq(conversations.userId, persist.userId),
+        ),
+      );
+  } else {
+    // Create new conversation
+    const title = userText.slice(0, 100) || 'New conversation';
+    await db.insert(conversations).values({
+      userId: persist.userId,
+      adAccountId: persist.adAccountId,
+      title,
+      messages: newMessages,
+    });
+  }
+
+  // 2. Upsert usage for this month
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  await db
+    .insert(usage)
+    .values({
+      userId: persist.userId,
+      month,
+      apiCalls: 1,
+      inputTokens,
+      outputTokens,
+      estimatedCostCents: estimateCostCents(inputTokens, outputTokens),
+    })
+    .onConflictDoUpdate({
+      target: [usage.userId, usage.month],
+      set: {
+        apiCalls: sql`${usage.apiCalls} + 1`,
+        inputTokens: sql`${usage.inputTokens} + ${inputTokens}`,
+        outputTokens: sql`${usage.outputTokens} + ${outputTokens}`,
+        estimatedCostCents: sql`${usage.estimatedCostCents} + ${estimateCostCents(inputTokens, outputTokens)}`,
+      },
+    });
+}
+
+function estimateCostCents(inputTokens: number, outputTokens: number): number {
+  // Sonnet pricing: $3/MTok input, $15/MTok output
+  const inputCost = (inputTokens / 1_000_000) * 3;
+  const outputCost = (outputTokens / 1_000_000) * 15;
+  return Math.round((inputCost + outputCost) * 100);
 }
