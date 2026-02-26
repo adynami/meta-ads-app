@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-const metaMcpServer = path.resolve(__dirname, '../meta-mcp-server');
+const metaMcpServer = path.resolve(__dirname, 'packages/meta-mcp-server');
 
 const nextConfig: NextConfig = {
   transpilePackages: ['meta-mcp-server'],
