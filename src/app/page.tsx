@@ -27,11 +27,11 @@ export default function Home() {
     },
     {
       q: "Do I need technical skills or API knowledge to use it?",
-      a: "No. You speak to Adynami like you'd brief a colleague. Say what you want in plain English — it handles the API calls, the targeting logic, the budget math, all of it."
+      a: "No. You speak to Adynami like you'd brief a colleague. Say what you want in plain English. It handles the API calls, targeting logic, and budget math."
     },
     {
       q: "How does it connect to my Meta account securely?",
-      a: "You authenticate via Meta's official OAuth flow. Adynami requests the standard Marketing API permissions. Your credentials are never stored — we use token-based access that you can revoke anytime from your Meta Business Settings."
+      a: "You authenticate via Meta's official OAuth flow. Adynami requests the standard Marketing API permissions. Your credentials are never stored. We use token-based access that you can revoke anytime from your Meta Business Settings."
     },
     {
       q: "What is the Claude MCP Integration on the Agency plan?",
@@ -39,7 +39,7 @@ export default function Home() {
     },
     {
       q: "Can I manage multiple ad accounts?",
-      a: "Yes. Starter supports 1 account, Pro supports up to 5, and Agency supports unlimited accounts. Switch between accounts instantly from the sidebar — no logging in and out."
+      a: "Yes. Starter supports 1 account, Pro supports up to 5, and Agency supports unlimited accounts. Switch between accounts instantly from the sidebar. No switching logins."
     },
     {
       q: "How is my data handled? Can Adynami see my customer data?",
@@ -90,6 +90,7 @@ export default function Home() {
             <button onClick={() => scrollToSection('features')} className="text-gray-400 hover:text-white transition-colors text-sm">Features</button>
             <button onClick={() => scrollToSection('use-cases')} className="text-gray-400 hover:text-white transition-colors text-sm">Use Cases</button>
             <button onClick={() => scrollToSection('pricing')} className="text-gray-400 hover:text-white transition-colors text-sm">Pricing</button>
+            <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-sm">About</Link>
             <Link href="/docs" className="text-gray-400 hover:text-white transition-colors text-sm">Docs</Link>
           </div>
 
@@ -107,7 +108,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen pt-32 pb-20 overflow-hidden">
+      <section className="relative min-h-screen pt-32 pb-12 overflow-hidden">
         <div className="aurora">
           <div className="aurora-orb aurora-orb-1"></div>
           <div className="aurora-orb aurora-orb-2"></div>
@@ -122,11 +123,11 @@ export default function Home() {
             </p>
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Your Meta Ads.<br />
-              <span className="gradient-text">Controlled By Conversation.</span>
+              <span className="gradient-text">Managed in Minutes.</span>
             </h1>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Adynami connects to your Meta account and lets you operate it entirely through chat.
-              Launch campaigns, fix what&apos;s broken, find what&apos;s working — no dashboards, no Ads Manager, no manual reports.
+              Adynami connects to your Meta account and turns hours of dashboard work into simple text commands.
+              Launch campaigns, kill wasted spend, and pull reports by typing what you want. No dashboards. No Ads Manager. No manual reports.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -207,9 +208,9 @@ export default function Home() {
                     <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-5 py-4 max-w-lg shadow-lg shadow-purple-500/5">
                       <p className="text-sm text-gray-300 mb-3">Here are campaigns with spend but zero conversions in the last 7 days:</p>
                       <div className="mono text-xs bg-black/30 rounded-lg p-4 mb-3 border border-white/5">
-                        <p className="text-red-400">&#x1f534; Prospecting — Broad US <span className="text-white">$284</span> · 0 conversions</p>
-                        <p className="text-red-400">&#x1f534; Retargeting — 30 Day Window <span className="text-white">$97</span> · 0 conversions</p>
-                        <p className="text-red-400">&#x1f534; TOF Video — 18-34 <span className="text-white">$143</span> · 0 conversions</p>
+                        <p className="text-red-400">&#x1f534; Prospecting: Broad US <span className="text-white">$284</span> · 0 conversions</p>
+                        <p className="text-red-400">&#x1f534; Retargeting: 30 Day Window <span className="text-white">$97</span> · 0 conversions</p>
+                        <p className="text-red-400">&#x1f534; TOF Video: 18-34 <span className="text-white">$143</span> · 0 conversions</p>
                         <p className="text-yellow-400 mt-2">Total wasted spend this week: <span className="text-white font-semibold">$524</span></p>
                       </div>
                       <p className="text-sm text-gray-300">Want me to pause these and reallocate budget to your ROAS winners?</p>
@@ -228,7 +229,7 @@ export default function Home() {
                     <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-5 py-4 max-w-lg shadow-lg shadow-purple-500/5">
                       <p className="text-sm text-gray-300 mb-3">Done. Paused all 3. Reallocated $174/day to your top performers:</p>
                       <div className="mono text-xs space-y-1 mb-3">
-                        <p className="text-green-400">&#x2705; Summer Hero — ROAS 4.2x</p>
+                        <p className="text-green-400">&#x2705; Summer Hero: ROAS 4.2x</p>
                         <p className="text-cyan-400 ml-4">+$87/day &#x2192; now <span className="text-white font-semibold">$195/day</span></p>
                       </div>
                       <p className="text-sm text-gray-300">Your blended ROAS should recover within 24–48 hours.</p>
@@ -264,10 +265,10 @@ export default function Home() {
       </section>
 
       {/* The Problem Section */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="dot-pattern absolute inset-0 opacity-20"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-10">
             Ads Manager Was Built for Clicking.<br />
             <span className="gradient-text">Adynami Was Built for Thinking.</span>
           </h2>
@@ -296,11 +297,11 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-6 gradient-text">With Adynami</h3>
               <ul className="space-y-4">
                 {[
-                  { prompt: '"Pause everything with ROAS under 1.5"', result: '— done' },
-                  { prompt: '"Which campaigns are bleeding?"', result: '— answered in seconds' },
-                  { prompt: '"Build a lookalike from my top customers"', result: '— done' },
-                  { prompt: '"Scale my winners by 20%"', result: '— one sentence' },
-                  { prompt: '"Which creative has the best hook?"', result: '— shown immediately' },
+                  { prompt: '"Pause everything with ROAS under 1.5"', result: '→ done' },
+                  { prompt: '"Which campaigns are bleeding?"', result: '→ answered in seconds' },
+                  { prompt: '"Build a lookalike from my top customers"', result: '→ done' },
+                  { prompt: '"Scale my winners by 20%"', result: '→ one sentence' },
+                  { prompt: '"Which creative has the best hook?"', result: '→ shown immediately' },
                   { prompt: 'Your hours back.', result: 'Your results up.' }
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
@@ -318,18 +319,18 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">How It Works</h2>
-          <p className="text-gray-400 text-center mb-16 text-lg">Three steps. Full control.</p>
+          <p className="text-gray-400 text-center mb-10 text-lg">Three steps. Full control.</p>
 
           <div className="grid md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-24 left-1/4 right-1/4 h-0.5 step-line"></div>
 
             {[
               { num: "1", title: "Connect Your Account", desc: "Link your Meta Ads account securely. API credentials, 2 minutes, then Adynami has full read and write access." },
-              { num: "2", title: "Describe What You Want", desc: "Type an instruction, ask a question, or diagnose a problem. Adynami understands how advertisers think and speak — metrics, tactics, and all." },
-              { num: "3", title: "It Executes", desc: "Adynami hits the Meta API directly. Campaigns launch, budgets shift, audiences build, reports surface — in real time. No confirmation screens. No waiting." }
+              { num: "2", title: "Describe What You Want", desc: "Type like you'd brief a colleague. Metrics, tactics, plain English. Adynami understands how advertisers think and gets straight to work." },
+              { num: "3", title: "It Executes", desc: "Adynami hits the Meta API directly. Campaigns launch, budgets shift, audiences build, reports surface in real time. No extra screens. No waiting." }
             ].map((step, i) => (
               <div key={i} className="glass-card glass-card-hover rounded-2xl p-8 text-center relative">
                 <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center text-xl font-bold mx-auto mb-6 shadow-lg shadow-purple-500/30">
@@ -344,22 +345,22 @@ export default function Home() {
       </section>
 
       {/* Capabilities Grid */}
-      <section id="features" className="py-24 relative">
+      <section id="features" className="py-16 relative">
         <div className="dot-pattern absolute inset-0 opacity-20"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">
             Everything You Can Do From <span className="gradient-text">One Conversation</span>
           </h2>
-          <p className="text-gray-400 text-center mb-16 text-lg">Full control. No menus.</p>
+          <p className="text-gray-400 text-center mb-10 text-lg">Everything Ads Manager does, without the clicking.</p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: Zap, title: "Campaign Operations", desc: "Launch, pause, duplicate, and optimize campaigns from a single instruction. Full creation including targeting, creative, budget, and UTM tracking." },
               { icon: BarChart3, title: "Performance Diagnostics", desc: "Zero conversions? Ask Adynami to run the full diagnostic: pixel funnel audit, creative scoring by engagement, demographic breakdown, placement analysis, frequency check." },
               { icon: Layers, title: "Creative Testing & DCO", desc: "Score creatives by CTR and outbound clicks before purchase data arrives. Run Dynamic Creative Optimization tests across headline and image combinations." },
-              { icon: Users, title: "Audience Building", desc: "Website retargeting, video view audiences, page engagement segments, customer list lookalikes — built on demand, in seconds. Estimate reach before committing budget." },
+              { icon: Users, title: "Audience Building", desc: "Website retargeting, video view audiences, page engagement segments, customer list lookalikes. Built on demand, with reach estimates before you spend." },
               { icon: Shield, title: "Signal Recovery (iOS 14+)", desc: "Send server-side conversion events via CAPI to recover attribution lost to iOS opt-outs. Full funnel: ViewContent, AddToCart, InitiateCheckout, Purchase." },
-              { icon: Search, title: "Competitive Intelligence", desc: "Search the Meta Ads Library for competitor creatives. See what's been running for 90+ days — those are the profitable ads worth reverse-engineering." }
+              { icon: Search, title: "Competitive Intelligence", desc: "Search the Meta Ads Library for competitor creatives. See what's been running for 90+ days. Those are the ones worth studying." }
             ].map((item, i) => (
               <div key={i} className="glass-card glass-card-hover rounded-2xl p-8 group">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition-colors">
@@ -374,10 +375,10 @@ export default function Home() {
       </section>
 
       {/* Use Cases */}
-      <section id="use-cases" className="py-24">
+      <section id="use-cases" className="py-16">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">Built for Every Situation</h2>
-          <p className="text-gray-400 text-center mb-12 text-lg">12 workflow categories. One conversation window.</p>
+          <p className="text-gray-400 text-center mb-12 text-lg">12 workflow categories. One chat window.</p>
 
           <div className="flex flex-wrap justify-center gap-3 mb-8">
             {useCases.map((useCase, i) => (
@@ -395,11 +396,11 @@ export default function Home() {
       </section>
 
       {/* Example Conversations */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="dot-pattern absolute inset-0 opacity-20"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">Just Say What You Want</h2>
-          <p className="text-gray-400 text-center mb-16 text-lg">Real prompts. Real outcomes.</p>
+          <p className="text-gray-400 text-center mb-10 text-lg">Real prompts. Real outcomes.</p>
 
           <div className="grid md:grid-cols-2 gap-6">
             {exampleConversations.map((conv, i) => (
@@ -418,7 +419,7 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 relative">
+      <section id="pricing" className="py-16 relative">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">Simple Pricing. Serious Capability.</h2>
           <p className="text-gray-400 text-center mb-8 text-lg">No command limits. No feature gates on core functionality. Just a tool that pays for itself.</p>
@@ -531,10 +532,10 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-24 relative">
+      <section className="py-16 relative">
         <div className="dot-pattern absolute inset-0 opacity-20"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">Trusted by Performance Marketers</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-10">Trusted by Performance Marketers</h2>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
@@ -558,9 +559,9 @@ export default function Home() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24">
+      <section className="py-16">
         <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">Frequently Asked Questions</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-10">Frequently Asked Questions</h2>
 
           <div className="space-y-4">
             {faqs.map((faq, i) => (
@@ -584,7 +585,7 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 relative overflow-hidden">
+      <section className="py-16 relative overflow-hidden">
         <div className="aurora">
           <div className="aurora-orb aurora-orb-1"></div>
           <div className="aurora-orb aurora-orb-2"></div>
@@ -592,7 +593,7 @@ export default function Home() {
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-6xl font-bold mb-6">
             Stop Clicking.<br />
-            <span className="gradient-text">Start Commanding.</span>
+            <span className="gradient-text">Start Scaling.</span>
           </h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
             Start your free trial today. Your first conversation could save you hours and improve your ROAS before the week is out.
@@ -614,13 +615,14 @@ export default function Home() {
                 <span className="text-white">Ady</span>
                 <span className="gradient-text">nami</span>
               </span>
-              <span className="text-gray-500 text-sm ml-4">The conversational AI interface for Meta advertising.</span>
+              <span className="text-gray-500 text-sm ml-4">AI-powered Meta ads management.</span>
             </div>
 
             <div className="flex items-center gap-8 text-sm text-gray-400">
               <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button>
               <button onClick={() => scrollToSection('use-cases')} className="hover:text-white transition-colors">Use Cases</button>
               <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button>
+              <Link href="/about" className="hover:text-white transition-colors">About</Link>
               <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
             </div>
           </div>
