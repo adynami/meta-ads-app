@@ -206,10 +206,11 @@ export default function About() {
 
             <div className="flex items-center gap-8 text-sm text-gray-400">
               <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
-              <Link href="/#use-cases" className="hover:text-white transition-colors">Use Cases</Link>
               <Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
               <Link href="/about" className="hover:text-white transition-colors">About</Link>
               <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             </div>
           </div>
 

@@ -43,7 +43,8 @@ export default function Home() {
     },
     {
       q: "How is my data handled? Can Adynami see my customer data?",
-      a: "Adynami processes your Meta Ads data to respond to your queries. We don't store your campaign data beyond the session. For CAPI events, PII is hashed before transmission. We never sell or share your data. Full details in our privacy policy."
+      a: "Adynami processes your Meta Ads data to respond to your queries. We don\u2019t store your campaign data beyond the session. For CAPI events, PII is hashed before transmission. We never sell or share your data.",
+      link: "/privacy"
     }
   ];
 
@@ -576,6 +577,9 @@ export default function Home() {
                 {openFaq === i && (
                   <div className="px-6 pb-5 text-gray-400 text-sm leading-relaxed">
                     {faq.a}
+                    {'link' in faq && faq.link && (
+                      <>{' '}<Link href={faq.link} className="text-purple-400 hover:text-purple-300 underline">Read our privacy policy</Link>.</>
+                    )}
                   </div>
                 )}
               </div>
@@ -624,6 +628,8 @@ export default function Home() {
               <button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button>
               <Link href="/about" className="hover:text-white transition-colors">About</Link>
               <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             </div>
           </div>
 
