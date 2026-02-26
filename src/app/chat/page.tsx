@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, ChevronDown, Bell, Settings, Menu, X } from 'lucide-react';
+import { Plus, ChevronDown, Bell, Settings, Menu, X, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import NoAccount from '@/components/errors/NoAccount';
 import TokenExpired from '@/components/errors/TokenExpired';
@@ -192,6 +193,12 @@ export default function ChatPage() {
               <Settings className="w-5 h-5" />
             </button>
           </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </div>
 

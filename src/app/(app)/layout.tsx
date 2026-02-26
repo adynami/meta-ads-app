@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, Settings, CreditCard, LogOut, Menu, X } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -77,6 +78,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">User</p>
             </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>

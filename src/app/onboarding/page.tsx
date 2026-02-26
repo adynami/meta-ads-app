@@ -58,6 +58,7 @@ export default function OnboardingPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch accounts from Meta when entering step 2
   useEffect(() => {
@@ -226,6 +227,19 @@ export default function OnboardingPage() {
                 add more later.
               </p>
 
+              {!loadingAccounts && accounts.length > 0 && (
+                <div className="glass-card rounded-xl p-1.5 flex items-center gap-2 mb-6">
+                  <Search className="w-4 h-4 text-gray-500 ml-3 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search accounts by name or ID..."
+                    className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none px-2 py-3"
+                  />
+                </div>
+              )}
+
               {loadingAccounts ? (
                 <div className="glass-card rounded-2xl p-12 text-center">
                   <div className="flex justify-center mb-4">
@@ -248,9 +262,28 @@ export default function OnboardingPage() {
                     your business.
                   </p>
                 </div>
-              ) : (
+              ) : (() => {
+                const filteredAccounts = accounts.filter((account) => {
+                  if (!searchQuery) return true;
+                  const q = searchQuery.toLowerCase();
+                  return (
+                    (account.name || '').toLowerCase().includes(q) ||
+                    account.id.toLowerCase().includes(q)
+                  );
+                });
+                return filteredAccounts.length === 0 ? (
+                  <div className="glass-card rounded-2xl p-12 text-center mb-8">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-8 h-8 text-gray-500" />
+                    </div>
+                    <p className="text-gray-400 mb-2">No matching accounts</p>
+                    <p className="text-gray-500 text-sm">
+                      Try a different search term.
+                    </p>
+                  </div>
+                ) : (
                 <div className="space-y-3 mb-8">
-                  {accounts.map((account, index) => (
+                  {filteredAccounts.map((account, index) => (
                     <button
                       key={account.id}
                       onClick={() => setSelectedAccount(account.id)}
@@ -289,7 +322,8 @@ export default function OnboardingPage() {
                     </button>
                   ))}
                 </div>
-              )}
+                );
+              })()}
 
               <button
                 onClick={async () => {
