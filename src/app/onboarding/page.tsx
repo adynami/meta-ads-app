@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 
 interface AdAccount {
-  id: string;
-  metaAdAccountId: string;
-  metaAccountName: string | null;
-  isActive: boolean;
+  id: string;           // act_xxxxx
+  name: string;
+  account_status: number;
+  currency: string;
 }
 
 const permissionBullets = [
@@ -56,19 +56,24 @@ export default function OnboardingPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
 
-  // Fetch accounts when entering step 2
+  // Fetch accounts from Meta when entering step 2
   useEffect(() => {
     if (step === 2) {
       setLoadingAccounts(true);
-      fetch('/api/accounts')
+      fetch('/api/meta/ad-accounts')
         .then((res) => {
+          if (res.status === 401) {
+            window.location.href = '/login';
+            return null;
+          }
           if (res.ok) return res.json();
           return { accounts: [] };
         })
         .then((data) => {
-          setAccounts(data.accounts || []);
+          if (data) setAccounts(data.accounts || []);
         })
         .catch(() => {
           setAccounts([]);
@@ -260,17 +265,14 @@ export default function OnboardingPage() {
                           gradientColors[index % gradientColors.length]
                         } flex items-center justify-center text-sm font-bold flex-shrink-0`}
                       >
-                        {getInitials(
-                          account.metaAccountName,
-                          account.metaAdAccountId,
-                        )}
+                        {getInitials(account.name, account.id)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
-                          {account.metaAccountName ?? 'Unnamed Account'}
+                          {account.name || 'Unnamed Account'}
                         </p>
                         <p className="text-sm text-gray-500 truncate">
-                          {account.metaAdAccountId}
+                          {account.id}
                         </p>
                       </div>
                       <div
@@ -290,18 +292,49 @@ export default function OnboardingPage() {
               )}
 
               <button
-                onClick={() => {
-                  if (selectedAccount) setStep(3);
+                onClick={async () => {
+                  if (!selectedAccount) return;
+                  setSaving(true);
+                  try {
+                    const res = await fetch('/api/meta/ad-accounts', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ selectedAccountId: selectedAccount }),
+                    });
+                    if (res.status === 401) {
+                      window.location.href = '/login';
+                      return;
+                    }
+                    if (!res.ok) {
+                      const data = await res.json();
+                      alert(data.error || 'Failed to save account');
+                      return;
+                    }
+                    setStep(3);
+                  } catch {
+                    alert('Something went wrong. Please try again.');
+                  } finally {
+                    setSaving(false);
+                  }
                 }}
-                disabled={!selectedAccount}
+                disabled={!selectedAccount || saving}
                 className={`w-full font-semibold py-4 px-6 rounded-xl flex items-center justify-center gap-3 text-lg transition-all ${
-                  selectedAccount
+                  selectedAccount && !saving
                     ? 'gradient-bg text-white glow-btn'
                     : 'bg-white/10 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Continue
-                <ArrowRight className="w-5 h-5" />
+                {saving ? (
+                  <>
+                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </div>
           )}

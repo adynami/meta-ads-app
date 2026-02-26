@@ -62,7 +62,14 @@ export const authConfig: NextAuthConfig = {
       }
     },
 
-    async session({ session }) {
+    async jwt({ token, account }) {
+      if (account?.access_token) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
       if (session.user?.email) {
         const dbUser = await db
           .select()
@@ -71,9 +78,12 @@ export const authConfig: NextAuthConfig = {
           .limit(1);
 
         if (dbUser[0]) {
-          (session as any).userId = dbUser[0].id;
-          (session as any).plan = dbUser[0].plan;
+          session.userId = dbUser[0].id;
+          session.plan = dbUser[0].plan;
         }
+      }
+      if (token?.accessToken) {
+        session.accessToken = token.accessToken as string;
       }
       return session;
     },
