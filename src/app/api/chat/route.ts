@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import type Anthropic from '@anthropic-ai/sdk';
 import { getAnthropicClient, SYSTEM_PROMPT } from '@/lib/anthropic';
 import { ALL_TOOLS, executeTool } from '@/lib/tool-executor';
-import { mcpToAnthropic } from '@/lib/tools-schema';
+import { mcpToAnthropicCached } from '@/lib/tools-schema';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, adAccounts, conversations, usage } from '@/lib/db/schema';
@@ -18,7 +18,7 @@ export const config = {
   api: { bodyParser: { sizeLimit: '50mb' } },
 };
 
-const anthropicTools = mcpToAnthropic(ALL_TOOLS);
+const anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
 const MAX_TOOL_ROUNDS = 10;
 
 export async function POST(req: NextRequest) {
@@ -263,6 +263,30 @@ interface AccountLabel {
   name: string;
 }
 
+/**
+ * Truncate tool_result content blocks in older messages to reduce token usage.
+ * Keeps the last `recentToKeep` messages fully intact; older tool results
+ * are trimmed to `maxLen` characters.
+ */
+function truncateOldToolResults(
+  messages: Anthropic.MessageParam[],
+  recentToKeep = 8,
+  maxLen = 800,
+): Anthropic.MessageParam[] {
+  const cutoff = Math.max(0, messages.length - recentToKeep);
+  return messages.map((msg, i) => {
+    if (i >= cutoff || msg.role !== 'user' || !Array.isArray(msg.content)) return msg;
+    return {
+      ...msg,
+      content: (msg.content as any[]).map((block) => {
+        if (block.type !== 'tool_result' || typeof block.content !== 'string') return block;
+        if (block.content.length <= maxLen) return block;
+        return { ...block, content: block.content.slice(0, maxLen) + '\n...[truncated]' };
+      }),
+    };
+  });
+}
+
 async function runChat(
   ctx: TenantContext | TenantContext[],
   messages: Anthropic.MessageParam[],
@@ -273,27 +297,39 @@ async function runChat(
   const client = getAnthropicClient();
   const isMultiAccount = Array.isArray(ctx);
 
-  const systemPrompt = isMultiAccount && accountNames
-    ? `${SYSTEM_PROMPT}\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`
-    : SYSTEM_PROMPT;
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ...(isMultiAccount && accountNames ? [{
+      type: 'text' as const,
+      text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
+    }] : []),
+  ];
 
-  let currentMessages: Anthropic.MessageParam[] = [...messages];
+  let currentMessages: Anthropic.MessageParam[] = truncateOldToolResults([...messages]);
   let finalText = '';
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let totalCacheCreationTokens = 0;
+  let totalCacheReadTokens = 0;
   const toolCalls: { id: string; name: string; input: any; result: string }[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: systemPrompt,
+      system: systemBlocks,
       tools: anthropicTools,
       messages: currentMessages,
     });
 
+    const cacheRead = (response.usage as any).cache_read_input_tokens ?? 0;
+    const cacheCreate = (response.usage as any).cache_creation_input_tokens ?? 0;
+    console.log(`[chat] round=${round} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`);
+
     totalInputTokens += response.usage.input_tokens;
     totalOutputTokens += response.usage.output_tokens;
+    totalCacheCreationTokens += cacheCreate;
+    totalCacheReadTokens += cacheRead;
 
     const textParts: string[] = [];
     const toolUseBlocks: Anthropic.ContentBlockParam[] = [];
@@ -361,7 +397,7 @@ async function runChat(
   let returnedConversationId: string | undefined;
   if (persist) {
     try {
-      returnedConversationId = await persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens);
+      returnedConversationId = await persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens, totalCacheCreationTokens, totalCacheReadTokens);
     } catch (err) {
       console.error('[chat/route] Persistence error:', err);
     }
@@ -380,6 +416,8 @@ async function persistChatData(
   assistantText: string,
   inputTokens: number,
   outputTokens: number,
+  cacheCreationTokens = 0,
+  cacheReadTokens = 0,
 ): Promise<string> {
   const now = new Date();
 
@@ -439,7 +477,7 @@ async function persistChatData(
       apiCalls: 1,
       inputTokens,
       outputTokens,
-      estimatedCostCents: estimateCostCents(inputTokens, outputTokens),
+      estimatedCostCents: estimateCostCents(inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens),
     })
     .onConflictDoUpdate({
       target: [usage.userId, usage.month],
@@ -447,16 +485,24 @@ async function persistChatData(
         apiCalls: sql`${usage.apiCalls} + 1`,
         inputTokens: sql`${usage.inputTokens} + ${inputTokens}`,
         outputTokens: sql`${usage.outputTokens} + ${outputTokens}`,
-        estimatedCostCents: sql`${usage.estimatedCostCents} + ${estimateCostCents(inputTokens, outputTokens)}`,
+        estimatedCostCents: sql`${usage.estimatedCostCents} + ${estimateCostCents(inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens)}`,
       },
     });
 
   return conversationId!;
 }
 
-function estimateCostCents(inputTokens: number, outputTokens: number): number {
+function estimateCostCents(
+  inputTokens: number,
+  outputTokens: number,
+  cacheCreationTokens = 0,
+  cacheReadTokens = 0,
+): number {
   // Sonnet pricing: $3/MTok input, $15/MTok output
+  // Cache write: $3.75/MTok, Cache read: $0.30/MTok
   const inputCost = (inputTokens / 1_000_000) * 3;
   const outputCost = (outputTokens / 1_000_000) * 15;
-  return Math.round((inputCost + outputCost) * 100);
+  const cacheWriteCost = (cacheCreationTokens / 1_000_000) * 3.75;
+  const cacheReadCost = (cacheReadTokens / 1_000_000) * 0.30;
+  return Math.round((inputCost + outputCost + cacheWriteCost + cacheReadCost) * 100);
 }

@@ -23,3 +23,18 @@ export function mcpToAnthropic(tools: McpToolDef[]): Anthropic.Tool[] {
     input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
   }));
 }
+
+/**
+ * Same as mcpToAnthropic but marks the last tool with cache_control
+ * so the entire tool list is cached by Anthropic's prompt caching.
+ */
+export function mcpToAnthropicCached(tools: McpToolDef[]): Anthropic.Tool[] {
+  const result = mcpToAnthropic(tools);
+  if (result.length > 0) {
+    result[result.length - 1] = {
+      ...result[result.length - 1],
+      cache_control: { type: 'ephemeral' },
+    };
+  }
+  return result;
+}
