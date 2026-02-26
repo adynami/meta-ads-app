@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, ChevronDown, Bell, Settings, Menu, X, LogOut } from 'lucide-react';
+import { Plus, ChevronDown, Bell, Settings, Menu, X, LogOut, MessageSquare, LayoutDashboard } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
+import { DashboardPanel } from '@/components/dashboard/DashboardPanel';
 import NoAccount from '@/components/errors/NoAccount';
 import TokenExpired from '@/components/errors/TokenExpired';
 import TrialExpired from '@/components/errors/TrialExpired';
+import { cn } from '@/lib/utils';
 
 interface AdAccount {
   id: string;
@@ -62,6 +64,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   // Track whether this is a "new chat" press vs account switch
   const [loadRecent, setLoadRecent] = useState(true);
+  const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
 
   useEffect(() => {
     Promise.all([
@@ -154,6 +157,7 @@ export default function ChatPage() {
                         setConversationId(null);
                         setLoadRecent(true);
                         setNewChatKey((k) => k + 1);
+                        setActiveTab('chat');
                       }}
                       className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
                         selectedAccountId === 'all'
@@ -289,6 +293,39 @@ export default function ChatPage() {
             )}
           </div>
 
+          {/* Tab switcher */}
+          <div className="flex items-center bg-white/5 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                activeTab === 'chat'
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:text-gray-200',
+              )}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Chat
+            </button>
+            <button
+              onClick={() => {
+                if (selectedAccountId !== 'all') setActiveTab('dashboard');
+              }}
+              disabled={selectedAccountId === 'all'}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                activeTab === 'dashboard'
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:text-gray-200',
+                selectedAccountId === 'all' && 'opacity-40 cursor-not-allowed hover:text-gray-400',
+              )}
+              title={selectedAccountId === 'all' ? 'Select a single account to use Dashboard' : undefined}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </button>
+          </div>
+
           <div className="flex items-center gap-4">
             <Link href="/settings" className="text-gray-400 hover:text-white transition-colors">
               <Settings className="w-5 h-5" />
@@ -299,15 +336,22 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Chat Area */}
+        {/* Content Area */}
         <main className="flex-1 min-h-0">
-          <ChatWindow
-            key={`${selectedAccountId}-${newChatKey}`}
-            accountId={selectedAccountId}
-            conversationId={conversationId}
-            onConversationId={setConversationId}
-            loadRecent={loadRecent}
-          />
+          {activeTab === 'chat' ? (
+            <ChatWindow
+              key={`${selectedAccountId}-${newChatKey}`}
+              accountId={selectedAccountId}
+              conversationId={conversationId}
+              onConversationId={setConversationId}
+              loadRecent={loadRecent}
+            />
+          ) : (
+            <DashboardPanel
+              key={selectedAccountId ?? ''}
+              accountId={selectedAccountId ?? ''}
+            />
+          )}
         </main>
       </div>
     </div>
