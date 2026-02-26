@@ -71,6 +71,38 @@ export async function POST(req: NextRequest) {
         return Response.json({ error: 'messages is required' }, { status: 400 });
       }
 
+      // Multi-account mode
+      if (accountId === 'all') {
+        const allAccounts = await db
+          .select()
+          .from(adAccounts)
+          .where(and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true)));
+
+        if (allAccounts.length === 0) {
+          return Response.json({
+            error: 'No connected ad accounts found. Go to Settings to connect your Meta ad account.',
+          }, { status: 400 });
+        }
+
+        const contexts: TenantContext[] = allAccounts.map((a) => ({
+          accessToken: decrypt(a.accessTokenEnc),
+          adAccountId: a.metaAdAccountId,
+          apiVersion: 'v25.0',
+          dryRun: false,
+        }));
+
+        const accountNames = allAccounts.map((a) => ({
+          id: a.metaAdAccountId,
+          name: a.metaAccountName || a.metaAdAccountId,
+        }));
+
+        return await runChat(contexts, messages, {
+          userId: user.id,
+          adAccountId: null,
+          conversationId: body.conversationId,
+        }, accountNames);
+      }
+
       const accountFilter = accountId
         ? and(eq(adAccounts.userId, user.id), eq(adAccounts.id, accountId), eq(adAccounts.isActive, true))
         : and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true));
@@ -139,16 +171,27 @@ export async function POST(req: NextRequest) {
 
 interface PersistenceContext {
   userId: string;
-  adAccountId: string;
+  adAccountId: string | null;
   conversationId?: string;
 }
 
+interface AccountLabel {
+  id: string;
+  name: string;
+}
+
 async function runChat(
-  ctx: TenantContext,
+  ctx: TenantContext | TenantContext[],
   messages: Anthropic.MessageParam[],
   persist?: PersistenceContext,
+  accountNames?: AccountLabel[],
 ): Promise<Response> {
   const client = getAnthropicClient();
+  const isMultiAccount = Array.isArray(ctx);
+
+  const systemPrompt = isMultiAccount && accountNames
+    ? `${SYSTEM_PROMPT}\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`
+    : SYSTEM_PROMPT;
 
   let currentMessages: Anthropic.MessageParam[] = [...messages];
   let finalText = '';
@@ -160,7 +203,7 @@ async function runChat(
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       tools: anthropicTools,
       messages: currentMessages,
     });
@@ -190,7 +233,22 @@ async function runChat(
     const toolResults = await Promise.all(
       toolUseBlocks.map(async (block) => {
         if (block.type !== 'tool_use') return null;
-        const result = await executeTool(ctx, block.name, block.input as Record<string, any>);
+
+        let result: string;
+
+        if (isMultiAccount && accountNames) {
+          // Execute against all accounts and aggregate
+          const perAccount = await Promise.all(
+            (ctx as TenantContext[]).map(async (tenantCtx, i) => {
+              const r = await executeTool(tenantCtx, block.name, block.input as Record<string, any>);
+              return { account: accountNames[i].name, result: r };
+            }),
+          );
+          result = JSON.stringify(perAccount);
+        } else {
+          result = await executeTool(ctx as TenantContext, block.name, block.input as Record<string, any>);
+        }
+
         toolCalls.push({
           id: block.id,
           name: block.name,
@@ -215,14 +273,21 @@ async function runChat(
     ];
   }
 
-  // Persist conversation and usage to DB (fire-and-forget, don't block response)
+  // Persist conversation and usage to DB — await to get conversationId
+  let returnedConversationId: string | undefined;
   if (persist) {
-    persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens).catch(
-      (err) => console.error('[chat/route] Persistence error:', err),
-    );
+    try {
+      returnedConversationId = await persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens);
+    } catch (err) {
+      console.error('[chat/route] Persistence error:', err);
+    }
   }
 
-  return Response.json({ text: finalText, toolCalls });
+  return Response.json({
+    text: finalText,
+    toolCalls,
+    conversationId: returnedConversationId ?? persist?.conversationId,
+  });
 }
 
 async function persistChatData(
@@ -231,7 +296,7 @@ async function persistChatData(
   assistantText: string,
   inputTokens: number,
   outputTokens: number,
-) {
+): Promise<string> {
   const now = new Date();
 
   // 1. Upsert conversation
@@ -251,7 +316,9 @@ async function persistChatData(
     { role: 'assistant', content: assistantText, timestamp: now.toISOString() },
   ];
 
-  if (persist.conversationId) {
+  let conversationId = persist.conversationId;
+
+  if (conversationId) {
     // Append to existing conversation
     await db
       .update(conversations)
@@ -261,19 +328,20 @@ async function persistChatData(
       })
       .where(
         and(
-          eq(conversations.id, persist.conversationId),
+          eq(conversations.id, conversationId),
           eq(conversations.userId, persist.userId),
         ),
       );
   } else {
     // Create new conversation
     const title = userText.slice(0, 100) || 'New conversation';
-    await db.insert(conversations).values({
+    const [inserted] = await db.insert(conversations).values({
       userId: persist.userId,
       adAccountId: persist.adAccountId,
       title,
       messages: newMessages,
-    });
+    }).returning({ id: conversations.id });
+    conversationId = inserted.id;
   }
 
   // 2. Upsert usage for this month
@@ -298,6 +366,8 @@ async function persistChatData(
         estimatedCostCents: sql`${usage.estimatedCostCents} + ${estimateCostCents(inputTokens, outputTokens)}`,
       },
     });
+
+  return conversationId!;
 }
 
 function estimateCostCents(inputTokens: number, outputTokens: number): number {

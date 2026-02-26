@@ -44,27 +44,84 @@ export async function exchangeForLongLivedToken(
 
 /**
  * Fetch all ad accounts the user has access to.
+ * Queries personal accounts via `me/adaccounts` and also discovers accounts
+ * through all business managers the user belongs to (owned + client accounts).
  */
 export async function fetchAdAccounts(
   accessToken: string,
 ): Promise<AdAccountInfo[]> {
-  const params = new URLSearchParams({
+  const fields = 'id,name,account_status,currency';
+  const seen = new Map<string, AdAccountInfo>();
+
+  // 1. Personal ad accounts (me/adaccounts)
+  const personalParams = new URLSearchParams({
     access_token: accessToken,
-    fields: 'id,name,account_status,currency',
+    fields,
     limit: '100',
   });
 
-  const res = await fetch(
-    `${GRAPH_BASE}/v25.0/me/adaccounts?${params}`,
+  const personalRes = await fetch(
+    `${GRAPH_BASE}/v25.0/me/adaccounts?${personalParams}`,
   );
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message ?? `Failed to fetch ad accounts: ${res.status}`);
+  if (personalRes.ok) {
+    const personalData = await personalRes.json();
+    for (const acct of personalData.data ?? []) {
+      seen.set(acct.id, acct);
+    }
   }
 
-  const data = await res.json();
-  return data.data ?? [];
+  // 2. Discover business managers the user belongs to
+  const bizParams = new URLSearchParams({
+    access_token: accessToken,
+    fields: 'id,name',
+    limit: '100',
+  });
+
+  const bizRes = await fetch(
+    `${GRAPH_BASE}/v25.0/me/businesses?${bizParams}`,
+  );
+
+  if (bizRes.ok) {
+    const bizData = await bizRes.json();
+    const businesses: { id: string }[] = bizData.data ?? [];
+
+    // For each business, fetch owned and client ad accounts in parallel
+    await Promise.all(
+      businesses.map(async (biz) => {
+        const endpoints = [
+          `${GRAPH_BASE}/v25.0/${biz.id}/owned_ad_accounts`,
+          `${GRAPH_BASE}/v25.0/${biz.id}/client_ad_accounts`,
+        ];
+
+        await Promise.all(
+          endpoints.map(async (endpoint) => {
+            const p = new URLSearchParams({
+              access_token: accessToken,
+              fields,
+              limit: '100',
+            });
+
+            try {
+              const r = await fetch(`${endpoint}?${p}`);
+              if (r.ok) {
+                const d = await r.json();
+                for (const acct of d.data ?? []) {
+                  if (!seen.has(acct.id)) {
+                    seen.set(acct.id, acct);
+                  }
+                }
+              }
+            } catch {
+              // Ignore individual business endpoint failures
+            }
+          }),
+        );
+      }),
+    );
+  }
+
+  return Array.from(seen.values());
 }
 
 /**

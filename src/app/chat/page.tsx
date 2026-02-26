@@ -56,8 +56,12 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [newChatKey, setNewChatKey] = useState(0);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  // Track whether this is a "new chat" press vs account switch
+  const [loadRecent, setLoadRecent] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -120,7 +124,11 @@ export default function ChatPage() {
 
           <button
             className="w-full py-2.5 px-4 rounded-lg border border-white/20 hover:bg-white/5 transition-colors flex items-center justify-center gap-2 text-sm font-medium gradient-border"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              setConversationId(null);
+              setLoadRecent(false);
+              setNewChatKey((k) => k + 1);
+            }}
           >
             <Plus className="w-4 h-4" />
             New Chat
@@ -138,36 +146,71 @@ export default function ChatPage() {
               {accounts.length === 0 ? (
                 <p className="text-sm text-gray-500 italic">No accounts connected</p>
               ) : (
-                accounts.map((account, i) => (
-                  <div
-                    key={account.id}
-                    onClick={() => setSelectedAccountId(account.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
-                      selectedAccountId === account.id
-                        ? 'bg-white/5 border-l-2 border-purple-500'
-                        : 'hover:bg-white/5'
-                    }`}
-                  >
+                <>
+                  {accounts.length > 1 && (
                     <div
-                      className={`w-8 h-8 rounded-lg bg-gradient-to-br ${GRADIENT_COLORS[i % GRADIENT_COLORS.length]} flex items-center justify-center text-xs font-bold`}
+                      onClick={() => {
+                        setSelectedAccountId('all');
+                        setConversationId(null);
+                        setLoadRecent(true);
+                        setNewChatKey((k) => k + 1);
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+                        selectedAccountId === 'all'
+                          ? 'bg-white/5 border-l-2 border-purple-500'
+                          : 'hover:bg-white/5'
+                      }`}
                     >
-                      {getInitials(account.metaAccountName || account.metaAdAccountId)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {account.metaAccountName || account.metaAdAccountId}
-                      </p>
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${account.isActive ? 'bg-green-500' : 'bg-gray-500'}`}
-                        ></span>
-                        <span className="text-[10px] text-gray-500">
-                          {account.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-bold">
+                        All
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">All Accounts</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          <span className="text-[10px] text-gray-500">
+                            {accounts.length} accounts
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  )}
+                  {accounts.map((account, i) => (
+                    <div
+                      key={account.id}
+                      onClick={() => {
+                        setSelectedAccountId(account.id);
+                        setConversationId(null);
+                        setLoadRecent(true);
+                        setNewChatKey((k) => k + 1);
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+                        selectedAccountId === account.id
+                          ? 'bg-white/5 border-l-2 border-purple-500'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg bg-gradient-to-br ${GRADIENT_COLORS[i % GRADIENT_COLORS.length]} flex items-center justify-center text-xs font-bold`}
+                      >
+                        {getInitials(account.metaAccountName || account.metaAdAccountId)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {account.metaAccountName || account.metaAdAccountId}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${account.isActive ? 'bg-green-500' : 'bg-gray-500'}`}
+                          ></span>
+                          <span className="text-[10px] text-gray-500">
+                            {account.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
             <Link href="/onboarding">
@@ -219,7 +262,15 @@ export default function ChatPage() {
               <Menu className="w-5 h-5 text-gray-400" />
             </button>
 
-            {selectedAccount ? (
+            {selectedAccountId === 'all' ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+                <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold">
+                  All
+                </div>
+                <span className="text-sm font-medium">All Accounts</span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+            ) : selectedAccount ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                 <div
                   className={`w-6 h-6 rounded bg-gradient-to-br ${GRADIENT_COLORS[accounts.indexOf(selectedAccount) % GRADIENT_COLORS.length]} flex items-center justify-center text-[10px] font-bold`}
@@ -250,7 +301,13 @@ export default function ChatPage() {
 
         {/* Chat Area */}
         <main className="flex-1 min-h-0">
-          <ChatWindow />
+          <ChatWindow
+            key={`${selectedAccountId}-${newChatKey}`}
+            accountId={selectedAccountId}
+            conversationId={conversationId}
+            onConversationId={setConversationId}
+            loadRecent={loadRecent}
+          />
         </main>
       </div>
     </div>

@@ -24,12 +24,47 @@ const suggestions = [
   { icon: Target, text: 'Build a lookalike audience from my purchasers' },
 ];
 
-export function ChatWindow() {
+interface ChatWindowProps {
+  accountId: string | null;
+  conversationId: string | null;
+  onConversationId: (id: string) => void;
+  loadRecent: boolean;
+}
+
+export function ChatWindow({ accountId, conversationId, onConversationId, loadRecent }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(loadRecent);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load most recent conversation on mount (when loadRecent is true)
+  useEffect(() => {
+    if (!loadRecent || !accountId) {
+      setIsLoadingHistory(false);
+      return;
+    }
+
+    fetch(`/api/conversations?accountId=${encodeURIComponent(accountId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.conversations?.[0]) {
+          const conv = data.conversations[0];
+          const restored: Message[] = (conv.messages || []).map((m: any) => ({
+            role: m.role,
+            content: m.content,
+            toolCalls: m.toolCalls,
+          }));
+          if (restored.length > 0) {
+            setMessages(restored);
+            onConversationId(conv.id);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingHistory(false));
+  }, []); // runs once on mount
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -65,7 +100,7 @@ export function ChatWindow() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, accountId, conversationId }),
       });
 
       if (!res.ok) {
@@ -74,6 +109,10 @@ export function ChatWindow() {
       }
 
       const data = await res.json();
+
+      if (data.conversationId) {
+        onConversationId(data.conversationId);
+      }
 
       const assistantMessage: Message = {
         role: 'assistant',
@@ -113,7 +152,13 @@ export function ChatWindow() {
     <div className="flex flex-col h-full">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-8" ref={scrollRef}>
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="loading-dots text-purple-400 text-lg">
+              <span>&#x25CF;</span> <span>&#x25CF;</span> <span>&#x25CF;</span>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="max-w-4xl mx-auto flex flex-col items-center justify-center h-full text-center pt-16">
             <div className="mb-8">
               <span className="text-4xl font-bold">
