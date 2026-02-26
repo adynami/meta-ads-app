@@ -10,6 +10,13 @@ import { eq, and, sql } from 'drizzle-orm';
 import { decrypt } from '@/lib/crypto';
 import { isTrialExpired, PLAN_LIMITS, type Plan } from '@/lib/plans';
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
+import type { Attachment, AttachmentStore } from '@/lib/attachments';
+import { isImageType, isVideoType } from '@/lib/attachments';
+
+// Increase body size limit for base64-encoded image/video attachments
+export const config = {
+  api: { bodyParser: { sizeLimit: '50mb' } },
+};
 
 const anthropicTools = mcpToAnthropic(ALL_TOOLS);
 const MAX_TOOL_ROUNDS = 10;
@@ -62,10 +69,17 @@ export async function POST(req: NextRequest) {
 
       // Get the user's active ad account (use account_id from request or first active)
       const body = await req.json();
-      const { messages, accountId } = body as {
+      const { messages, accountId, attachments: rawAttachments } = body as {
         messages: Anthropic.MessageParam[];
         accountId?: string;
+        attachments?: Attachment[];
       };
+
+      // Build attachment store from request body
+      const attachmentStore: AttachmentStore = new Map();
+      if (rawAttachments?.length) {
+        for (const a of rawAttachments) attachmentStore.set(a.id, a);
+      }
 
       if (!messages?.length) {
         return Response.json({ error: 'messages is required' }, { status: 400 });
@@ -96,11 +110,14 @@ export async function POST(req: NextRequest) {
           name: a.metaAccountName || a.metaAdAccountId,
         }));
 
-        return await runChat(contexts, messages, {
+        // Inject attachment vision blocks into the last user message
+        const messagesWithAttachments = injectAttachmentBlocks(messages, attachmentStore);
+
+        return await runChat(contexts, messagesWithAttachments, {
           userId: user.id,
           adAccountId: null,
           conversationId: body.conversationId,
-        }, accountNames);
+        }, accountNames, attachmentStore);
       }
 
       const accountFilter = accountId
@@ -126,11 +143,13 @@ export async function POST(req: NextRequest) {
         dryRun: false,
       };
 
-      return await runChat(ctx, messages, {
+      const messagesWithAttachmentsSingle = injectAttachmentBlocks(messages, attachmentStore);
+
+      return await runChat(ctx, messagesWithAttachmentsSingle, {
         userId: user.id,
         adAccountId: account.id,
         conversationId: body.conversationId,
-      });
+      }, undefined, attachmentStore);
     }
 
     // Fallback: env var credentials (dev/demo mode)
@@ -144,12 +163,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { messages } = (await req.json()) as {
+    const envBody = (await req.json()) as {
       messages: Anthropic.MessageParam[];
+      attachments?: Attachment[];
     };
+    const { messages, attachments: envAttachments } = envBody;
 
     if (!messages?.length) {
       return Response.json({ error: 'messages is required' }, { status: 400 });
+    }
+
+    const envAttachmentStore: AttachmentStore = new Map();
+    if (envAttachments?.length) {
+      for (const a of envAttachments) envAttachmentStore.set(a.id, a);
     }
 
     ctx = {
@@ -159,7 +185,8 @@ export async function POST(req: NextRequest) {
       dryRun: process.env.DRY_RUN === 'true',
     };
 
-    return await runChat(ctx, messages);
+    const envMessages = injectAttachmentBlocks(messages, envAttachmentStore);
+    return await runChat(ctx, envMessages, undefined, undefined, envAttachmentStore);
   } catch (error: any) {
     console.error('[chat/route] Error:', error);
     return Response.json(
@@ -167,6 +194,62 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/**
+ * Transform the last user message to include vision blocks for image attachments
+ * and a text note listing all attachment IDs for tool use.
+ */
+function injectAttachmentBlocks(
+  messages: Anthropic.MessageParam[],
+  store: AttachmentStore,
+): Anthropic.MessageParam[] {
+  if (store.size === 0) return messages;
+
+  const result = [...messages];
+  const lastIdx = result.length - 1;
+  const lastMsg = result[lastIdx];
+  if (!lastMsg || lastMsg.role !== 'user') return result;
+
+  const originalText = typeof lastMsg.content === 'string'
+    ? lastMsg.content
+    : Array.isArray(lastMsg.content)
+      ? lastMsg.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join(' ')
+      : '';
+
+  const contentBlocks: Anthropic.ContentBlockParam[] = [];
+
+  // Add image blocks for vision (skip videos — Claude can't process them)
+  for (const [, att] of store) {
+    if (isImageType(att.media_type)) {
+      contentBlocks.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: att.media_type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: att.base64,
+        },
+      });
+    }
+  }
+
+  // Add text block with original message
+  if (originalText) {
+    contentBlocks.push({ type: 'text', text: originalText });
+  }
+
+  // Add note listing attachment IDs so Claude can reference them in tool calls
+  const attachmentNotes = Array.from(store.values()).map((a) => {
+    const kind = isImageType(a.media_type) ? 'image' : 'video';
+    return `- ${a.name} (${kind}, id: ${a.id})`;
+  });
+  contentBlocks.push({
+    type: 'text',
+    text: `[Attached files available for upload tools:\n${attachmentNotes.join('\n')}]`,
+  });
+
+  result[lastIdx] = { role: 'user', content: contentBlocks };
+  return result;
 }
 
 interface PersistenceContext {
@@ -185,6 +268,7 @@ async function runChat(
   messages: Anthropic.MessageParam[],
   persist?: PersistenceContext,
   accountNames?: AccountLabel[],
+  attachmentStore?: AttachmentStore,
 ): Promise<Response> {
   const client = getAnthropicClient();
   const isMultiAccount = Array.isArray(ctx);
@@ -240,13 +324,13 @@ async function runChat(
           // Execute against all accounts and aggregate
           const perAccount = await Promise.all(
             (ctx as TenantContext[]).map(async (tenantCtx, i) => {
-              const r = await executeTool(tenantCtx, block.name, block.input as Record<string, any>);
+              const r = await executeTool(tenantCtx, block.name, block.input as Record<string, any>, attachmentStore);
               return { account: accountNames[i].name, result: r };
             }),
           );
           result = JSON.stringify(perAccount);
         } else {
-          result = await executeTool(ctx as TenantContext, block.name, block.input as Record<string, any>);
+          result = await executeTool(ctx as TenantContext, block.name, block.input as Record<string, any>, attachmentStore);
         }
 
         toolCalls.push({

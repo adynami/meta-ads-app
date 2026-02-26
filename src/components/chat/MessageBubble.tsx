@@ -3,6 +3,8 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
+import { Film } from 'lucide-react';
+import type { AttachmentMeta } from '@/lib/attachments';
 
 interface ToolCall {
   id: string;
@@ -11,10 +13,11 @@ interface ToolCall {
   result: string;
 }
 
-interface Message {
+export interface Message {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: ToolCall[];
+  attachments?: AttachmentMeta[];
 }
 
 const markdownComponents: Components = {
@@ -52,12 +55,36 @@ const markdownComponents: Components = {
   td: ({ children }) => <td>{children}</td>,
 };
 
+function isImageMime(mime: string): boolean {
+  return mime.startsWith('image/');
+}
+
 export function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === 'user';
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className="max-w-2xl">
+        {isUser && message.attachments && message.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2 justify-end">
+            {message.attachments.map((att) => (
+              <div key={att.id} className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2 py-1.5">
+                {att.preview_url && isImageMime(att.media_type) ? (
+                  <img
+                    src={att.preview_url}
+                    alt={att.name}
+                    className="w-16 h-16 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-gray-300">
+                    <Film className="w-4 h-4 text-purple-400" />
+                    <span className="max-w-[120px] truncate">{att.name}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {message.content && (
           <div
             className={

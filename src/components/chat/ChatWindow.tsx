@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Send, Search, TrendingUp, BarChart3, Target } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
+import type { AttachmentMeta } from '@/lib/attachments';
+import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
 
 interface ToolCall {
   id: string;
@@ -11,10 +13,21 @@ interface ToolCall {
   result: string;
 }
 
-interface Message {
+export interface Message {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: ToolCall[];
+  attachments?: AttachmentMeta[];
+}
+
+/** Client-side attachment with base64 data for sending */
+interface ClientAttachment {
+  id: string;
+  name: string;
+  media_type: string;
+  size: number;
+  base64: string;
+  preview_url?: string;
 }
 
 const suggestions = [
@@ -36,8 +49,11 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(loadRecent);
+  const [attachments, setAttachments] = useState<ClientAttachment[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load most recent conversation on mount (when loadRecent is true)
   useEffect(() => {
@@ -76,14 +92,77 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
     textareaRef.current?.focus();
   }, []);
 
+  const processFiles = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
+        continue; // skip unsupported types
+      }
+      const maxSize = isImageType(file.type) ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+      if (file.size > maxSize) {
+        continue; // skip oversized files
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        // dataUrl is "data:<mime>;base64,<data>"
+        const base64 = dataUrl.split(',')[1];
+        const previewUrl = isImageType(file.type) ? dataUrl : undefined;
+
+        const attachment: ClientAttachment = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          media_type: file.type,
+          size: file.size,
+          base64,
+          preview_url: previewUrl,
+        };
+        setAttachments((prev) => [...prev, attachment]);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => {
+      const removed = prev.find((a) => a.id === id);
+      if (removed?.preview_url) URL.revokeObjectURL(removed.preview_url);
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
+
   const sendMessage = async (text?: string) => {
     const trimmed = (text || input).trim();
-    if (!trimmed || isLoading) return;
+    if ((!trimmed && attachments.length === 0) || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: trimmed };
+    // Build display metadata for attachments (no base64)
+    const attachmentMetas: AttachmentMeta[] = attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      media_type: a.media_type,
+      preview_url: a.preview_url,
+    }));
+
+    const userMessage: Message = {
+      role: 'user',
+      content: trimmed,
+      attachments: attachmentMetas.length > 0 ? attachmentMetas : undefined,
+    };
     const updated = [...messages, userMessage];
     setMessages(updated);
+
+    // Capture attachments for the request before clearing state
+    const attachmentsToSend = attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      media_type: a.media_type,
+      size: a.size,
+      base64: a.base64,
+    }));
+
     setInput('');
+    setAttachments([]);
     setIsLoading(true);
 
     // Reset textarea height
@@ -100,7 +179,12 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, accountId, conversationId }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          accountId,
+          conversationId,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -147,6 +231,24 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  }, [processFiles]);
 
   return (
     <div className="flex flex-col h-full">
@@ -206,25 +308,86 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
       {/* Input Bar */}
       <div className="border-t border-white/5 bg-[#0d0d1a] p-4 shrink-0">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-end gap-3 bg-white/5 border border-white/10 rounded-xl p-3">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleTextareaInput}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything about your Meta ads..."
-              rows={1}
-              disabled={isLoading}
-              className="flex-1 bg-transparent text-white placeholder-gray-500 resize-none outline-none text-sm"
-              style={{ minHeight: '24px', maxHeight: '120px' }}
-            />
-            <button
-              onClick={() => sendMessage()}
-              disabled={isLoading || !input.trim()}
-              className="gradient-bg p-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+          <div
+            className={`flex flex-col gap-2 bg-white/5 border rounded-xl p-3 transition-colors ${
+              isDragOver ? 'border-purple-500 bg-purple-500/10' : 'border-white/10'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {/* Attachment preview strip */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((att) => (
+                  <div
+                    key={att.id}
+                    className="relative flex items-center gap-1.5 bg-white/10 rounded-lg px-2 py-1.5 text-xs text-gray-300"
+                  >
+                    {att.preview_url ? (
+                      <img
+                        src={att.preview_url}
+                        alt={att.name}
+                        className="w-8 h-8 rounded object-cover"
+                      />
+                    ) : (
+                      <Film className="w-4 h-4 text-purple-400" />
+                    )}
+                    <span className="max-w-[100px] truncate">{att.name}</span>
+                    <button
+                      onClick={() => removeAttachment(att.id)}
+                      className="ml-1 text-gray-500 hover:text-white transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-end gap-3">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) processFiles(e.target.files);
+                  e.target.value = ''; // reset so same file can be re-selected
+                }}
+              />
+
+              {/* Paperclip button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className="text-gray-400 hover:text-purple-400 transition-colors disabled:opacity-50 p-1"
+                title="Attach image or video"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleTextareaInput}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask anything about your Meta ads..."
+                rows={1}
+                disabled={isLoading}
+                className="flex-1 bg-transparent text-white placeholder-gray-500 resize-none outline-none text-sm"
+                style={{ minHeight: '24px', maxHeight: '120px' }}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={isLoading || (!input.trim() && attachments.length === 0)}
+                className="gradient-bg p-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
             <p className="text-xs text-gray-500">

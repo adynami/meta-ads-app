@@ -1,5 +1,5 @@
 import { rateLimitedCall } from '../utils/rate-limiter.js';
-import { graphGet } from '../utils/graph.js';
+import { graphGet, graphPostMultipart } from '../utils/graph.js';
 // ── Tool definitions ──
 export const libraryTools = [
     {
@@ -24,12 +24,39 @@ export const libraryTools = [
             },
         },
     },
+    {
+        name: 'meta_upload_image',
+        description: 'Upload an image attachment to the ad account image library. Returns an image hash that can be used with meta_deploy_campaign or meta_add_ad. The attachment must have been provided by the user in the current conversation.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                attachment_id: { type: 'string', description: 'The attachment ID from the user message' },
+                name: { type: 'string', description: 'Optional name for the image' },
+            },
+            required: ['attachment_id'],
+        },
+    },
+    {
+        name: 'meta_upload_video',
+        description: 'Upload a video attachment to the ad account video library. Returns a video_id that can be used with meta_deploy_campaign or meta_add_ad. The attachment must have been provided by the user in the current conversation.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                attachment_id: { type: 'string', description: 'The attachment ID from the user message' },
+                title: { type: 'string', description: 'Optional title for the video' },
+                description: { type: 'string', description: 'Optional description for the video' },
+            },
+            required: ['attachment_id'],
+        },
+    },
 ];
 // ── Handler ──
-export async function handleLibraryTool(ctx, name, args) {
+export async function handleLibraryTool(ctx, name, args, attachmentStore) {
     switch (name) {
         case 'meta_list_ad_images': return listAdImages(ctx, args);
         case 'meta_list_ad_videos': return listAdVideos(ctx, args);
+        case 'meta_upload_image': return uploadImage(ctx, args, attachmentStore);
+        case 'meta_upload_video': return uploadVideo(ctx, args, attachmentStore);
         default: throw new Error(`Unknown tool: ${name}`);
     }
 }
@@ -57,6 +84,62 @@ async function listAdImages(ctx, args) {
             ? { next_cursor: result.paging.cursors.after }
             : {}),
         note: 'Use the hash field when creating ads with meta_add_ad or meta_deploy_campaign.',
+    };
+}
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
+async function uploadImage(ctx, args, attachmentStore) {
+    if (!attachmentStore)
+        throw new Error('No attachment store available');
+    const attachment = attachmentStore.get(args.attachment_id);
+    if (!attachment)
+        throw new Error(`Attachment not found: ${args.attachment_id}`);
+    if (!IMAGE_MIME_TYPES.includes(attachment.media_type)) {
+        throw new Error(`Attachment is not an image (type: ${attachment.media_type})`);
+    }
+    const buffer = Buffer.from(attachment.base64, 'base64');
+    const filename = args.name || attachment.name || 'image.jpg';
+    const result = await rateLimitedCall(() => graphPostMultipart(ctx, `${ctx.adAccountId}/adimages`, {}, {
+        name: 'filename',
+        data: buffer,
+        filename,
+        contentType: attachment.media_type,
+    }));
+    // Meta returns images keyed by filename
+    const imageData = result.images?.[filename] ?? Object.values(result.images ?? {})[0];
+    return {
+        success: true,
+        hash: imageData?.hash ?? null,
+        name: filename,
+        url: imageData?.url ?? null,
+    };
+}
+async function uploadVideo(ctx, args, attachmentStore) {
+    if (!attachmentStore)
+        throw new Error('No attachment store available');
+    const attachment = attachmentStore.get(args.attachment_id);
+    if (!attachment)
+        throw new Error(`Attachment not found: ${args.attachment_id}`);
+    if (!VIDEO_MIME_TYPES.includes(attachment.media_type)) {
+        throw new Error(`Attachment is not a video (type: ${attachment.media_type})`);
+    }
+    const buffer = Buffer.from(attachment.base64, 'base64');
+    const title = args.title || attachment.name || 'video.mp4';
+    const fields = {};
+    if (args.title)
+        fields.title = args.title;
+    if (args.description)
+        fields.description = args.description;
+    const result = await rateLimitedCall(() => graphPostMultipart(ctx, `${ctx.adAccountId}/advideos`, fields, {
+        name: 'source',
+        data: buffer,
+        filename: attachment.name || 'video.mp4',
+        contentType: attachment.media_type,
+    }));
+    return {
+        success: true,
+        video_id: result.id ?? null,
+        title,
     };
 }
 async function listAdVideos(ctx, args) {

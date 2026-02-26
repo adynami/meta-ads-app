@@ -56,7 +56,7 @@ export const ALL_TOOLS: McpToolDef[] = [
 
 // ── Dispatch map ─────────────────────────────────────────────────────────────
 
-type Handler = (ctx: TenantContext, name: string, args: Record<string, any>) => Promise<any>;
+type Handler = (ctx: TenantContext, name: string, args: Record<string, any>, attachmentStore?: Map<string, any>) => Promise<any>;
 
 const dispatchMap = new Map<string, Handler>();
 
@@ -93,6 +93,7 @@ export async function executeTool(
   ctx: TenantContext,
   toolName: string,
   args: Record<string, any>,
+  attachmentStore?: Map<string, any>,
 ): Promise<string> {
   const handler = dispatchMap.get(toolName);
   if (!handler) {
@@ -100,7 +101,7 @@ export async function executeTool(
   }
 
   try {
-    const result = await handler(ctx, toolName, args);
+    const result = await handler(ctx, toolName, args, attachmentStore);
     return JSON.stringify(result);
   } catch (error: any) {
     const message = error?.response?.error?.message

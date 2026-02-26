@@ -40,6 +40,25 @@ export async function graphPost(ctx, objectPath, params) {
     }
     return data;
 }
+export async function graphPostMultipart(ctx, objectPath, fields, fileField) {
+    const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}`;
+    const form = new FormData();
+    form.append('access_token', ctx.accessToken);
+    for (const [k, v] of Object.entries(fields)) {
+        form.append(k, v);
+    }
+    form.append(fileField.name, new Blob([fileField.data], { type: fileField.contentType }), fileField.filename);
+    // Do NOT set Content-Type header — fetch auto-sets it with the boundary
+    const response = await fetch(url, { method: 'POST', body: form });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+        const e = data.error ?? {};
+        const err = new Error(e.message ?? `HTTP ${response.status}`);
+        err.response = { error: e };
+        throw err;
+    }
+    return data;
+}
 export async function graphDelete(ctx, objectPath) {
     const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}`;
     const formBody = new URLSearchParams({ access_token: ctx.accessToken });
