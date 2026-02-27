@@ -275,7 +275,7 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
       )}
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-6 py-6 sm:py-8" ref={scrollRef}>
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 sm:px-6 py-6 sm:py-8" ref={scrollRef}>
         {isLoadingHistory ? (
           <div className="flex items-center justify-center h-full">
             <div className="loading-dots text-purple-400 text-lg">

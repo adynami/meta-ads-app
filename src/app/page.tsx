@@ -470,7 +470,7 @@ export default function Home() {
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-3 mb-8 text-sm">
-                {["1 Meta ad account", "Unlimited conversations & commands", "Campaign creation & management", "Performance reporting & breakdowns", "Visual campaign dashboard", "Audience builder", "Automated rules", "Email support"].map((feature, i) => (
+                {["1 Meta ad account", "100 AI conversations/month", "Campaign creation & management", "Performance reporting & breakdowns", "Visual campaign dashboard", "Audience builder", "Automated rules", "Email support"].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {feature}
@@ -499,7 +499,7 @@ export default function Home() {
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-3 mb-8 text-sm">
-                {["Up to 5 Meta ad accounts", "Everything in Starter", "Bulk operations across accounts", "Zero-conversion diagnostic workflows", "Creative performance analysis", "Image & video creative analysis", "Advanced demographic & placement breakdowns", "Priority support"].map((feature, i) => (
+                {["Up to 5 Meta ad accounts", "400 AI conversations/month", "Everything in Starter", "Bulk operations across accounts", "Zero-conversion diagnostic workflows", "Creative performance analysis", "Image & video creative analysis", "Advanced demographic & placement breakdowns", "Priority support"].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {feature}
@@ -525,7 +525,7 @@ export default function Home() {
                 <span className="text-gray-400">/month</span>
               </div>
               <ul className="space-y-3 mb-8 text-sm">
-                {["Unlimited Meta ad accounts", "Everything in Pro", "Team seats (up to 5 users)", "White-label reporting exports", "Competitive intelligence (Ads Library access)", "Claude MCP Integration", "Dedicated support"].map((feature, i) => (
+                {["Unlimited Meta ad accounts", "1,000 AI conversations/month", "Everything in Pro", "Team seats (up to 5 users)", "White-label reporting exports", "Competitive intelligence (Ads Library access)", "Claude MCP Integration", "Dedicated support"].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-300">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {feature}

@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#08080f] text-white flex">
+    <div className="h-dvh bg-[#08080f] text-white flex overflow-hidden">
       {/* Mobile sidebar toggle */}
       <button
         className="fixed top-4 left-4 z-50 lg:hidden bg-white/5 p-2 rounded-lg border border-white/10"
@@ -46,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Sidebar */}
-      <div className={`w-[260px] h-screen bg-[#0d0d1a] border-r border-white/5 flex flex-col fixed z-40 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`w-[260px] h-dvh bg-[#0d0d1a] border-r border-white/5 flex flex-col fixed z-40 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center gap-2 mb-8">
             <Link href="/" className="flex items-center gap-2">

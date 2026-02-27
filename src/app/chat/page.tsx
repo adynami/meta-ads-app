@@ -115,7 +115,7 @@ export default function ChatPage() {
 
       {/* Left Sidebar */}
       <div
-        className={`w-[260px] h-full bg-[#0d0d1a] border-r border-white/5 flex flex-col transition-all duration-300 fixed z-40 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`w-[260px] h-dvh lg:h-full bg-[#0d0d1a] border-r border-white/5 flex flex-col transition-all duration-300 fixed z-40 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo & New Chat */}
         <div className="p-4 border-b border-white/5">
