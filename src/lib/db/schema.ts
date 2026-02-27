@@ -42,6 +42,7 @@ export const conversations = pgTable('conversations', {
   adAccountId: uuid('ad_account_id').references(() => adAccounts.id),
   title: text('title'),
   messages: jsonb('messages').default([]).notNull(),
+  context: text('context'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

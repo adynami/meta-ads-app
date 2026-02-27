@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film, Plus } from 'lucide-react';
+import { Send, Square, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film, Plus } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import type { AttachmentMeta } from '@/lib/attachments';
 import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
@@ -55,6 +55,7 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Load most recent conversation on mount (when loadRecent is true)
   useEffect(() => {
@@ -133,6 +134,12 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
     });
   }, []);
 
+  const stopChat = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsLoading(false);
+  }, []);
+
   const sendMessage = async (text?: string) => {
     const trimmed = (text || input).trim();
     if ((!trimmed && attachments.length === 0) || isLoading) return;
@@ -177,6 +184,9 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
         content: m.content,
       }));
 
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,6 +196,7 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
           conversationId,
           attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -215,12 +226,14 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
+      if (error.name === 'AbortError') return; // user cancelled — no error message
       const errorMessage: Message = {
         role: 'assistant',
         content: `Error: ${error.message}`,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
+      abortRef.current = null;
       setIsLoading(false);
       textareaRef.current?.focus();
     }
@@ -402,13 +415,23 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
                 className="flex-1 bg-transparent text-white placeholder-gray-500 resize-none outline-none text-sm"
                 style={{ minHeight: '24px', maxHeight: '120px' }}
               />
-              <button
-                onClick={() => sendMessage()}
-                disabled={isLoading || (!input.trim() && attachments.length === 0)}
-                className="gradient-bg p-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              {isLoading ? (
+                <button
+                  onClick={stopChat}
+                  className="bg-red-500/80 hover:bg-red-500 p-2 rounded-lg transition-colors"
+                  title="Stop generating"
+                >
+                  <Square className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() && attachments.length === 0}
+                  className="gradient-bg p-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-between mt-2 px-1">

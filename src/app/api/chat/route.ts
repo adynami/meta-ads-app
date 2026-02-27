@@ -18,6 +18,16 @@ export const config = {
   api: { bodyParser: { sizeLimit: '50mb' } },
 };
 
+const CONTEXT_REGEX = /<context>\s*([\s\S]*?)\s*<\/context>/i;
+
+function extractAndStripContext(text: string): { cleanText: string; context: string | null } {
+  const match = text.match(CONTEXT_REGEX);
+  if (!match) return { cleanText: text, context: null };
+  let context = match[1].trim();
+  if (context.length > 2000) context = context.slice(0, 2000);
+  return { cleanText: text.replace(CONTEXT_REGEX, '').trimEnd(), context };
+}
+
 const anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
 const MAX_TOOL_ROUNDS = 5;
 
@@ -87,6 +97,17 @@ export async function POST(req: NextRequest) {
         return Response.json({ error: 'messages is required' }, { status: 400 });
       }
 
+      // Load existing conversation context for continuity
+      let existingContext: string | null = null;
+      if (body.conversationId) {
+        const [conv] = await db
+          .select({ context: conversations.context })
+          .from(conversations)
+          .where(and(eq(conversations.id, body.conversationId), eq(conversations.userId, user.id)))
+          .limit(1);
+        existingContext = conv?.context ?? null;
+      }
+
       // Multi-account mode
       if (accountId === 'all') {
         const allAccounts = await db
@@ -120,7 +141,8 @@ export async function POST(req: NextRequest) {
           adAccountId: null,
           conversationId: body.conversationId,
           useBonusCall: planCallsLeft <= 0,
-        }, accountNames, attachmentStore);
+          existingContext,
+        }, accountNames, attachmentStore, req.signal);
       }
 
       const accountFilter = accountId
@@ -153,7 +175,8 @@ export async function POST(req: NextRequest) {
         adAccountId: account.id,
         conversationId: body.conversationId,
         useBonusCall: planCallsLeft <= 0,
-      }, undefined, attachmentStore);
+        existingContext,
+      }, undefined, attachmentStore, req.signal);
     }
 
     // Fallback: env var credentials (dev/demo mode)
@@ -190,7 +213,7 @@ export async function POST(req: NextRequest) {
     };
 
     const envMessages = injectAttachmentBlocks(messages, envAttachmentStore);
-    return await runChat(ctx, envMessages, undefined, undefined, envAttachmentStore);
+    return await runChat(ctx, envMessages, undefined, undefined, envAttachmentStore, req.signal);
   } catch (error: any) {
     console.error('[chat/route] Error:', error);
     return Response.json(
@@ -261,6 +284,7 @@ interface PersistenceContext {
   adAccountId: string | null;
   conversationId?: string;
   useBonusCall?: boolean;
+  existingContext?: string | null;
 }
 
 interface AccountLabel {
@@ -269,14 +293,13 @@ interface AccountLabel {
 }
 
 /**
- * Truncate tool_result content blocks in older messages to reduce token usage.
+ * Replace tool_result content blocks in older messages with a placeholder.
  * Keeps the last `recentToKeep` messages fully intact; older tool results
- * are trimmed to `maxLen` characters.
+ * are replaced entirely since conversation context carries the key data.
  */
 function truncateOldToolResults(
   messages: Anthropic.MessageParam[],
-  recentToKeep = 4,
-  maxLen = 400,
+  recentToKeep = 6,
 ): Anthropic.MessageParam[] {
   const cutoff = Math.max(0, messages.length - recentToKeep);
   return messages.map((msg, i) => {
@@ -285,8 +308,7 @@ function truncateOldToolResults(
       ...msg,
       content: (msg.content as any[]).map((block) => {
         if (block.type !== 'tool_result' || typeof block.content !== 'string') return block;
-        if (block.content.length <= maxLen) return block;
-        return { ...block, content: block.content.slice(0, maxLen) + '\n...[truncated]' };
+        return { ...block, content: '[Result available in conversation context]' };
       }),
     };
   });
@@ -298,6 +320,7 @@ async function runChat(
   persist?: PersistenceContext,
   accountNames?: AccountLabel[],
   attachmentStore?: AttachmentStore,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const client = getAnthropicClient();
   const isMultiAccount = Array.isArray(ctx);
@@ -307,6 +330,10 @@ async function runChat(
     ...(isMultiAccount && accountNames ? [{
       type: 'text' as const,
       text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
+    }] : []),
+    ...(persist?.existingContext ? [{
+      type: 'text' as const,
+      text: `\nPrevious conversation context (update this in your <context> block):\n${persist.existingContext}`,
     }] : []),
   ];
 
@@ -319,6 +346,8 @@ async function runChat(
   const toolCalls: { id: string; name: string; input: any; result: string }[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    if (signal?.aborted) break;
+
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
@@ -398,11 +427,14 @@ async function runChat(
     ];
   }
 
+  // Extract context block from response before persisting/returning
+  const { cleanText, context: extractedContext } = extractAndStripContext(finalText);
+
   // Persist conversation and usage to DB — await to get conversationId
   let returnedConversationId: string | undefined;
   if (persist) {
     try {
-      returnedConversationId = await persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens, totalCacheCreationTokens, totalCacheReadTokens);
+      returnedConversationId = await persistChatData(persist, messages, cleanText, totalInputTokens, totalOutputTokens, totalCacheCreationTokens, totalCacheReadTokens, extractedContext);
 
       // Decrement bonus calls if this call consumed a bonus credit
       if (persist.useBonusCall) {
@@ -417,7 +449,7 @@ async function runChat(
   }
 
   return Response.json({
-    text: finalText,
+    text: cleanText,
     toolCalls,
     conversationId: returnedConversationId ?? persist?.conversationId,
   });
@@ -431,6 +463,7 @@ async function persistChatData(
   outputTokens: number,
   cacheCreationTokens = 0,
   cacheReadTokens = 0,
+  context?: string | null,
 ): Promise<string> {
   const now = new Date();
 
@@ -460,6 +493,7 @@ async function persistChatData(
       .set({
         messages: sql`${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb`,
         updatedAt: now,
+        ...(context != null ? { context } : {}),
       })
       .where(
         and(
@@ -475,6 +509,7 @@ async function persistChatData(
       adAccountId: persist.adAccountId,
       title,
       messages: newMessages,
+      context: context ?? undefined,
     }).returning({ id: conversations.id });
     conversationId = inserted.id;
   }
