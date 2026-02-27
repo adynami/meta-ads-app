@@ -81,6 +81,7 @@ export const authConfig: NextAuthConfig = {
         if (dbUser[0]) {
           session.userId = dbUser[0].id;
           session.plan = dbUser[0].plan;
+          session.isAdmin = dbUser[0].isAdmin;
         }
       }
       if (token?.accessToken) {

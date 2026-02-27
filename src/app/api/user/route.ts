@@ -19,6 +19,7 @@ export async function GET() {
       plan: users.plan,
       trialEndsAt: users.trialEndsAt,
       bonusCalls: users.bonusCalls,
+      isAdmin: users.isAdmin,
       createdAt: users.createdAt,
     })
     .from(users)

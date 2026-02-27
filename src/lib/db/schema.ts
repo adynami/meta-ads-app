@@ -20,6 +20,7 @@ export const users = pgTable('users', {
   plan: text('plan').default('trial').notNull(), // trial, basic, pro, agency
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
   bonusCalls: integer('bonus_calls').default(0).notNull(),
+  isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

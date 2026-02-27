@@ -5,6 +5,7 @@ declare module 'next-auth' {
   interface Session extends DefaultSession {
     userId?: string;
     plan?: string;
+    isAdmin?: boolean;
     accessToken?: string;
   }
 }

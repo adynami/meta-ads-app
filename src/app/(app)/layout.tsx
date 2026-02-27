@@ -1,19 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, Settings, CreditCard, LogOut, Menu, X } from 'lucide-react';
+import { MessageSquare, Settings, CreditCard, LogOut, Menu, X, Shield } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/user')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user?.isAdmin) setIsAdmin(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const navItems = [
     { href: '/chat', label: 'Chat', icon: MessageSquare },
     { href: '/settings', label: 'Settings', icon: Settings },
     { href: '/billing', label: 'Billing', icon: CreditCard },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: Shield }] : []),
   ];
 
   return (
