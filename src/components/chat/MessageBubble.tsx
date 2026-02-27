@@ -64,7 +64,7 @@ export function MessageBubble({ message }: { message: Message }) {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-2xl">
+      <div className="max-w-full sm:max-w-2xl">
         {isUser && message.attachments && message.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2 justify-end">
             {message.attachments.map((att) => (

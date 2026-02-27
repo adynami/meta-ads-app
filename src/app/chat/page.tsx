@@ -105,7 +105,7 @@ export default function ChatPage() {
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#08080f] text-white flex overflow-hidden">
+    <div className="h-dvh bg-[#08080f] text-white flex overflow-hidden">
       {/* TokenExpired modal overlay — shown on top of the chat layout */}
       {tokenExpired && (
         <TokenExpired
@@ -115,7 +115,7 @@ export default function ChatPage() {
 
       {/* Left Sidebar */}
       <div
-        className={`w-[260px] h-screen bg-[#0d0d1a] border-r border-white/5 flex flex-col transition-all duration-300 fixed z-40 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`w-[260px] h-full bg-[#0d0d1a] border-r border-white/5 flex flex-col transition-all duration-300 fixed z-40 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo & New Chat */}
         <div className="p-4 border-b border-white/5">
@@ -260,7 +260,7 @@ export default function ChatPage() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col h-full">
         {/* Chat Header */}
         <div className="h-16 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 shrink-0">
           <div className="flex items-center gap-3">
