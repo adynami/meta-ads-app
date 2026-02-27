@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Upload, Check, AlertTriangle, Lock, ChevronDown, Plus, X } from 'lucide-react';
+import { Upload, Check, AlertTriangle, Lock, ChevronDown, Plus, X, Copy } from 'lucide-react';
+
+interface ApiKey {
+  id: string;
+  label: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
 
 interface AdAccount {
   id: string;
@@ -43,9 +50,15 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [disconnectingAccount, setDisconnectingAccount] = useState<string | null>(null);
+  const [plan, setPlan] = useState<string>('');
+  const [keys, setKeys] = useState<ApiKey[]>([]);
+  const [newKeyLabel, setNewKeyLabel] = useState('');
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
+    fetchUserPlan();
   }, []);
 
   async function fetchAccounts() {
@@ -64,6 +77,62 @@ export default function SettingsPage() {
     await fetch(`/api/accounts?id=${id}`, { method: 'DELETE' });
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     setDisconnectingAccount(null);
+  }
+
+  async function fetchUserPlan() {
+    try {
+      const res = await fetch('/api/user');
+      if (res.ok) {
+        const data = await res.json();
+        setPlan(data.user.plan || '');
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (plan === 'agency') {
+      fetchKeys();
+    }
+  }, [plan]);
+
+  async function fetchKeys() {
+    try {
+      const res = await fetch('/api/keys');
+      if (res.ok) {
+        const data = await res.json();
+        setKeys(data.keys || []);
+      }
+    } catch {}
+  }
+
+  async function generateKey() {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: newKeyLabel || undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNewlyCreatedKey(data.key);
+        setNewKeyLabel('');
+        await fetchKeys();
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function revokeKey(id: string) {
+    const res = await fetch(`/api/keys?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setKeys((prev) => prev.filter((k) => k.id !== id));
+    }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
   }
 
   function isTokenExpired(account: AdAccount): boolean {
@@ -247,26 +316,97 @@ export default function SettingsPage() {
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl font-semibold">API Keys</h2>
-            <Lock className="w-4 h-4 text-gray-500" />
-            <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded">Agency Plan</span>
+            {plan !== 'agency' && (
+              <>
+                <Lock className="w-4 h-4 text-gray-500" />
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded">Agency Plan</span>
+              </>
+            )}
           </div>
           <p className="text-sm text-gray-400 mb-6">Generate API keys to use Adynami programmatically or integrate with Claude AI via MCP.</p>
 
-          <div className="glass-card rounded-xl p-6 opacity-50 pointer-events-none">
-            <div className="bg-white/5 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
-              <span className="text-sm font-mono text-gray-500 blur-sm">ady_sk_xxxxxxxxxxxxxxxxxxxx</span>
-              <button className="text-sm text-gray-500">Copy</button>
-            </div>
-            <button className="px-6 py-2.5 rounded-lg border border-white/20 text-sm font-medium">
-              Generate New Key
-            </button>
-          </div>
+          {plan !== 'agency' ? (
+            <>
+              <div className="glass-card rounded-xl p-6 opacity-50 pointer-events-none">
+                <div className="bg-white/5 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
+                  <span className="text-sm font-mono text-gray-500 blur-sm">ady_sk_xxxxxxxxxxxxxxxxxxxx</span>
+                  <button className="text-sm text-gray-500">Copy</button>
+                </div>
+                <button className="px-6 py-2.5 rounded-lg border border-white/20 text-sm font-medium">
+                  Generate New Key
+                </button>
+              </div>
+              <Link href="/billing">
+                <button className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity mt-4">
+                  Upgrade to Agency to unlock
+                </button>
+              </Link>
+            </>
+          ) : (
+            <div className="glass-card rounded-xl p-6">
+              {/* Existing keys */}
+              {keys.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  {keys.map((k) => (
+                    <div key={k.id} className="bg-white/5 rounded-lg px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{k.label || 'Unnamed key'}</p>
+                        <p className="text-xs text-gray-500">
+                          Created {new Date(k.createdAt).toLocaleDateString()}
+                          {k.lastUsedAt && ` · Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => revokeKey(k.id)}
+                        className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-          <Link href="/billing">
-            <button className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity mt-4">
-              Upgrade to Agency to unlock
-            </button>
-          </Link>
+              {/* Newly created key warning */}
+              {newlyCreatedKey && (
+                <div className="mb-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                  <p className="text-sm font-medium text-amber-400 mb-2">
+                    Save this key — it will not be shown again.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm font-mono bg-black/30 rounded px-3 py-2 break-all">
+                      {newlyCreatedKey}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(newlyCreatedKey)}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Generate new key */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={newKeyLabel}
+                  onChange={(e) => setNewKeyLabel(e.target.value)}
+                  placeholder="Key label (optional)"
+                  className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white text-sm input-focus transition-all"
+                />
+                <button
+                  onClick={generateKey}
+                  disabled={generating}
+                  className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {generating ? 'Generating...' : 'Generate New Key'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="h-px bg-white/10 mb-12"></div>
