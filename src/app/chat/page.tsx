@@ -66,6 +66,12 @@ export default function ChatPage() {
   const [loadRecent, setLoadRecent] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
 
+  const handleNewChat = () => {
+    setConversationId(null);
+    setLoadRecent(false);
+    setNewChatKey((k) => k + 1);
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/accounts').then((r) => (r.ok ? r.json() : { accounts: [] })),
@@ -127,11 +133,7 @@ export default function ChatPage() {
 
           <button
             className="w-full py-2.5 px-4 rounded-lg border border-white/20 hover:bg-white/5 transition-colors flex items-center justify-center gap-2 text-sm font-medium gradient-border"
-            onClick={() => {
-              setConversationId(null);
-              setLoadRecent(false);
-              setNewChatKey((k) => k + 1);
-            }}
+            onClick={handleNewChat}
           >
             <Plus className="w-4 h-4" />
             New Chat
@@ -260,22 +262,22 @@ export default function ChatPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen">
         {/* Chat Header */}
-        <div className="h-16 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
+        <div className="h-16 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 shrink-0">
           <div className="flex items-center gap-3">
             <button className="block lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="w-5 h-5 text-gray-400" />
             </button>
 
             {selectedAccountId === 'all' ? (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                 <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold">
                   All
                 </div>
-                <span className="text-sm font-medium">All Accounts</span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none">All Accounts</span>
+                <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
               </div>
             ) : selectedAccount ? (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                 <div
                   className={`w-6 h-6 rounded bg-gradient-to-br ${GRADIENT_COLORS[accounts.indexOf(selectedAccount) % GRADIENT_COLORS.length]} flex items-center justify-center text-[10px] font-bold`}
                 >
@@ -283,10 +285,10 @@ export default function ChatPage() {
                     selectedAccount.metaAccountName || selectedAccount.metaAdAccountId,
                   )}
                 </div>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none">
                   {selectedAccount.metaAccountName || selectedAccount.metaAdAccountId}
                 </span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
               </div>
             ) : (
               <span className="text-sm font-medium text-gray-400">Adynami</span>
@@ -298,14 +300,14 @@ export default function ChatPage() {
             <button
               onClick={() => setActiveTab('chat')}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                'flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
                 activeTab === 'chat'
                   ? 'bg-white/10 text-white'
                   : 'text-gray-400 hover:text-gray-200',
               )}
             >
               <MessageSquare className="w-4 h-4" />
-              Chat
+              <span className="hidden sm:inline">Chat</span>
             </button>
             <button
               onClick={() => {
@@ -313,7 +315,7 @@ export default function ChatPage() {
               }}
               disabled={selectedAccountId === 'all'}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                'flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
                 activeTab === 'dashboard'
                   ? 'bg-white/10 text-white'
                   : 'text-gray-400 hover:text-gray-200',
@@ -322,11 +324,11 @@ export default function ChatPage() {
               title={selectedAccountId === 'all' ? 'Select a single account to use Dashboard' : undefined}
             >
               <LayoutDashboard className="w-4 h-4" />
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <Link href="/settings" className="text-gray-400 hover:text-white transition-colors">
               <Settings className="w-5 h-5" />
             </Link>
@@ -345,6 +347,7 @@ export default function ChatPage() {
               conversationId={conversationId}
               onConversationId={setConversationId}
               loadRecent={loadRecent}
+              onNewChat={handleNewChat}
             />
           ) : (
             <DashboardPanel

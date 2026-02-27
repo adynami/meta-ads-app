@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, Lock, Plus } from 'lucide-react';
+import { PLAN_LIMITS } from '@/lib/plans';
 
 const plans = {
   basic: {
@@ -10,7 +11,7 @@ const plans = {
     annual: 39,
     features: [
       '1 Meta ad account',
-      'Unlimited conversations',
+      '100 AI conversations/month',
       'Campaign management',
       'Performance reporting',
       'Audience builder',
@@ -23,10 +24,10 @@ const plans = {
     annual: 119,
     features: [
       '5 Meta ad accounts',
+      '400 AI conversations/month',
       'Everything in Starter',
       'Zero-conversion diagnostics',
       'Creative performance analysis',
-      'Advanced breakdowns',
       'Priority support',
     ],
   },
@@ -36,9 +37,9 @@ const plans = {
     annual: 279,
     features: [
       'Unlimited ad accounts',
+      '1,000 AI conversations/month',
       'Everything in Pro',
       'Team seats (5 users)',
-      'White-label exports',
       'Claude MCP Integration',
       'Dedicated support',
     ],
@@ -47,13 +48,57 @@ const plans = {
 
 type PlanId = keyof typeof plans;
 
+const topupPacks = [
+  { pack: '25' as const, calls: 25, price: 19 },
+  { pack: '100' as const, calls: 100, price: 59 },
+  { pack: '250' as const, calls: 250, price: 119 },
+];
+
+interface UserData {
+  plan: string;
+  bonusCalls: number;
+}
+
+interface UsageData {
+  apiCalls: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostCents: number;
+}
+
 export default function BillingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // In production, this would come from the session/API
-  const [currentPlan] = useState<PlanId>('pro');
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/user').then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/usage').then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([userRes, usageRes]) => {
+        if (userRes?.user) {
+          setUserData({ plan: userRes.user.plan, bonusCalls: userRes.user.bonusCalls ?? 0 });
+        }
+        if (usageRes) {
+          setUsageData({
+            apiCalls: usageRes.apiCalls ?? 0,
+            inputTokens: usageRes.inputTokens ?? 0,
+            outputTokens: usageRes.outputTokens ?? 0,
+            estimatedCostCents: usageRes.estimatedCostCents ?? 0,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setDataLoading(false));
+  }, []);
+
+  const currentPlan = (userData?.plan ?? 'trial') as PlanId | 'trial';
+  const currentPlanConfig = currentPlan !== 'trial' && currentPlan in plans ? plans[currentPlan as PlanId] : null;
+  const planLimits = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.trial;
 
   const getPrice = (plan: typeof plans[PlanId]) =>
     billingPeriod === 'monthly' ? plan.monthly : plan.annual;
@@ -75,6 +120,23 @@ export default function BillingPage() {
     }
   }
 
+  async function buyTopup(pack: string) {
+    setLoading(`topup-${pack}`);
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'topup', pack }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function manageSubscription() {
     const res = await fetch('/api/billing/portal', { method: 'POST' });
     const data = await res.json();
@@ -82,6 +144,11 @@ export default function BillingPage() {
       window.location.href = data.url;
     }
   }
+
+  const apiCalls = usageData?.apiCalls ?? 0;
+  const callLimit = planLimits.monthlyApiCalls;
+  const bonusCalls = userData?.bonusCalls ?? 0;
+  const usagePercent = Math.min(100, Math.round((apiCalls / callLimit) * 100));
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -96,40 +163,121 @@ export default function BillingPage() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <span className="inline-block gradient-bg px-3 py-1 rounded-lg text-sm font-semibold">
-                    {plans[currentPlan].name} Plan
+                    {currentPlanConfig ? `${currentPlanConfig.name} Plan` : 'Trial'}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-green-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                     Current
                   </span>
                 </div>
-                <p className="text-2xl font-bold">
-                  ${plans[currentPlan].monthly}
-                  <span className="text-base text-gray-400 font-normal"> / month</span>
-                </p>
+                {currentPlanConfig ? (
+                  <p className="text-2xl font-bold">
+                    ${currentPlanConfig.monthly}
+                    <span className="text-base text-gray-400 font-normal"> / month</span>
+                  </p>
+                ) : (
+                  <p className="text-2xl font-bold">Free Trial</p>
+                )}
                 <p className="text-sm text-gray-400 mt-2">
-                  {currentPlan === 'basic' && '1 ad account · Unlimited conversations · Campaign management'}
-                  {currentPlan === 'pro' && 'Up to 5 ad accounts · Unlimited conversations · Creative diagnostics · Priority support'}
-                  {currentPlan === 'agency' && 'Unlimited ad accounts · Team seats · White-label exports · Dedicated support'}
+                  {callLimit} AI conversations/month
+                  {bonusCalls > 0 && ` + ${bonusCalls} bonus calls`}
                 </p>
               </div>
             </div>
             <div className="flex gap-3">
               {currentPlan !== 'agency' && (
                 <button
-                  onClick={() => subscribe(currentPlan === 'basic' ? 'pro' : 'agency')}
+                  onClick={() => {
+                    if (currentPlan === 'trial' || currentPlan === 'basic') subscribe('pro');
+                    else subscribe('agency');
+                  }}
                   className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity"
                 >
-                  {currentPlan === 'basic' ? 'Upgrade to Pro' : 'Upgrade to Agency'}
+                  {currentPlan === 'trial' || currentPlan === 'basic' ? 'Upgrade to Pro' : 'Upgrade to Agency'}
                 </button>
               )}
-              <button
-                onClick={manageSubscription}
-                className="px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
-              >
-                Manage Subscription
-              </button>
+              {currentPlan !== 'trial' && (
+                <button
+                  onClick={manageSubscription}
+                  className="px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
+                >
+                  Manage Subscription
+                </button>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="h-px bg-white/10 mb-12"></div>
+
+        {/* Usage */}
+        <div className="mb-12">
+          <h2 className="text-xl font-semibold mb-6">Usage — {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="glass-card rounded-xl p-6">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">AI Conversations</h3>
+              {dataLoading ? (
+                <p className="text-3xl font-bold mb-1">—</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold mb-1">
+                    {apiCalls} <span className="text-base text-gray-400 font-normal">/ {callLimit}</span>
+                  </p>
+                  <div className="w-full bg-white/10 rounded-full h-2 mt-3 mb-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-yellow-500' : 'bg-purple-500'}`}
+                      style={{ width: `${usagePercent}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">{usagePercent}% used this month</p>
+                </>
+              )}
+            </div>
+
+            <div className="glass-card rounded-xl p-6">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Bonus Calls</h3>
+              {dataLoading ? (
+                <p className="text-3xl font-bold mb-1">—</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold mb-1">{bonusCalls}</p>
+                  <p className="text-xs text-gray-500">
+                    {bonusCalls > 0
+                      ? 'Available credits (never expire)'
+                      : 'Purchase credit packs below'}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="h-px bg-white/10 mb-12"></div>
+
+        {/* Top Up */}
+        <div className="mb-12">
+          <h2 className="text-xl font-semibold mb-2">Top Up</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Need more conversations? Buy credit packs — they never expire and are used after your monthly allowance runs out.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {topupPacks.map(({ pack, calls, price }) => (
+              <div key={pack} className="glass-card rounded-xl p-5 flex flex-col items-center text-center">
+                <div className="flex items-center gap-1 mb-2">
+                  <Plus className="w-4 h-4 text-purple-400" />
+                  <span className="text-2xl font-bold">{calls}</span>
+                </div>
+                <p className="text-sm text-gray-400 mb-3">conversations</p>
+                <p className="text-lg font-semibold mb-4">${price}</p>
+                <button
+                  onClick={() => buyTopup(pack)}
+                  disabled={loading !== null}
+                  className="w-full py-2 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
+                >
+                  {loading === `topup-${pack}` ? 'Redirecting...' : 'Buy'}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -201,55 +349,22 @@ export default function BillingPage() {
                     onClick={() => subscribe(id)}
                     disabled={loading !== null}
                     className={`w-full py-2.5 rounded-lg font-medium text-sm transition-opacity ${
-                      (id === 'pro' && currentPlan === 'basic') || (id === 'agency')
+                      (id === 'pro' && (currentPlan === 'basic' || currentPlan === 'trial')) || (id === 'agency')
                         ? 'gradient-bg hover:opacity-90'
                         : 'border border-white/20 hover:bg-white/5 text-gray-400'
                     }`}
                   >
                     {loading === id
                       ? 'Redirecting...'
-                      : Object.keys(plans).indexOf(id) > Object.keys(plans).indexOf(currentPlan)
+                      : Object.keys(plans).indexOf(id) > Object.keys(plans).indexOf(currentPlan as PlanId)
                         ? `Upgrade to ${plan.name}`
-                        : `Downgrade to ${plan.name}`
+                        : `Switch to ${plan.name}`
                     }
                   </button>
                 )}
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="h-px bg-white/10 mb-12"></div>
-
-        {/* Usage */}
-        <div className="mb-12">
-          <h2 className="text-xl font-semibold mb-6">Usage — {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="glass-card rounded-xl p-6 text-center">
-              <div className="text-3xl mb-2">&#x1F4AC;</div>
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Conversations</h3>
-              <p className="text-3xl font-bold mb-1">—</p>
-              <p className="text-xs text-gray-500">this month</p>
-              <p className="text-xs text-purple-400 mt-2">No limit on {plans[currentPlan].name}</p>
-            </div>
-
-            <div className="glass-card rounded-xl p-6 text-center">
-              <div className="text-3xl mb-2">&#x26A1;</div>
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Commands Executed</h3>
-              <p className="text-3xl font-bold mb-1">—</p>
-              <p className="text-xs text-gray-500">this month</p>
-              <p className="text-xs text-purple-400 mt-2">No limit on {plans[currentPlan].name}</p>
-            </div>
-
-            <div className="glass-card rounded-xl p-6 text-center">
-              <div className="text-3xl mb-2">&#x1F4CA;</div>
-              <h3 className="text-sm font-medium text-gray-400 mb-2">API Calls</h3>
-              <p className="text-3xl font-bold mb-1">—</p>
-              <p className="text-xs text-gray-500">this month</p>
-              <p className="text-xs text-purple-400 mt-2">No limit on {plans[currentPlan].name}</p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 text-center mt-4">No limits on Pro or Agency plans.</p>
         </div>
 
         <div className="h-px bg-white/10 mb-12"></div>

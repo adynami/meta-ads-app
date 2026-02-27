@@ -19,7 +19,7 @@ export const config = {
 };
 
 const anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
-const MAX_TOOL_ROUNDS = 10;
+const MAX_TOOL_ROUNDS = 5;
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,11 +59,13 @@ export async function POST(req: NextRequest) {
         .where(and(eq(usage.userId, user.id), eq(usage.month, month)))
         .limit(1);
 
-      if (monthUsage && monthUsage.apiCalls >= planLimits.monthlyApiCalls) {
+      const planCallsLeft = planLimits.monthlyApiCalls - (monthUsage?.apiCalls ?? 0);
+      if (planCallsLeft <= 0 && (user.bonusCalls ?? 0) <= 0) {
         return Response.json({
-          error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade for more.`,
+          error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade or buy more calls.`,
           code: 'RATE_LIMITED',
-          usage: { current: monthUsage.apiCalls, limit: planLimits.monthlyApiCalls },
+          canTopUp: true,
+          usage: { current: monthUsage?.apiCalls ?? 0, limit: planLimits.monthlyApiCalls },
         }, { status: 429 });
       }
 
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           adAccountId: null,
           conversationId: body.conversationId,
+          useBonusCall: planCallsLeft <= 0,
         }, accountNames, attachmentStore);
       }
 
@@ -149,6 +152,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         adAccountId: account.id,
         conversationId: body.conversationId,
+        useBonusCall: planCallsLeft <= 0,
       }, undefined, attachmentStore);
     }
 
@@ -256,6 +260,7 @@ interface PersistenceContext {
   userId: string;
   adAccountId: string | null;
   conversationId?: string;
+  useBonusCall?: boolean;
 }
 
 interface AccountLabel {
@@ -270,8 +275,8 @@ interface AccountLabel {
  */
 function truncateOldToolResults(
   messages: Anthropic.MessageParam[],
-  recentToKeep = 8,
-  maxLen = 800,
+  recentToKeep = 4,
+  maxLen = 400,
 ): Anthropic.MessageParam[] {
   const cutoff = Math.max(0, messages.length - recentToKeep);
   return messages.map((msg, i) => {
@@ -398,6 +403,14 @@ async function runChat(
   if (persist) {
     try {
       returnedConversationId = await persistChatData(persist, messages, finalText, totalInputTokens, totalOutputTokens, totalCacheCreationTokens, totalCacheReadTokens);
+
+      // Decrement bonus calls if this call consumed a bonus credit
+      if (persist.useBonusCall) {
+        await db
+          .update(users)
+          .set({ bonusCalls: sql`bonus_calls - 1` })
+          .where(eq(users.id, persist.userId));
+      }
     } catch (err) {
       console.error('[chat/route] Persistence error:', err);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film } from 'lucide-react';
+import { Send, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film, Plus } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import type { AttachmentMeta } from '@/lib/attachments';
 import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
@@ -42,9 +42,10 @@ interface ChatWindowProps {
   conversationId: string | null;
   onConversationId: (id: string) => void;
   loadRecent: boolean;
+  onNewChat?: () => void;
 }
 
-export function ChatWindow({ accountId, conversationId, onConversationId, loadRecent }: ChatWindowProps) {
+export function ChatWindow({ accountId, conversationId, onConversationId, loadRecent, onNewChat }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -189,6 +190,14 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
 
       if (!res.ok) {
         const err = await res.json();
+        if (err.code === 'RATE_LIMITED' && err.canTopUp) {
+          const errorMessage: Message = {
+            role: 'assistant',
+            content: `You've reached your monthly conversation limit. [Buy more calls](/billing) to continue chatting, or upgrade your plan.`,
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          return;
+        }
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
@@ -252,8 +261,21 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
 
   return (
     <div className="flex flex-col h-full">
+      {/* New Chat header bar */}
+      {messages.length > 0 && onNewChat && (
+        <div className="flex items-center justify-end px-3 sm:px-6 py-2 border-b border-white/5 shrink-0">
+          <button
+            onClick={onNewChat}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New Chat
+          </button>
+        </div>
+      )}
+
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-8" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 sm:px-6 py-6 sm:py-8" ref={scrollRef}>
         {isLoadingHistory ? (
           <div className="flex items-center justify-center h-full">
             <div className="loading-dots text-purple-400 text-lg">
@@ -261,7 +283,7 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <div className="max-w-4xl mx-auto flex flex-col items-center justify-center h-full text-center pt-16">
+          <div className="max-w-4xl mx-auto flex flex-col items-center justify-center h-full text-center pt-8 sm:pt-16 px-2">
             <div className="mb-8">
               <span className="text-4xl font-bold">
                 <span className="text-white">Ady</span>
@@ -390,10 +412,10 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
             </div>
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
-            <p className="text-xs text-gray-500">
+            <p className="text-[10px] sm:text-xs text-gray-500">
               Adynami reads and writes your live Meta account. Actions execute immediately.
             </p>
-            <p className="text-xs text-gray-600 hidden sm:block">
+            <p className="text-[10px] sm:text-xs text-gray-600 hidden sm:block">
               Enter to send · Shift+Enter for new line
             </p>
           </div>

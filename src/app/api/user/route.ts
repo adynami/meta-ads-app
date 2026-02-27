@@ -18,6 +18,7 @@ export async function GET() {
       image: users.image,
       plan: users.plan,
       trialEndsAt: users.trialEndsAt,
+      bonusCalls: users.bonusCalls,
       createdAt: users.createdAt,
     })
     .from(users)

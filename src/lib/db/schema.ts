@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   stripeCustomerId: text('stripe_customer_id'),
   plan: text('plan').default('trial').notNull(), // trial, basic, pro, agency
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+  bonusCalls: integer('bonus_calls').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

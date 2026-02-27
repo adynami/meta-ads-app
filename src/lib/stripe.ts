@@ -18,3 +18,17 @@ export const PRICE_IDS = {
 } as const;
 
 export type PricePlan = keyof typeof PRICE_IDS;
+
+export const TOPUP_PRICE_IDS = {
+  '25': process.env.STRIPE_TOPUP_25_PRICE_ID!,
+  '100': process.env.STRIPE_TOPUP_100_PRICE_ID!,
+  '250': process.env.STRIPE_TOPUP_250_PRICE_ID!,
+} as const;
+
+export type TopupPack = keyof typeof TOPUP_PRICE_IDS;
+
+export const TOPUP_AMOUNTS: Record<string, number> = {
+  [process.env.STRIPE_TOPUP_25_PRICE_ID!]: 25,
+  [process.env.STRIPE_TOPUP_100_PRICE_ID!]: 100,
+  [process.env.STRIPE_TOPUP_250_PRICE_ID!]: 250,
+};

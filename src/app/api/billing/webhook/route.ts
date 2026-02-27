@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 /**
  * POST /api/billing/webhook
- * Handles Stripe webhook events for subscription lifecycle.
+ * Handles Stripe webhook events for subscription lifecycle and top-up payments.
  */
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -33,6 +33,26 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
+
+      // Handle one-time top-up payments
+      if (session.mode === 'payment') {
+        const paymentIntentId = session.payment_intent as string;
+        if (paymentIntentId) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+          const metadata = paymentIntent.metadata;
+          if (metadata?.type === 'topup' && metadata.userId && metadata.credits) {
+            const credits = parseInt(metadata.credits, 10);
+            await db
+              .update(users)
+              .set({ bonusCalls: sql`bonus_calls + ${credits}` })
+              .where(eq(users.id, metadata.userId));
+            console.log(`[webhook] Top-up: +${credits} bonus calls for user ${metadata.userId}`);
+          }
+        }
+        break;
+      }
+
+      // Handle subscription checkout
       const userId = session.subscription
         ? (await stripe.subscriptions.retrieve(session.subscription as string))
             .metadata?.userId

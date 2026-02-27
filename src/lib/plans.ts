@@ -1,8 +1,8 @@
 export const PLAN_LIMITS = {
-  trial: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 50 },
-  basic: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 500 },
-  pro: { adAccounts: 5, hasMcp: false, monthlyApiCalls: 2_000 },
-  agency: { adAccounts: Infinity, hasMcp: true, monthlyApiCalls: 10_000 },
+  trial: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 25 },
+  basic: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 100 },
+  pro: { adAccounts: 5, hasMcp: false, monthlyApiCalls: 400 },
+  agency: { adAccounts: Infinity, hasMcp: true, monthlyApiCalls: 1_000 },
 } as const;
 
 export type Plan = keyof typeof PLAN_LIMITS;
