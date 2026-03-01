@@ -3,6 +3,7 @@ import type { NextAuthConfig } from 'next-auth';
 import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
+import { META_API_VERSION } from './meta-auth';
 
 export const authConfig: NextAuthConfig = {
   trustHost: true,
@@ -12,13 +13,13 @@ export const authConfig: NextAuthConfig = {
       name: 'Meta',
       type: 'oauth',
       authorization: {
-        url: 'https://www.facebook.com/v25.0/dialog/oauth',
+        url: `https://www.facebook.com/${META_API_VERSION}/dialog/oauth`,
         params: {
           scope: 'email,ads_management,ads_read,business_management,read_insights,pages_read_engagement,pages_show_list',
         },
       },
-      token: 'https://graph.facebook.com/v25.0/oauth/access_token',
-      userinfo: 'https://graph.facebook.com/v25.0/me?fields=id,name,email,picture',
+      token: `https://graph.facebook.com/${META_API_VERSION}/oauth/access_token`,
+      userinfo: `https://graph.facebook.com/${META_API_VERSION}/me?fields=id,name,email,picture`,
       clientId: process.env.META_APP_ID,
       clientSecret: process.env.META_APP_SECRET,
       profile(profile) {

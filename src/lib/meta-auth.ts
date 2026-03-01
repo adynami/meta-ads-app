@@ -2,6 +2,8 @@
  * Meta OAuth utilities — token exchange, long-lived tokens, ad account discovery.
  */
 
+export const META_API_VERSION = 'v25.0';
+
 const GRAPH_BASE = 'https://graph.facebook.com';
 
 interface TokenExchangeResult {
@@ -31,7 +33,7 @@ export async function exchangeForLongLivedToken(
   });
 
   const res = await fetch(
-    `${GRAPH_BASE}/v25.0/oauth/access_token?${params}`,
+    `${GRAPH_BASE}/${META_API_VERSION}/oauth/access_token?${params}`,
   );
 
   if (!res.ok) {
@@ -61,7 +63,7 @@ export async function fetchAdAccounts(
   });
 
   const personalRes = await fetch(
-    `${GRAPH_BASE}/v25.0/me/adaccounts?${personalParams}`,
+    `${GRAPH_BASE}/${META_API_VERSION}/me/adaccounts?${personalParams}`,
   );
 
   if (personalRes.ok) {
@@ -79,7 +81,7 @@ export async function fetchAdAccounts(
   });
 
   const bizRes = await fetch(
-    `${GRAPH_BASE}/v25.0/me/businesses?${bizParams}`,
+    `${GRAPH_BASE}/${META_API_VERSION}/me/businesses?${bizParams}`,
   );
 
   if (bizRes.ok) {
@@ -90,8 +92,8 @@ export async function fetchAdAccounts(
     await Promise.all(
       businesses.map(async (biz) => {
         const endpoints = [
-          `${GRAPH_BASE}/v25.0/${biz.id}/owned_ad_accounts`,
-          `${GRAPH_BASE}/v25.0/${biz.id}/client_ad_accounts`,
+          `${GRAPH_BASE}/${META_API_VERSION}/${biz.id}/owned_ad_accounts`,
+          `${GRAPH_BASE}/${META_API_VERSION}/${biz.id}/client_ad_accounts`,
         ];
 
         await Promise.all(

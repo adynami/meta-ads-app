@@ -6,6 +6,7 @@ import { users, adAccounts } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decrypt } from '@/lib/crypto';
 import { isTrialExpired } from '@/lib/plans';
+import { META_API_VERSION } from '@/lib/meta-auth';
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
 
 export async function POST(req: NextRequest) {
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
       ctx = {
         accessToken: decrypt(account.accessTokenEnc),
         adAccountId: account.metaAdAccountId,
-        apiVersion: 'v25.0',
+        apiVersion: META_API_VERSION,
         dryRun: false,
       };
     } else {
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
       ctx = {
         accessToken: envToken,
         adAccountId: envAccount,
-        apiVersion: process.env.META_API_VERSION ?? 'v25.0',
+        apiVersion: process.env.META_API_VERSION ?? META_API_VERSION,
         dryRun: process.env.DRY_RUN === 'true',
       };
     }

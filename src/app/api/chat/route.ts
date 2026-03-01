@@ -12,6 +12,7 @@ import { isTrialExpired, PLAN_LIMITS, type Plan } from '@/lib/plans';
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
 import type { Attachment, AttachmentStore } from '@/lib/attachments';
 import { isImageType, isVideoType } from '@/lib/attachments';
+import { META_API_VERSION } from '@/lib/meta-auth';
 
 // Increase body size limit for base64-encoded image/video attachments
 export const config = {
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
         const contexts: TenantContext[] = allAccounts.map((a) => ({
           accessToken: decrypt(a.accessTokenEnc),
           adAccountId: a.metaAdAccountId,
-          apiVersion: 'v25.0',
+          apiVersion: META_API_VERSION,
           dryRun: false,
         }));
 
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
       ctx = {
         accessToken: decrypt(account.accessTokenEnc),
         adAccountId: account.metaAdAccountId,
-        apiVersion: 'v25.0',
+        apiVersion: META_API_VERSION,
         dryRun: false,
       };
 
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest) {
     ctx = {
       accessToken: envToken,
       adAccountId: envAccount,
-      apiVersion: process.env.META_API_VERSION ?? 'v25.0',
+      apiVersion: process.env.META_API_VERSION ?? META_API_VERSION,
       dryRun: process.env.DRY_RUN === 'true',
     };
 

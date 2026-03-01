@@ -3,7 +3,7 @@ import { randomBytes, createHash } from 'crypto';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, apiKeys } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * GET /api/keys — list user's API keys (Agency only)
@@ -108,7 +108,7 @@ export async function DELETE(req: NextRequest) {
 
   await db
     .delete(apiKeys)
-    .where(eq(apiKeys.id, keyId));
+    .where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, user.id)));
 
   return Response.json({ success: true });
 }
