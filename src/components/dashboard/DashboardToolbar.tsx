@@ -3,9 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { RefreshCw, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type Level = 'campaign' | 'adset' | 'ad';
-type TimeRange = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'custom';
+import type { Level, TimeRange } from '@/types/dashboard';
 
 const TIME_RANGE_LABELS: Record<TimeRange, string> = {
   today: 'Today',

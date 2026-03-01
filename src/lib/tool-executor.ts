@@ -103,10 +103,17 @@ export async function executeTool(
   try {
     const result = await handler(ctx, toolName, args, attachmentStore);
     return JSON.stringify(result);
-  } catch (error: any) {
-    const message = error?.response?.error?.message
-      ?? error?.message
-      ?? String(error);
-    return JSON.stringify({ error: message });
+  } catch (error: unknown) {
+    let message: string;
+    let code: string | undefined;
+    if (error instanceof Error) {
+      message = error.message;
+      code = 'code' in error ? String((error as Record<string, unknown>).code) : undefined;
+    } else if (error && typeof error === 'object') {
+      try { message = JSON.stringify(error); } catch { message = 'Unknown tool execution error'; }
+    } else {
+      message = 'Unknown tool execution error';
+    }
+    return JSON.stringify({ error: message, ...(code ? { code } : {}) });
   }
 }

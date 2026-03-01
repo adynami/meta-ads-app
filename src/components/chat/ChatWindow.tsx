@@ -5,20 +5,9 @@ import { Send, Square, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film
 import { MessageBubble } from './MessageBubble';
 import type { AttachmentMeta } from '@/lib/attachments';
 import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
+import type { Message } from '@/types/chat';
 
-interface ToolCall {
-  id: string;
-  name: string;
-  input: any;
-  result: string;
-}
-
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  toolCalls?: ToolCall[];
-  attachments?: AttachmentMeta[];
-}
+export type { Message };
 
 /** Client-side attachment with base64 data for sending */
 interface ClientAttachment {

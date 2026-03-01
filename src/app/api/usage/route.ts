@@ -2,12 +2,11 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { usage, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const dbUser = await db
@@ -17,7 +16,7 @@ export async function GET() {
     .limit(1);
 
   if (!dbUser[0]) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const now = new Date();
@@ -41,7 +40,7 @@ export async function GET() {
     estimatedCostCents: 0,
   };
 
-  return NextResponse.json({
+  return Response.json({
     month,
     apiCalls: stats.apiCalls,
     inputTokens: stats.inputTokens,

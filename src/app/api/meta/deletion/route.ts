@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { users, adAccounts, conversations, usage, apiKeys } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createHmac } from 'crypto';
 
 /**
@@ -44,17 +44,17 @@ export async function POST(req: NextRequest) {
     const signedRequest = formData.get('signed_request') as string;
 
     if (!signedRequest) {
-      return NextResponse.json({ error: 'Missing signed_request' }, { status: 400 });
+      return Response.json({ error: 'Missing signed_request' }, { status: 400 });
     }
 
     const appSecret = process.env.META_APP_SECRET;
     if (!appSecret) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      return Response.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
     const data = parseSignedRequest(signedRequest, appSecret);
     if (!data) {
-      return NextResponse.json({ error: 'Invalid signed request' }, { status: 403 });
+      return Response.json({ error: 'Invalid signed request' }, { status: 403 });
     }
 
     const metaUserId = data.user_id;
@@ -87,11 +87,11 @@ export async function POST(req: NextRequest) {
 
     // Meta expects a JSON response with a status URL and confirmation code
     const appUrl = process.env.AUTH_URL || 'https://adynami.ai';
-    return NextResponse.json({
+    return Response.json({
       url: `${appUrl}/deletion-status?code=${confirmationCode}`,
       confirmation_code: confirmationCode,
     });
   } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

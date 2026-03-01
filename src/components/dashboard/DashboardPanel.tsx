@@ -3,10 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardToolbar } from './DashboardToolbar';
 import { DashboardTable, type DashboardRow } from './DashboardTable';
-
-type Level = 'campaign' | 'adset' | 'ad';
-type TimeRange = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'custom';
-type SortDir = 'asc' | 'desc';
+import type { Level, TimeRange, SortDir } from '@/types/dashboard';
 
 interface DashboardPanelProps {
   accountId: string;

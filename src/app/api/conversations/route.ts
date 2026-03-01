@@ -2,12 +2,12 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { conversations, users } from '@/lib/db/schema';
 import { eq, desc, and, isNull } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const dbUser = await db
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .limit(1);
 
   if (!dbUser[0]) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const userId = dbUser[0].id;
@@ -34,10 +34,10 @@ export async function GET(req: NextRequest) {
       .limit(1);
 
     if (!conv) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+      return Response.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ conversation: conv });
+    return Response.json({ conversation: conv });
   }
 
   // Filter by account — return most recent with messages
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(conversations.updatedAt))
       .limit(1);
 
-    return NextResponse.json({ conversations: userConversations });
+    return Response.json({ conversations: userConversations });
   }
 
   // Default: list all conversations (without messages for sidebar listing)
@@ -70,5 +70,5 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(conversations.updatedAt))
     .limit(50);
 
-  return NextResponse.json({ conversations: userConversations });
+  return Response.json({ conversations: userConversations });
 }

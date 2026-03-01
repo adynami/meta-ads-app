@@ -13,6 +13,7 @@ import type { TenantContext } from 'meta-mcp-server/tenant-context';
 import type { Attachment, AttachmentStore } from '@/lib/attachments';
 import { isImageType, isVideoType } from '@/lib/attachments';
 import { META_API_VERSION } from '@/lib/meta-auth';
+import { estimateCostCents } from '@/lib/pricing';
 
 // Increase body size limit for base64-encoded image/video attachments
 export const config = {
@@ -31,6 +32,20 @@ function extractAndStripContext(text: string): { cleanText: string; context: str
 
 const anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
 const MAX_TOOL_ROUNDS = 10;
+const MAX_MESSAGES = 100;
+const VALID_ROLES = new Set(['user', 'assistant']);
+
+function validateMessages(messages: unknown): string | null {
+  if (!Array.isArray(messages)) return 'messages must be an array';
+  if (messages.length === 0) return 'messages is required';
+  if (messages.length > MAX_MESSAGES) return `messages exceeds maximum of ${MAX_MESSAGES}`;
+  for (const msg of messages) {
+    if (!msg || typeof msg !== 'object') return 'each message must be an object';
+    if (!VALID_ROLES.has(msg.role)) return `invalid message role: ${msg.role}`;
+    if (msg.content == null) return 'each message must have content';
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -94,8 +109,9 @@ export async function POST(req: NextRequest) {
         for (const a of rawAttachments) attachmentStore.set(a.id, a);
       }
 
-      if (!messages?.length) {
-        return Response.json({ error: 'messages is required' }, { status: 400 });
+      const msgError = validateMessages(messages);
+      if (msgError) {
+        return Response.json({ error: msgError }, { status: 400 });
       }
 
       // Load existing conversation context for continuity
@@ -122,12 +138,26 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         }
 
-        const contexts: TenantContext[] = allAccounts.map((a) => ({
-          accessToken: decrypt(a.accessTokenEnc),
-          adAccountId: a.metaAdAccountId,
-          apiVersion: META_API_VERSION,
-          dryRun: false,
-        }));
+        const contexts: TenantContext[] = [];
+        const failedAccounts: string[] = [];
+        for (const a of allAccounts) {
+          try {
+            contexts.push({
+              accessToken: decrypt(a.accessTokenEnc),
+              adAccountId: a.metaAdAccountId,
+              apiVersion: META_API_VERSION,
+              dryRun: false,
+            });
+          } catch {
+            failedAccounts.push(a.metaAccountName || a.metaAdAccountId);
+          }
+        }
+        if (contexts.length === 0) {
+          return Response.json({
+            error: 'Failed to decrypt tokens for all accounts. Please reconnect in Settings.',
+            code: 'TOKEN_DECRYPT_FAILED',
+          }, { status: 400 });
+        }
 
         const accountNames = allAccounts.map((a) => ({
           id: a.metaAdAccountId,
@@ -162,12 +192,19 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      ctx = {
-        accessToken: decrypt(account.accessTokenEnc),
-        adAccountId: account.metaAdAccountId,
-        apiVersion: META_API_VERSION,
-        dryRun: false,
-      };
+      try {
+        ctx = {
+          accessToken: decrypt(account.accessTokenEnc),
+          adAccountId: account.metaAdAccountId,
+          apiVersion: META_API_VERSION,
+          dryRun: false,
+        };
+      } catch {
+        return Response.json({
+          error: 'Failed to decrypt token. Please reconnect in Settings.',
+          code: 'TOKEN_DECRYPT_FAILED',
+        }, { status: 400 });
+      }
 
       const messagesWithAttachmentsSingle = injectAttachmentBlocks(messages, attachmentStore);
 
@@ -197,8 +234,9 @@ export async function POST(req: NextRequest) {
     };
     const { messages, attachments: envAttachments } = envBody;
 
-    if (!messages?.length) {
-      return Response.json({ error: 'messages is required' }, { status: 400 });
+    const envMsgError = validateMessages(messages);
+    if (envMsgError) {
+      return Response.json({ error: envMsgError }, { status: 400 });
     }
 
     const envAttachmentStore: AttachmentStore = new Map();
@@ -485,14 +523,24 @@ async function persistChatData(
     { role: 'assistant', content: assistantText, timestamp: now.toISOString() },
   ];
 
+  const MAX_STORED_MESSAGES = 200;
   let conversationId = persist.conversationId;
 
   if (conversationId) {
-    // Append to existing conversation
+    // Append to existing conversation, trimming oldest if over threshold
     await db
       .update(conversations)
       .set({
-        messages: sql`${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb`,
+        messages: sql`(
+          CASE WHEN jsonb_array_length(${conversations.messages}) + ${newMessages.length} > ${MAX_STORED_MESSAGES}
+          THEN (SELECT jsonb_agg(elem) FROM (
+            SELECT elem FROM jsonb_array_elements(${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb) AS elem
+            ORDER BY elem->>'timestamp' DESC
+            LIMIT ${MAX_STORED_MESSAGES}
+          ) sub)
+          ELSE ${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb
+          END
+        )`,
         updatedAt: now,
         ...(context != null ? { context } : {}),
       })
@@ -541,17 +589,3 @@ async function persistChatData(
   return conversationId!;
 }
 
-function estimateCostCents(
-  inputTokens: number,
-  outputTokens: number,
-  cacheCreationTokens = 0,
-  cacheReadTokens = 0,
-): number {
-  // Sonnet pricing: $3/MTok input, $15/MTok output
-  // Cache write: $3.75/MTok, Cache read: $0.30/MTok
-  const inputCost = (inputTokens / 1_000_000) * 3;
-  const outputCost = (outputTokens / 1_000_000) * 15;
-  const cacheWriteCost = (cacheCreationTokens / 1_000_000) * 3.75;
-  const cacheReadCost = (cacheReadTokens / 1_000_000) * 0.30;
-  return Math.round((inputCost + outputCost + cacheWriteCost + cacheReadCost) * 100);
-}

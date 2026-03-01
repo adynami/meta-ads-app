@@ -34,6 +34,7 @@ export async function exchangeForLongLivedToken(
 
   const res = await fetch(
     `${GRAPH_BASE}/${META_API_VERSION}/oauth/access_token?${params}`,
+    { signal: AbortSignal.timeout(15_000) },
   );
 
   if (!res.ok) {
@@ -41,7 +42,11 @@ export async function exchangeForLongLivedToken(
     throw new Error(err.error?.message ?? `Token exchange failed: ${res.status}`);
   }
 
-  return res.json();
+  const data: TokenExchangeResult = await res.json();
+  if (!data.access_token || typeof data.access_token !== 'string') {
+    throw new Error('Token exchange returned invalid or missing access_token');
+  }
+  return data;
 }
 
 /**
@@ -64,6 +69,7 @@ export async function fetchAdAccounts(
 
   const personalRes = await fetch(
     `${GRAPH_BASE}/${META_API_VERSION}/me/adaccounts?${personalParams}`,
+    { signal: AbortSignal.timeout(15_000) },
   );
 
   if (personalRes.ok) {
@@ -82,6 +88,7 @@ export async function fetchAdAccounts(
 
   const bizRes = await fetch(
     `${GRAPH_BASE}/${META_API_VERSION}/me/businesses?${bizParams}`,
+    { signal: AbortSignal.timeout(15_000) },
   );
 
   if (bizRes.ok) {
@@ -105,7 +112,7 @@ export async function fetchAdAccounts(
             });
 
             try {
-              const r = await fetch(`${endpoint}?${p}`);
+              const r = await fetch(`${endpoint}?${p}`, { signal: AbortSignal.timeout(15_000) });
               if (r.ok) {
                 const d = await r.json();
                 for (const acct of d.data ?? []) {

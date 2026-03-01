@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { users, webhookEvents } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 /**
@@ -16,6 +16,12 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Missing stripe-signature' }, { status: 400 });
   }
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('[webhook] STRIPE_WEBHOOK_SECRET is not configured');
+    return Response.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
   const stripe = getStripe();
   let event;
 
@@ -23,11 +29,23 @@ export async function POST(req: NextRequest) {
     event = stripe.webhooks.constructEvent(
       body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!,
+      webhookSecret,
     );
   } catch (err: any) {
     console.error('[webhook] Signature verification failed:', err.message);
     return Response.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  // Idempotency check — skip already-processed events
+  const [existing] = await db
+    .select({ id: webhookEvents.id })
+    .from(webhookEvents)
+    .where(eq(webhookEvents.id, event.id))
+    .limit(1);
+
+  if (existing) {
+    console.log(`[webhook] Skipping already-processed event: ${event.id}`);
+    return Response.json({ received: true });
   }
 
   switch (event.type) {
@@ -42,6 +60,10 @@ export async function POST(req: NextRequest) {
           const metadata = paymentIntent.metadata;
           if (metadata?.type === 'topup' && metadata.userId && metadata.credits) {
             const credits = parseInt(metadata.credits, 10);
+            if (isNaN(credits) || credits <= 0) {
+              console.error(`[webhook] Invalid credits value in top-up metadata: ${metadata.credits}`);
+              break;
+            }
             await db
               .update(users)
               .set({ bonusCalls: sql`bonus_calls + ${credits}` })
@@ -52,24 +74,20 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Handle subscription checkout
-      const userId = session.subscription
-        ? (await stripe.subscriptions.retrieve(session.subscription as string))
-            .metadata?.userId
-        : null;
+      // Handle subscription checkout — retrieve once, reuse for userId and plan
+      if (session.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        const userId = subscription.metadata?.userId;
 
-      if (userId) {
-        const plan = (
-          await stripe.subscriptions.retrieve(session.subscription as string)
-        ).metadata?.plan;
-
-        await db
-          .update(users)
-          .set({
-            plan: plan ?? 'basic',
-            stripeCustomerId: session.customer as string,
-          })
-          .where(eq(users.id, userId));
+        if (userId) {
+          await db
+            .update(users)
+            .set({
+              plan: subscription.metadata?.plan ?? 'basic',
+              stripeCustomerId: session.customer as string,
+            })
+            .where(eq(users.id, userId));
+        }
       }
       break;
     }
@@ -102,9 +120,12 @@ export async function POST(req: NextRequest) {
     }
 
     default:
-      // Unhandled event type
+      console.log(`[webhook] Unhandled event type: ${event.type}`);
       break;
   }
+
+  // Record event as processed for idempotency
+  await db.insert(webhookEvents).values({ id: event.id }).onConflictDoNothing();
 
   return Response.json({ received: true });
 }

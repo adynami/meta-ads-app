@@ -7,7 +7,11 @@ const TAG_LENGTH = 16;
 function getKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) throw new Error('ENCRYPTION_KEY is required');
-  return Buffer.from(key, 'hex'); // 32 bytes = 64 hex chars
+  const buf = Buffer.from(key, 'hex');
+  if (buf.length !== 32) {
+    throw new Error(`ENCRYPTION_KEY must be 32 bytes (64 hex chars), got ${buf.length} bytes`);
+  }
+  return buf;
 }
 
 /**
@@ -31,6 +35,10 @@ export function encrypt(plaintext: string): string {
 export function decrypt(encoded: string): string {
   const key = getKey();
   const buf = Buffer.from(encoded, 'base64');
+
+  if (buf.length < IV_LENGTH + TAG_LENGTH) {
+    throw new Error(`Ciphertext too short: expected at least ${IV_LENGTH + TAG_LENGTH} bytes, got ${buf.length}`);
+  }
 
   const iv = buf.subarray(0, IV_LENGTH);
   const tag = buf.subarray(buf.length - TAG_LENGTH);

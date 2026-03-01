@@ -2,12 +2,11 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, adAccounts, conversations, usage, apiKeys } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const [user] = await db
@@ -27,16 +26,16 @@ export async function GET() {
     .limit(1);
 
   if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ user });
+  return Response.json({ user });
 }
 
 export async function DELETE() {
   const session = await auth();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const dbUser = await db
@@ -46,7 +45,7 @@ export async function DELETE() {
     .limit(1);
 
   if (!dbUser[0]) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const userId = dbUser[0].id;
@@ -58,5 +57,5 @@ export async function DELETE() {
   await db.delete(adAccounts).where(eq(adAccounts.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
 
-  return NextResponse.json({ success: true });
+  return Response.json({ success: true });
 }

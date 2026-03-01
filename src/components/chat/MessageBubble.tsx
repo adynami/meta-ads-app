@@ -4,21 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { Film } from 'lucide-react';
-import type { AttachmentMeta } from '@/lib/attachments';
-
-interface ToolCall {
-  id: string;
-  name: string;
-  input: any;
-  result: string;
-}
-
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  toolCalls?: ToolCall[];
-  attachments?: AttachmentMeta[];
-}
+import type { Message } from '@/types/chat';
 
 const markdownComponents: Components = {
   h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-4 mb-2">{children}</h1>,

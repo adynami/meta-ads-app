@@ -1,8 +1,8 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, usage } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { NextRequest } from 'next/server';
 
 async function requireAdmin() {
   const session = await auth();
@@ -19,7 +19,7 @@ async function requireAdmin() {
 export async function GET() {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const now = new Date();
@@ -62,7 +62,7 @@ export async function GET() {
   const totalCostCents = merged.reduce((s, u) => s + u.estimatedCostCents, 0);
   const totalApiCalls = merged.reduce((s, u) => s + u.apiCalls, 0);
 
-  return NextResponse.json({
+  return Response.json({
     users: merged,
     summary: {
       totalUsers: merged.length,
@@ -76,7 +76,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json();
@@ -88,15 +88,21 @@ export async function PATCH(req: NextRequest) {
   };
 
   if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    return Response.json({ error: 'userId is required' }, { status: 400 });
   }
 
   if (plan && !['trial', 'basic', 'pro', 'agency'].includes(plan)) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    return Response.json({ error: 'Invalid plan' }, { status: 400 });
   }
 
   if (userId === admin.id && isAdmin === false) {
-    return NextResponse.json({ error: 'Cannot remove your own admin access' }, { status: 400 });
+    return Response.json({ error: 'Cannot remove your own admin access' }, { status: 400 });
+  }
+
+  if (bonusCalls !== undefined) {
+    if (!Number.isInteger(bonusCalls) || bonusCalls < 0 || bonusCalls > 100_000) {
+      return Response.json({ error: 'bonusCalls must be an integer between 0 and 100,000' }, { status: 400 });
+    }
   }
 
   const updates: Record<string, unknown> = {};
@@ -105,10 +111,10 @@ export async function PATCH(req: NextRequest) {
   if (isAdmin !== undefined) updates.isAdmin = isAdmin;
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    return Response.json({ error: 'No fields to update' }, { status: 400 });
   }
 
   await db.update(users).set(updates).where(eq(users.id, userId));
 
-  return NextResponse.json({ success: true });
+  return Response.json({ success: true });
 }

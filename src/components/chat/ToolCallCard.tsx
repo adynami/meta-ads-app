@@ -2,13 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-
-interface ToolCall {
-  id: string;
-  name: string;
-  input: any;
-  result: string;
-}
+import type { ToolCall } from '@/types/chat';
 
 const TOOL_ICONS: Record<string, string> = {
   campaign: '\u{1F4E2}',
