@@ -26,7 +26,7 @@ npm run dev          # tsx src/index.ts (stdio mode)
 ## Architecture
 
 ### Chat flow
-`ChatWindow.tsx` -> `POST /api/chat` -> Claude agentic loop (max 5 tool rounds) -> `tool-executor.ts` dispatches to MCP tool handlers -> Meta Marketing API
+`ChatWindow.tsx` -> `POST /api/chat` -> Claude agentic loop (max 10 tool rounds) -> `tool-executor.ts` dispatches to MCP tool handlers -> Meta Marketing API
 
 ### Auth flow
 Meta OAuth (`/api/auth/[...nextauth]`) -> short-lived token -> `exchangeForLongLivedToken()` (~60 days) -> AES-256-GCM encrypt -> store in `ad_accounts.access_token_enc`
@@ -148,6 +148,9 @@ NEXT_PUBLIC_APP_URL=       # Base URL for OAuth redirects
 Trial expires 7 days after signup. Bonus calls can be added by admin.
 
 ## Improvement Backlog
+
+### P0 — Reliability
+- [x] ~~Chat agent gets stuck narrating actions without executing tool calls~~ -> fixed break condition dropping tool_use blocks on `end_turn`, increased `max_tokens` to 16384, `MAX_TOOL_ROUNDS` to 10, added `stop_reason` logging (`src/app/api/chat/route.ts`)
 
 ### P0 — Security
 - [x] ~~API key DELETE missing userId ownership check~~ (`src/app/api/keys/route.ts`)
