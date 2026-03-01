@@ -30,7 +30,7 @@ function extractAndStripContext(text: string): { cleanText: string; context: str
 }
 
 const anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
-const MAX_TOOL_ROUNDS = 5;
+const MAX_TOOL_ROUNDS = 10;
 
 export async function POST(req: NextRequest) {
   try {
@@ -351,7 +351,7 @@ async function runChat(
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 16384,
       system: systemBlocks,
       tools: anthropicTools,
       messages: currentMessages,
@@ -359,7 +359,7 @@ async function runChat(
 
     const cacheRead = (response.usage as any).cache_read_input_tokens ?? 0;
     const cacheCreate = (response.usage as any).cache_creation_input_tokens ?? 0;
-    console.log(`[chat] round=${round} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`);
+    console.log(`[chat] round=${round} stop=${response.stop_reason} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`);
 
     totalInputTokens += response.usage.input_tokens;
     totalOutputTokens += response.usage.output_tokens;
@@ -381,7 +381,7 @@ async function runChat(
       finalText = textParts.join('\n');
     }
 
-    if (toolUseBlocks.length === 0 || response.stop_reason === 'end_turn') {
+    if (toolUseBlocks.length === 0) {
       break;
     }
 
