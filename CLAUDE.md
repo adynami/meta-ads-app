@@ -99,6 +99,9 @@ packages/meta-mcp-server/
 | `conversations` | userId (FK), adAccountId (FK), messages (jsonb), context | Messages array + extracted context |
 | `usage` | userId (FK), month, apiCalls, inputTokens, outputTokens | Unique on (userId, month) |
 | `api_keys` | userId (FK), keyHash (SHA-256), label | Agency plan only |
+| `webhook_events` | id (text PK = Stripe event ID), processedAt | Idempotency dedup for webhooks |
+
+All child table FKs use `onDelete: 'cascade'` except `conversations.adAccountId` which uses `onDelete: 'set null'`.
 
 ## Conventions
 
@@ -155,17 +158,30 @@ Trial expires 7 days after signup. Bonus calls can be added by admin.
 ### P0 — Security
 - [x] ~~API key DELETE missing userId ownership check~~ (`src/app/api/keys/route.ts`)
 - [x] ~~Hardcoded Meta API version `v25.0` in 6+ locations~~ -> extracted to `META_API_VERSION`
-- [ ] Admin PATCH accepts negative bonusCalls without validation (`src/app/api/admin/users/route.ts:104`)
-- [ ] No input validation on chat message structure/length (`src/app/api/chat/route.ts:83-88`)
+- [x] ~~Admin PATCH accepts negative bonusCalls without validation~~ -> validated integer in [0, 100000] (`src/app/api/admin/users/route.ts`)
+- [x] ~~No input validation on chat message structure/length~~ -> `validateMessages()` checks array, max 100, valid roles, non-null content (`src/app/api/chat/route.ts`)
+- [x] ~~No CSP headers configured~~ -> security headers middleware (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy) (`src/middleware.ts`)
+- [x] ~~Crypto: no key length or ciphertext bounds validation~~ -> validates 32-byte key + minimum buffer length (`src/lib/crypto.ts`)
+- [x] ~~decrypt() call sites unwrapped in chat route~~ -> try-catch at both paths, multi-account skips failed accounts (`src/app/api/chat/route.ts`)
+- [x] ~~Meta token exchange returns unvalidated response~~ -> validates access_token is non-empty string (`src/lib/meta-auth.ts`)
+- [x] ~~Meta API fetch calls have no timeout~~ -> `AbortSignal.timeout(15_000)` on all 4 calls (`src/lib/meta-auth.ts`)
+- [x] ~~Webhook STRIPE_WEBHOOK_SECRET used with ! assertion~~ -> null check before constructEvent (`src/app/api/billing/webhook/route.ts`)
+- [x] ~~Webhook credits parseInt with no NaN/negative check~~ -> guards against invalid values (`src/app/api/billing/webhook/route.ts`)
+- [x] ~~Webhook has no idempotency dedup~~ -> `webhook_events` table, check before processing, record after (`src/app/api/billing/webhook/route.ts`)
+- [x] ~~Conversations JSONB grows unbounded~~ -> MAX_STORED_MESSAGES (200) trim in persistChatData (`src/app/api/chat/route.ts`)
+- [x] ~~FK references have no onDelete~~ -> cascade on all child tables, set null on conversations.adAccountId (`src/lib/db/schema.ts`)
 - [ ] No rate limiting on auth or billing checkout endpoints
-- [ ] No CSP headers configured
 
 ### P1 — Code Quality
-- [ ] Duplicated `Message`/`ToolCall` interfaces in `ChatWindow.tsx` and `MessageBubble.tsx` -> extract to `src/types/chat.ts`
-- [ ] Inconsistent `Response.json()` vs `NextResponse.json()` across API routes -> standardize on `Response.json()`
-- [ ] `src/app/api/chat/route.ts` is 557 lines -> extract `runChat()`, `injectAttachmentBlocks()`, context logic into `src/lib/chat.ts`
+- [x] ~~Duplicated `Message`/`ToolCall` interfaces in `ChatWindow.tsx` and `MessageBubble.tsx`~~ -> extracted to `src/types/chat.ts`
+- [x] ~~Duplicated `Level`/`TimeRange`/`SortDir` in dashboard components~~ -> extracted to `src/types/dashboard.ts`
+- [x] ~~Inconsistent `Response.json()` vs `NextResponse.json()` across API routes~~ -> standardized on `Response.json()` in 5 routes
+- [x] ~~Cost estimation uses hardcoded Sonnet pricing~~ -> extracted to `src/lib/pricing.ts` with `MODEL_PRICING` config
+- [x] ~~Tool executor `String(error)` produces `[object Object]`~~ -> instanceof check + JSON.stringify fallback + error code propagation (`src/lib/tool-executor.ts`)
+- [x] ~~Webhook retrieves same subscription twice~~ -> single retrieve, reuse for userId and plan (`src/app/api/billing/webhook/route.ts`)
+- [x] ~~Unhandled webhook events silently return 200~~ -> logs event type (`src/app/api/billing/webhook/route.ts`)
+- [ ] `src/app/api/chat/route.ts` is 580+ lines -> extract `runChat()`, `injectAttachmentBlocks()`, context logic into `src/lib/chat.ts`
 - [ ] Duplicated ad-account connection logic across `POST /api/accounts`, `POST /api/auth/meta/connect`, and `POST /api/meta/ad-accounts` -> consolidate into `lib/meta-auth.ts`
-- [ ] Cost estimation uses hardcoded Sonnet pricing (`chat/route.ts:~549`) -> extract to config constant
 - [ ] `tools-schema.ts` MCP-to-Anthropic conversion called at module load -> consider lazy initialization
 
 ### P2 — Testing (zero test files exist)
