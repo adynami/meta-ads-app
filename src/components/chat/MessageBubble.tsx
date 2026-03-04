@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { Film } from 'lucide-react';
 import type { Message } from '@/types/chat';
+import { ToolCallCard } from './ToolCallCard';
 
 const markdownComponents: Components = {
   h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-4 mb-2">{children}</h1>,
@@ -80,6 +81,13 @@ export function MessageBubble({ message }: { message: Message }) {
                   </div>
                 )}
               </div>
+            ))}
+          </div>
+        )}
+        {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {message.toolCalls.map((tc) => (
+              <ToolCallCard key={tc.id} toolCall={tc} />
             ))}
           </div>
         )}

@@ -249,6 +249,8 @@ export function ChatWindow({
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
+      const CONTEXT_REGEX = /<context>[\s\S]*?<\/context>/gi;
+      const PARTIAL_CONTEXT_REGEX = /<context>[\s\S]*$/i;
       const streamToolCalls: { id: string; name: string; input: any; result: string }[] = [];
 
       // Add empty assistant message that will be updated as stream arrives
@@ -275,14 +277,20 @@ export function ChatWindow({
           switch (event.type) {
             case 'text-delta':
               accumulatedText += event.text;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last?.role === 'assistant') {
-                  updated[updated.length - 1] = { ...last, content: accumulatedText };
-                }
-                return updated;
-              });
+              {
+                const displayText = accumulatedText
+                  .replace(CONTEXT_REGEX, '')
+                  .replace(PARTIAL_CONTEXT_REGEX, '')
+                  .trimEnd();
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  if (last?.role === 'assistant') {
+                    updated[updated.length - 1] = { ...last, content: displayText };
+                  }
+                  return updated;
+                });
+              }
               break;
 
             case 'tool-start':

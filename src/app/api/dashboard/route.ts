@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
         cpc: row.cpc ?? 0,
         cpm: row.cpm ?? 0,
         conversions: row.conversions ?? 0,
+        conversion_breakdown: row.conversion_breakdown ?? null,
         cpa: row.cpa ?? 0,
         roas: row.roas ?? 0,
       };
@@ -205,6 +206,7 @@ export async function POST(req: NextRequest) {
           cpc: 0,
           cpm: 0,
           conversions: 0,
+          conversion_breakdown: null,
           cpa: 0,
           roas: 0,
         });

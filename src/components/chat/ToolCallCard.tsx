@@ -29,48 +29,62 @@ function getToolIcon(name: string): string {
 
 export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
   const [expanded, setExpanded] = useState(false);
+  const isLoading = toolCall.result === '...';
 
   let parsedResult: any;
-  try {
-    parsedResult = JSON.parse(toolCall.result);
-  } catch {
-    parsedResult = toolCall.result;
+  if (!isLoading) {
+    try {
+      parsedResult = JSON.parse(toolCall.result);
+    } catch {
+      parsedResult = toolCall.result;
+    }
   }
 
-  const isError = parsedResult?.error;
+  const isError = !isLoading && parsedResult?.error;
   const displayName = toolCall.name.replace('meta_', '').replaceAll('_', ' ');
   const icon = getToolIcon(toolCall.name);
 
   return (
-    <div className={`tool-card ${isError ? 'border-red-500/30 bg-red-500/5' : ''} px-4 py-3`}>
+    <div
+      className={`tool-card ${isError ? 'border-red-500/30 bg-red-500/5' : ''} ${isLoading ? 'tool-card-loading' : ''} px-4 py-3`}
+    >
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => !isLoading && setExpanded(!expanded)}
         className="w-full flex items-center justify-between"
+        disabled={isLoading}
       >
         <div className="flex items-center gap-2 text-sm">
           <span>{icon}</span>
           <span className="font-medium">
-            {expanded ? '' : 'Running: '}
+            {isLoading ? 'Running: ' : expanded ? '' : ''}
             {displayName}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {isError ? (
+          {isLoading ? (
+            <span className="loading-dots text-purple-400 text-xs">
+              <span>&#x25CF;</span> <span>&#x25CF;</span> <span>&#x25CF;</span>
+            </span>
+          ) : isError ? (
             <span className="text-red-400 text-xs font-medium">Error</span>
           ) : (
-            <span className="text-green-400 text-sm">&#x2713;</span>
-          )}
-          {expanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <>
+              <span className="text-green-400 text-sm">&#x2713;</span>
+              {expanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              )}
+            </>
           )}
         </div>
       </button>
 
-      {!expanded && <p className="text-xs text-gray-400 mt-1 ml-6">{summarize(parsedResult)}</p>}
+      {!isLoading && !expanded && (
+        <p className="text-xs text-gray-400 mt-1 ml-6">{summarize(parsedResult)}</p>
+      )}
 
-      {expanded && (
+      {!isLoading && expanded && (
         <div className="mt-3 space-y-3 text-xs">
           <div>
             <span className="font-medium text-gray-400 block mb-1">Input:</span>

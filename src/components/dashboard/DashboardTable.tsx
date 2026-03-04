@@ -18,6 +18,7 @@ export interface DashboardRow {
   cpc: number;
   cpm: number;
   conversions: number;
+  conversion_breakdown: Record<string, number> | null;
   cpa: number;
   roas: number;
 }
@@ -257,6 +258,14 @@ export function DashboardTable({
                     )}
                   >
                     {row.status}
+                  </span>
+                ) : col.key === 'conversions' &&
+                  row.conversion_breakdown &&
+                  Object.keys(row.conversion_breakdown).length > 0 ? (
+                  <span>
+                    {Object.entries(row.conversion_breakdown)
+                      .map(([type, count]) => `${count} ${type}`)
+                      .join(', ')}
                   </span>
                 ) : col.key === 'name' ? (
                   <span className="font-medium">{row.name}</span>
