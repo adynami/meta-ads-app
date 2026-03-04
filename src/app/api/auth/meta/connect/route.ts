@@ -1,11 +1,9 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { users, adAccounts } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { encrypt } from '@/lib/crypto';
-import { exchangeForLongLivedToken, fetchAdAccounts } from '@/lib/meta-auth';
-import { canAddAccount, type Plan } from '@/lib/plans';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
 
 /**
  * POST /api/auth/meta/connect
@@ -26,7 +24,6 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'access_token is required' }, { status: 400 });
   }
 
-  // Get user from DB
   const [user] = await db
     .select()
     .from(users)
@@ -38,10 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Exchange for long-lived token
     const longLived = await exchangeForLongLivedToken(access_token);
-
-    // Fetch available ad accounts
     const accounts = await fetchAdAccounts(longLived.access_token);
 
     if (accounts.length === 0) {
@@ -62,52 +56,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Check plan limits
-    const existingAccounts = await db
-      .select()
-      .from(adAccounts)
-      .where(and(
-        eq(adAccounts.userId, user.id),
-        eq(adAccounts.isActive, true),
-      ));
-
-    if (!canAddAccount(user.plan as Plan, existingAccounts.length)) {
-      return Response.json({
-        error: `Your ${user.plan} plan supports up to ${user.plan === 'basic' || user.plan === 'trial' ? '1' : '5'} ad account(s). Upgrade to add more.`,
-      }, { status: 403 });
-    }
-
-    // Find the selected account in the list
     const selected = accounts.find((a) => a.id === selected_account_id);
     if (!selected) {
       return Response.json({ error: 'Selected ad account not found' }, { status: 400 });
     }
 
-    // Calculate token expiry (~60 days for long-lived tokens)
-    const tokenExpiresAt = longLived.expires_in
-      ? new Date(Date.now() + longLived.expires_in * 1000)
-      : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-
-    // Store encrypted token and account
-    const [account] = await db.insert(adAccounts).values({
+    const result = await connectAdAccount({
       userId: user.id,
+      plan: user.plan,
       metaAdAccountId: selected.id,
-      metaAccountName: selected.name,
-      accessTokenEnc: encrypt(longLived.access_token),
-      tokenExpiresAt,
-      scopes: 'ads_management,ads_read,business_management,read_insights',
-      isActive: true,
-    }).returning();
+      longLivedToken: longLived.access_token,
+      expiresIn: longLived.expires_in,
+      accountName: selected.name,
+    });
 
     return Response.json({
       success: true,
       account: {
-        id: account.id,
-        metaAdAccountId: account.metaAdAccountId,
-        metaAccountName: account.metaAccountName,
+        id: result.accountId,
+        metaAdAccountId: selected.id,
+        metaAccountName: selected.name,
       },
     });
   } catch (error: any) {
+    if (error instanceof AdAccountLimitError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
     console.error('[meta/connect] Error:', error);
     return Response.json(
       { error: error.message ?? 'Failed to connect Meta account' },

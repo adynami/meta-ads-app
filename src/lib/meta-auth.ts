@@ -1,6 +1,13 @@
 /**
- * Meta OAuth utilities — token exchange, long-lived tokens, ad account discovery.
+ * Meta OAuth utilities — token exchange, long-lived tokens, ad account discovery,
+ * and ad-account connection/storage.
  */
+
+import { db } from '@/lib/db';
+import { adAccounts } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { encrypt } from '@/lib/crypto';
+import { canAddAccount, type Plan } from '@/lib/plans';
 
 export const META_API_VERSION = 'v25.0';
 
@@ -141,4 +148,80 @@ export async function refreshLongLivedToken(
   currentToken: string,
 ): Promise<TokenExchangeResult> {
   return exchangeForLongLivedToken(currentToken);
+}
+
+// ── Ad-account connection ─────────────────────────────────────────────
+
+export class AdAccountLimitError extends Error {
+  constructor(plan: string) {
+    super(`Your ${plan} plan has reached its ad account limit. Upgrade to add more.`);
+    this.name = 'AdAccountLimitError';
+  }
+}
+
+/**
+ * Validate plan limits, encrypt token, and upsert an ad-account row.
+ * Handles both new connections and reconnections (token refresh / reactivation).
+ */
+export async function connectAdAccount(opts: {
+  userId: string;
+  plan: string;
+  metaAdAccountId: string;
+  longLivedToken: string;
+  expiresIn?: number;
+  accountName: string;
+}): Promise<{ accountId: string; reconnected: boolean }> {
+  const { userId, plan, metaAdAccountId, longLivedToken, expiresIn, accountName } = opts;
+
+  // Check for existing row first (reconnect bypasses limit check)
+  const [existing] = await db
+    .select({ id: adAccounts.id })
+    .from(adAccounts)
+    .where(and(eq(adAccounts.userId, userId), eq(adAccounts.metaAdAccountId, metaAdAccountId)))
+    .limit(1);
+
+  if (!existing) {
+    // New connection — enforce plan limits
+    const activeCount = await db
+      .select({ id: adAccounts.id })
+      .from(adAccounts)
+      .where(and(eq(adAccounts.userId, userId), eq(adAccounts.isActive, true)));
+
+    if (!canAddAccount(plan as Plan, activeCount.length)) {
+      throw new AdAccountLimitError(plan);
+    }
+  }
+
+  const tokenExpiresAt = expiresIn
+    ? new Date(Date.now() + expiresIn * 1000)
+    : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60-day fallback
+
+  const encryptedToken = encrypt(longLivedToken);
+
+  if (existing) {
+    await db
+      .update(adAccounts)
+      .set({
+        accessTokenEnc: encryptedToken,
+        tokenExpiresAt,
+        metaAccountName: accountName,
+        isActive: true,
+      })
+      .where(eq(adAccounts.id, existing.id));
+
+    return { accountId: existing.id, reconnected: true };
+  }
+
+  const [newAccount] = await db
+    .insert(adAccounts)
+    .values({
+      userId,
+      metaAdAccountId,
+      metaAccountName: accountName,
+      accessTokenEnc: encryptedToken,
+      tokenExpiresAt,
+    })
+    .returning({ id: adAccounts.id });
+
+  return { accountId: newAccount.id, reconnected: false };
 }

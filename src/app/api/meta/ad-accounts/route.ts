@@ -1,11 +1,9 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { users, adAccounts } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { encrypt } from '@/lib/crypto';
-import { exchangeForLongLivedToken, fetchAdAccounts } from '@/lib/meta-auth';
-import { canAddAccount, type Plan } from '@/lib/plans';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
 
 /**
  * GET /api/meta/ad-accounts
@@ -76,7 +74,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Get user from DB
   const [user] = await db
     .select()
     .from(users)
@@ -88,11 +85,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Exchange for long-lived token
     const { access_token: longLivedToken, expires_in } =
       await exchangeForLongLivedToken(session.accessToken);
 
-    // Fetch ad accounts to validate the selected one
     const metaAccounts = await fetchAdAccounts(longLivedToken);
     const selectedAccount = metaAccounts.find((a) => a.id === selectedAccountId);
 
@@ -103,65 +98,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check plan limits
-    const existingAccounts = await db
-      .select()
-      .from(adAccounts)
-      .where(and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true)));
+    const result = await connectAdAccount({
+      userId: user.id,
+      plan: user.plan,
+      metaAdAccountId: selectedAccountId,
+      longLivedToken,
+      expiresIn: expires_in,
+      accountName: selectedAccount.name,
+    });
 
-    if (!canAddAccount(user.plan as Plan, existingAccounts.length)) {
-      return Response.json(
-        { error: `Your ${user.plan} plan allows a maximum of ${existingAccounts.length} ad account(s). Upgrade to add more.` },
-        { status: 403 },
-      );
-    }
-
-    const tokenExpiresAt = expires_in
-      ? new Date(Date.now() + expires_in * 1000)
-      : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-
-    // Check if this ad account already exists (reconnect case)
-    const [existing] = await db
-      .select()
-      .from(adAccounts)
-      .where(
-        and(
-          eq(adAccounts.userId, user.id),
-          eq(adAccounts.metaAdAccountId, selectedAccountId),
-        ),
-      )
-      .limit(1);
-
-    if (existing) {
-      // Reactivate and refresh token
-      await db
-        .update(adAccounts)
-        .set({
-          accessTokenEnc: encrypt(longLivedToken),
-          tokenExpiresAt,
-          metaAccountName: selectedAccount.name,
-          isActive: true,
-        })
-        .where(eq(adAccounts.id, existing.id));
-
-      return Response.json({ accountId: existing.id, reconnected: true });
-    }
-
-    // Insert new ad account
-    const [newAccount] = await db
-      .insert(adAccounts)
-      .values({
-        userId: user.id,
-        metaAdAccountId: selectedAccountId,
-        metaAccountName: selectedAccount.name,
-        accessTokenEnc: encrypt(longLivedToken),
-        tokenExpiresAt,
-        isActive: true,
-      })
-      .returning({ id: adAccounts.id });
-
-    return Response.json({ accountId: newAccount.id }, { status: 201 });
+    return Response.json(result, { status: result.reconnected ? 200 : 201 });
   } catch (error: any) {
+    if (error instanceof AdAccountLimitError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
     console.error('[meta/ad-accounts] POST error:', error);
     if (error.message?.includes('expired') || error.message?.includes('Invalid')) {
       return Response.json(

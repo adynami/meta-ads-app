@@ -3,9 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, adAccounts } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { encrypt } from '@/lib/crypto';
-import { exchangeForLongLivedToken, fetchAdAccounts } from '@/lib/meta-auth';
-import { canAddAccount, type Plan } from '@/lib/plans';
+import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
 
 /**
  * GET /api/accounts — list user's connected ad accounts
@@ -83,11 +81,6 @@ export async function DELETE(req: NextRequest) {
 /**
  * POST /api/accounts — connect a Meta ad account
  * Body: { shortLivedToken: string, adAccountId: string }
- *
- * Flow:
- *  1. Exchange short-lived token for long-lived token (~60 days)
- *  2. Fetch the user's ad accounts from Meta to validate the selected one
- *  3. Encrypt the long-lived token and store in adAccounts
  */
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -118,76 +111,38 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check plan limits
-  const existingAccounts = await db
-    .select()
-    .from(adAccounts)
-    .where(and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true)));
+  try {
+    const { access_token: longLivedToken, expires_in } =
+      await exchangeForLongLivedToken(shortLivedToken);
 
-  if (!canAddAccount(user.plan as Plan, existingAccounts.length)) {
-    return Response.json(
-      { error: `Your ${user.plan} plan allows a maximum of ${existingAccounts.length} ad account(s). Upgrade to add more.` },
-      { status: 403 },
-    );
-  }
+    const metaAccounts = await fetchAdAccounts(longLivedToken);
+    const selectedAccount = metaAccounts.find((a) => a.id === adAccountId);
 
-  // Exchange for long-lived token
-  const { access_token: longLivedToken, expires_in } =
-    await exchangeForLongLivedToken(shortLivedToken);
+    if (!selectedAccount) {
+      return Response.json(
+        { error: `Ad account ${adAccountId} not found or not accessible with this token` },
+        { status: 400 },
+      );
+    }
 
-  // Fetch ad accounts to validate the selected one and get its name
-  const metaAccounts = await fetchAdAccounts(longLivedToken);
-  const selectedAccount = metaAccounts.find((a) => a.id === adAccountId);
-
-  if (!selectedAccount) {
-    return Response.json(
-      { error: `Ad account ${adAccountId} not found or not accessible with this token` },
-      { status: 400 },
-    );
-  }
-
-  // Check if this ad account is already connected (and reactivate if so)
-  const [existing] = await db
-    .select()
-    .from(adAccounts)
-    .where(
-      and(
-        eq(adAccounts.userId, user.id),
-        eq(adAccounts.metaAdAccountId, adAccountId),
-      ),
-    )
-    .limit(1);
-
-  const tokenExpiresAt = expires_in
-    ? new Date(Date.now() + expires_in * 1000)
-    : null;
-
-  if (existing) {
-    // Update existing record — refresh token and reactivate
-    await db
-      .update(adAccounts)
-      .set({
-        accessTokenEnc: encrypt(longLivedToken),
-        tokenExpiresAt,
-        metaAccountName: selectedAccount.name,
-        isActive: true,
-      })
-      .where(eq(adAccounts.id, existing.id));
-
-    return Response.json({ accountId: existing.id, reconnected: true });
-  }
-
-  // Insert new ad account
-  const [newAccount] = await db
-    .insert(adAccounts)
-    .values({
+    const result = await connectAdAccount({
       userId: user.id,
+      plan: user.plan,
       metaAdAccountId: adAccountId,
-      metaAccountName: selectedAccount.name,
-      accessTokenEnc: encrypt(longLivedToken),
-      tokenExpiresAt,
-    })
-    .returning({ id: adAccounts.id });
+      longLivedToken,
+      expiresIn: expires_in,
+      accountName: selectedAccount.name,
+    });
 
-  return Response.json({ accountId: newAccount.id }, { status: 201 });
+    return Response.json(result, { status: result.reconnected ? 200 : 201 });
+  } catch (error: any) {
+    if (error instanceof AdAccountLimitError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
+    console.error('[accounts] POST error:', error);
+    return Response.json(
+      { error: error.message ?? 'Failed to connect ad account' },
+      { status: 500 },
+    );
+  }
 }
