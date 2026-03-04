@@ -12,6 +12,8 @@ Conversational AI for Meta Ads management. Users chat with Claude to manage camp
 npm run dev          # next dev --webpack
 npm run build        # next build --webpack
 npm run lint         # eslint
+npm test             # vitest run
+npm run test:watch   # vitest (watch mode)
 
 # Database
 npx drizzle-kit push       # push schema to Neon
@@ -49,7 +51,7 @@ src/
 │   ├── api/
 │   │   ├── auth/           # NextAuth + Meta OAuth connect
 │   │   ├── billing/        # Stripe checkout, portal, webhook
-│   │   ├── chat/route.ts   # Main chat endpoint (557 lines, agentic loop)
+│   │   ├── chat/route.ts   # Main chat endpoint (thin controller, delegates to lib/chat.ts)
 │   │   ├── keys/route.ts   # API key CRUD (Agency plan)
 │   │   ├── accounts/       # Ad account management
 │   │   ├── conversations/  # Conversation history
@@ -66,6 +68,7 @@ src/
 ├── lib/
 │   ├── anthropic.ts        # Client init + SYSTEM_PROMPT
 │   ├── auth.ts             # NextAuth config (Meta OAuth provider)
+│   ├── chat.ts             # runChat agentic loop, message helpers, persistence
 │   ├── crypto.ts           # AES-256-GCM encrypt/decrypt
 │   ├── db/                 # Drizzle client + schema
 │   ├── meta-auth.ts        # Token exchange, ad account discovery, META_API_VERSION
@@ -180,15 +183,15 @@ Trial expires 7 days after signup. Bonus calls can be added by admin.
 - [x] ~~Tool executor `String(error)` produces `[object Object]`~~ -> instanceof check + JSON.stringify fallback + error code propagation (`src/lib/tool-executor.ts`)
 - [x] ~~Webhook retrieves same subscription twice~~ -> single retrieve, reuse for userId and plan (`src/app/api/billing/webhook/route.ts`)
 - [x] ~~Unhandled webhook events silently return 200~~ -> logs event type (`src/app/api/billing/webhook/route.ts`)
-- [ ] `src/app/api/chat/route.ts` is 580+ lines -> extract `runChat()`, `injectAttachmentBlocks()`, context logic into `src/lib/chat.ts`
-- [ ] Duplicated ad-account connection logic across `POST /api/accounts`, `POST /api/auth/meta/connect`, and `POST /api/meta/ad-accounts` -> consolidate into `lib/meta-auth.ts`
-- [ ] `tools-schema.ts` MCP-to-Anthropic conversion called at module load -> consider lazy initialization
+- [x] ~~`src/app/api/chat/route.ts` is 580+ lines~~ -> extracted `runChat()`, `injectAttachmentBlocks()`, `validateMessages()`, `persistChatData()`, context logic into `src/lib/chat.ts`; route.ts is now a thin controller (~190 lines)
+- [x] ~~Duplicated ad-account connection logic across `POST /api/accounts`, `POST /api/auth/meta/connect`, and `POST /api/meta/ad-accounts`~~ -> consolidated into `connectAdAccount()` in `lib/meta-auth.ts`; fixes missing upsert in `auth/meta/connect`, hardcoded plan limits, missing try/catch in `accounts`, inconsistent expiry fallback
+- [x] ~~`tools-schema.ts` MCP-to-Anthropic conversion called at module load~~ -> lazy-initialized via `getAnthropicTools()` in `lib/chat.ts`
 
 ### P2 — Testing (zero test files exist)
 Priority targets for first test suite:
-- [ ] `src/lib/crypto.ts` — encrypt/decrypt roundtrip, invalid key handling
-- [ ] `src/lib/plans.ts` — trial expiry edge cases, plan limit checks
-- [ ] `src/lib/tools-schema.ts` — MCP-to-Anthropic tool format conversion
+- [x] ~~`src/lib/crypto.ts` — encrypt/decrypt roundtrip, invalid key handling~~
+- [x] ~~`src/lib/plans.ts` — trial expiry edge cases, plan limit checks~~
+- [x] ~~`src/lib/tools-schema.ts` — MCP-to-Anthropic tool format conversion~~
 - [ ] `src/app/api/billing/webhook/route.ts` — Stripe event handling (mocked)
 - [ ] `src/app/api/chat/route.ts` — auth checks, rate limiting, trial expiry
 - [ ] `src/app/api/keys/route.ts` — ownership isolation
