@@ -22,7 +22,8 @@ export default function LoginPage() {
             </div>
 
             <h1 className="text-4xl font-bold mb-12 leading-tight">
-              The fastest way to<br />
+              The fastest way to
+              <br />
               <span className="gradient-text">run Meta ads</span>
             </h1>
 
@@ -33,15 +34,21 @@ export default function LoginPage() {
               </div>
               <div className="flex items-start gap-4">
                 <span className="text-2xl">&#x1F3AF;</span>
-                <p className="text-gray-300 text-lg">Diagnose zero-conversion campaigns instantly</p>
+                <p className="text-gray-300 text-lg">
+                  Diagnose zero-conversion campaigns instantly
+                </p>
               </div>
               <div className="flex items-start gap-4">
                 <span className="text-2xl">&#x1F4CA;</span>
-                <p className="text-gray-300 text-lg">Demographic and placement breakdowns on demand</p>
+                <p className="text-gray-300 text-lg">
+                  Demographic and placement breakdowns on demand
+                </p>
               </div>
               <div className="flex items-start gap-4">
                 <span className="text-2xl">&#x1F501;</span>
-                <p className="text-gray-300 text-lg">Audience building, creative testing, signal recovery — all in chat</p>
+                <p className="text-gray-300 text-lg">
+                  Audience building, creative testing, signal recovery — all in chat
+                </p>
               </div>
             </div>
           </div>
@@ -51,9 +58,7 @@ export default function LoginPage() {
               <p className="text-gray-400 italic mb-3">
                 &quot;I cut my weekly Ads Manager time from 6 hours to under 30 minutes.&quot;
               </p>
-              <p className="text-sm text-gray-500">
-                — Sarah K., Head of Growth
-              </p>
+              <p className="text-sm text-gray-500">— Sarah K., Head of Growth</p>
             </div>
           </div>
         </div>
@@ -86,29 +91,24 @@ export default function LoginPage() {
                   className="w-full gradient-bg text-white font-semibold py-4 px-6 rounded-xl glow-btn flex items-center justify-center gap-3 mb-3"
                 >
                   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                   Continue with Meta
                 </button>
               </form>
 
               <p className="text-xs text-gray-500 text-center mb-6">
-                We request read and write access to your Meta Ads account. You can revoke access at any time from your Meta Business settings.
+                We request read and write access to your Meta Ads account. You can revoke access at
+                any time from your Meta Business settings.
               </p>
 
               {/* Trust Signals */}
               <div className="flex items-center justify-center gap-4 text-xs text-gray-500 mb-8 flex-wrap">
-                <span className="flex items-center gap-1">
-                  &#x1F512; 256-bit encryption
-                </span>
+                <span className="flex items-center gap-1">&#x1F512; 256-bit encryption</span>
                 <span>·</span>
-                <span className="flex items-center gap-1">
-                  &#x1F6E1; Meta API Partner
-                </span>
+                <span className="flex items-center gap-1">&#x1F6E1; Meta API Partner</span>
                 <span>·</span>
-                <span className="flex items-center gap-1">
-                  &#x2713; SOC 2 Compliant
-                </span>
+                <span className="flex items-center gap-1">&#x2713; SOC 2 Compliant</span>
               </div>
 
               <div className="text-center">

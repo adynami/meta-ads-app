@@ -26,7 +26,9 @@ export const users = pgTable('users', {
 
 export const adAccounts = pgTable('ad_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
   metaAdAccountId: text('meta_ad_account_id').notNull(), // act_xxxxx
   metaAccountName: text('meta_account_name'),
   accessTokenEnc: text('access_token_enc').notNull(), // AES-256-GCM encrypted
@@ -38,7 +40,9 @@ export const adAccounts = pgTable('ad_accounts', {
 
 export const conversations = pgTable('conversations', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
   adAccountId: uuid('ad_account_id').references(() => adAccounts.id, { onDelete: 'set null' }),
   title: text('title'),
   messages: jsonb('messages').default([]).notNull(),
@@ -47,21 +51,27 @@ export const conversations = pgTable('conversations', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const usage = pgTable('usage', {
-  id: serial('id').primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  month: text('month').notNull(), // '2026-02'
-  apiCalls: integer('api_calls').default(0).notNull(),
-  inputTokens: bigint('input_tokens', { mode: 'number' }).default(0).notNull(),
-  outputTokens: bigint('output_tokens', { mode: 'number' }).default(0).notNull(),
-  estimatedCostCents: integer('estimated_cost_cents').default(0).notNull(),
-}, (table) => [
-  uniqueIndex('usage_user_month_idx').on(table.userId, table.month),
-]);
+export const usage = pgTable(
+  'usage',
+  {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    month: text('month').notNull(), // '2026-02'
+    apiCalls: integer('api_calls').default(0).notNull(),
+    inputTokens: bigint('input_tokens', { mode: 'number' }).default(0).notNull(),
+    outputTokens: bigint('output_tokens', { mode: 'number' }).default(0).notNull(),
+    estimatedCostCents: integer('estimated_cost_cents').default(0).notNull(),
+  },
+  (table) => [uniqueIndex('usage_user_month_idx').on(table.userId, table.month)],
+);
 
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
   keyHash: text('key_hash').unique().notNull(), // SHA-256
   label: text('label'),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),

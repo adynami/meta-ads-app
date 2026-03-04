@@ -3,7 +3,12 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
+import {
+  exchangeForLongLivedToken,
+  fetchAdAccounts,
+  connectAdAccount,
+  AdAccountLimitError,
+} from '@/lib/meta-auth';
 
 /**
  * GET /api/meta/ad-accounts
@@ -13,15 +18,11 @@ import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccount
 export async function GET() {
   const session = await auth();
   if (!session?.accessToken) {
-    return Response.json(
-      { error: 'No access token. Please sign in again.' },
-      { status: 401 },
-    );
+    return Response.json({ error: 'No access token. Please sign in again.' }, { status: 401 });
   }
 
   try {
-    const { access_token: longLivedToken } =
-      await exchangeForLongLivedToken(session.accessToken);
+    const { access_token: longLivedToken } = await exchangeForLongLivedToken(session.accessToken);
 
     const accounts = await fetchAdAccounts(longLivedToken);
 
@@ -36,10 +37,7 @@ export async function GET() {
   } catch (error: any) {
     console.error('[meta/ad-accounts] GET error:', error);
     if (error.message?.includes('expired') || error.message?.includes('Invalid')) {
-      return Response.json(
-        { error: 'Token expired. Please sign in again.' },
-        { status: 401 },
-      );
+      return Response.json({ error: 'Token expired. Please sign in again.' }, { status: 401 });
     }
     return Response.json(
       { error: error.message ?? 'Failed to fetch ad accounts' },
@@ -58,35 +56,26 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.accessToken || !session.user?.email) {
-    return Response.json(
-      { error: 'No access token. Please sign in again.' },
-      { status: 401 },
-    );
+    return Response.json({ error: 'No access token. Please sign in again.' }, { status: 401 });
   }
 
   const body = await req.json();
   const { selectedAccountId } = body as { selectedAccountId: string };
 
   if (!selectedAccountId) {
-    return Response.json(
-      { error: 'selectedAccountId is required' },
-      { status: 400 },
-    );
+    return Response.json({ error: 'selectedAccountId is required' }, { status: 400 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   try {
-    const { access_token: longLivedToken, expires_in } =
-      await exchangeForLongLivedToken(session.accessToken);
+    const { access_token: longLivedToken, expires_in } = await exchangeForLongLivedToken(
+      session.accessToken,
+    );
 
     const metaAccounts = await fetchAdAccounts(longLivedToken);
     const selectedAccount = metaAccounts.find((a) => a.id === selectedAccountId);
@@ -114,14 +103,8 @@ export async function POST(req: NextRequest) {
     }
     console.error('[meta/ad-accounts] POST error:', error);
     if (error.message?.includes('expired') || error.message?.includes('Invalid')) {
-      return Response.json(
-        { error: 'Token expired. Please sign in again.' },
-        { status: 401 },
-      );
+      return Response.json({ error: 'Token expired. Please sign in again.' }, { status: 401 });
     }
-    return Response.json(
-      { error: error.message ?? 'Failed to store ad account' },
-      { status: 500 },
-    );
+    return Response.json({ error: error.message ?? 'Failed to store ad account' }, { status: 500 });
   }
 }

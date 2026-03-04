@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, ChevronDown, Bell, Settings, Menu, X, LogOut, MessageSquare, LayoutDashboard } from 'lucide-react';
+import {
+  Plus,
+  ChevronDown,
+  Bell,
+  Settings,
+  Menu,
+  X,
+  LogOut,
+  MessageSquare,
+  LayoutDashboard,
+} from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { DashboardPanel } from '@/components/dashboard/DashboardPanel';
@@ -273,7 +283,9 @@ export default function ChatPage() {
                 <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold">
                   All
                 </div>
-                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none">All Accounts</span>
+                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none">
+                  All Accounts
+                </span>
                 <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
               </div>
             ) : selectedAccount ? (
@@ -281,9 +293,7 @@ export default function ChatPage() {
                 <div
                   className={`w-6 h-6 rounded bg-gradient-to-br ${GRADIENT_COLORS[accounts.indexOf(selectedAccount) % GRADIENT_COLORS.length]} flex items-center justify-center text-[10px] font-bold`}
                 >
-                  {getInitials(
-                    selectedAccount.metaAccountName || selectedAccount.metaAdAccountId,
-                  )}
+                  {getInitials(selectedAccount.metaAccountName || selectedAccount.metaAdAccountId)}
                 </div>
                 <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none">
                   {selectedAccount.metaAccountName || selectedAccount.metaAdAccountId}
@@ -321,7 +331,9 @@ export default function ChatPage() {
                   : 'text-gray-400 hover:text-gray-200',
                 selectedAccountId === 'all' && 'opacity-40 cursor-not-allowed hover:text-gray-400',
               )}
-              title={selectedAccountId === 'all' ? 'Select a single account to use Dashboard' : undefined}
+              title={
+                selectedAccountId === 'all' ? 'Select a single account to use Dashboard' : undefined
+              }
             >
               <LayoutDashboard className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -350,10 +362,7 @@ export default function ChatPage() {
               onNewChat={handleNewChat}
             />
           ) : (
-            <DashboardPanel
-              key={selectedAccountId ?? ''}
-              accountId={selectedAccountId ?? ''}
-            />
+            <DashboardPanel key={selectedAccountId ?? ''} accountId={selectedAccountId ?? ''} />
           )}
         </main>
       </div>

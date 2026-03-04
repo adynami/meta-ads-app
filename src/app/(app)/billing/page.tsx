@@ -97,10 +97,11 @@ export default function BillingPage() {
   }, []);
 
   const currentPlan = (userData?.plan ?? 'trial') as PlanId | 'trial';
-  const currentPlanConfig = currentPlan !== 'trial' && currentPlan in plans ? plans[currentPlan as PlanId] : null;
+  const currentPlanConfig =
+    currentPlan !== 'trial' && currentPlan in plans ? plans[currentPlan as PlanId] : null;
   const planLimits = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.trial;
 
-  const getPrice = (plan: typeof plans[PlanId]) =>
+  const getPrice = (plan: (typeof plans)[PlanId]) =>
     billingPeriod === 'monthly' ? plan.monthly : plan.annual;
 
   async function subscribe(plan: PlanId) {
@@ -193,7 +194,9 @@ export default function BillingPage() {
                   }}
                   className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity"
                 >
-                  {currentPlan === 'trial' || currentPlan === 'basic' ? 'Upgrade to Pro' : 'Upgrade to Agency'}
+                  {currentPlan === 'trial' || currentPlan === 'basic'
+                    ? 'Upgrade to Pro'
+                    : 'Upgrade to Agency'}
                 </button>
               )}
               {currentPlan !== 'trial' && (
@@ -212,7 +215,9 @@ export default function BillingPage() {
 
         {/* Usage */}
         <div className="mb-12">
-          <h2 className="text-xl font-semibold mb-6">Usage — {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+          <h2 className="text-xl font-semibold mb-6">
+            Usage — {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="glass-card rounded-xl p-6">
               <h3 className="text-sm font-medium text-gray-400 mb-3">AI Conversations</h3>
@@ -221,7 +226,8 @@ export default function BillingPage() {
               ) : (
                 <>
                   <p className="text-3xl font-bold mb-1">
-                    {apiCalls} <span className="text-base text-gray-400 font-normal">/ {callLimit}</span>
+                    {apiCalls}{' '}
+                    <span className="text-base text-gray-400 font-normal">/ {callLimit}</span>
                   </p>
                   <div className="w-full bg-white/10 rounded-full h-2 mt-3 mb-2">
                     <div
@@ -258,11 +264,15 @@ export default function BillingPage() {
         <div className="mb-12">
           <h2 className="text-xl font-semibold mb-2">Top Up</h2>
           <p className="text-sm text-gray-400 mb-6">
-            Need more conversations? Buy credit packs — they never expire and are used after your monthly allowance runs out.
+            Need more conversations? Buy credit packs — they never expire and are used after your
+            monthly allowance runs out.
           </p>
           <div className="grid sm:grid-cols-3 gap-4">
             {topupPacks.map(({ pack, calls, price }) => (
-              <div key={pack} className="glass-card rounded-xl p-5 flex flex-col items-center text-center">
+              <div
+                key={pack}
+                className="glass-card rounded-xl p-5 flex flex-col items-center text-center"
+              >
                 <div className="flex items-center gap-1 mb-2">
                   <Plus className="w-4 h-4 text-purple-400" />
                   <span className="text-2xl font-bold">{calls}</span>
@@ -308,7 +318,7 @@ export default function BillingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {(Object.entries(plans) as [PlanId, typeof plans[PlanId]][]).map(([id, plan]) => (
+            {(Object.entries(plans) as [PlanId, (typeof plans)[PlanId]][]).map(([id, plan]) => (
               <div
                 key={id}
                 className={`glass-card rounded-xl p-6 ${currentPlan === id ? 'current-plan-card relative' : ''}`}
@@ -327,7 +337,9 @@ export default function BillingPage() {
                   <span className="text-gray-400 text-sm"> /mo</span>
                 </div>
                 <p className="text-xs text-gray-500 mb-4">
-                  {id === 'basic' ? '7-day free trial · Then billed monthly' : 'Billed monthly · Cancel anytime'}
+                  {id === 'basic'
+                    ? '7-day free trial · Then billed monthly'
+                    : 'Billed monthly · Cancel anytime'}
                 </p>
                 <ul className="space-y-2 mb-6 min-h-[200px]">
                   {plan.features.map((feature, i) => (
@@ -349,17 +361,18 @@ export default function BillingPage() {
                     onClick={() => subscribe(id)}
                     disabled={loading !== null}
                     className={`w-full py-2.5 rounded-lg font-medium text-sm transition-opacity ${
-                      (id === 'pro' && (currentPlan === 'basic' || currentPlan === 'trial')) || (id === 'agency')
+                      (id === 'pro' && (currentPlan === 'basic' || currentPlan === 'trial')) ||
+                      id === 'agency'
                         ? 'gradient-bg hover:opacity-90'
                         : 'border border-white/20 hover:bg-white/5 text-gray-400'
                     }`}
                   >
                     {loading === id
                       ? 'Redirecting...'
-                      : Object.keys(plans).indexOf(id) > Object.keys(plans).indexOf(currentPlan as PlanId)
+                      : Object.keys(plans).indexOf(id) >
+                          Object.keys(plans).indexOf(currentPlan as PlanId)
                         ? `Upgrade to ${plan.name}`
-                        : `Switch to ${plan.name}`
-                    }
+                        : `Switch to ${plan.name}`}
                   </button>
                 )}
               </div>
@@ -375,7 +388,8 @@ export default function BillingPage() {
           <div className="glass-card rounded-xl p-6">
             <p className="font-medium mb-2">Manage via Stripe</p>
             <p className="text-sm text-gray-400 mb-6">
-              View and update your payment method, download invoices, and manage your subscription through the Stripe billing portal.
+              View and update your payment method, download invoices, and manage your subscription
+              through the Stripe billing portal.
             </p>
             <button
               onClick={manageSubscription}
@@ -398,7 +412,8 @@ export default function BillingPage() {
           <div className="glass-card rounded-xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-2">Cancel Subscription?</h3>
             <p className="text-sm text-gray-400 mb-6">
-              Are you sure? You&apos;ll lose access to your current plan features at the end of the billing period.
+              Are you sure? You&apos;ll lose access to your current plan features at the end of the
+              billing period.
             </p>
             <div className="flex gap-3">
               <button

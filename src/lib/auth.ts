@@ -15,7 +15,8 @@ export const authConfig: NextAuthConfig = {
       authorization: {
         url: `https://www.facebook.com/${META_API_VERSION}/dialog/oauth`,
         params: {
-          scope: 'email,ads_management,ads_read,business_management,read_insights,pages_read_engagement,pages_show_list',
+          scope:
+            'email,ads_management,ads_read,business_management,read_insights,pages_read_engagement,pages_show_list',
         },
       },
       token: `https://graph.facebook.com/${META_API_VERSION}/oauth/access_token`,
@@ -38,11 +39,7 @@ export const authConfig: NextAuthConfig = {
       if (!user.email) return false;
 
       try {
-        const existing = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, user.email))
-          .limit(1);
+        const existing = await db.select().from(users).where(eq(users.email, user.email)).limit(1);
 
         if (existing.length === 0) {
           const trialEndsAt = new Date();

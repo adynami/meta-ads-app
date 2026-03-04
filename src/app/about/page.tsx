@@ -16,15 +16,37 @@ export default function About() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm">Features</Link>
-            <Link href="/#use-cases" className="text-gray-400 hover:text-white transition-colors text-sm">Use Cases</Link>
-            <Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors text-sm">Pricing</Link>
-            <Link href="/about" className="text-white transition-colors text-sm">About</Link>
-            <Link href="/docs" className="text-gray-400 hover:text-white transition-colors text-sm">Docs</Link>
+            <Link
+              href="/#features"
+              className="text-gray-400 hover:text-white transition-colors text-sm"
+            >
+              Features
+            </Link>
+            <Link
+              href="/#use-cases"
+              className="text-gray-400 hover:text-white transition-colors text-sm"
+            >
+              Use Cases
+            </Link>
+            <Link
+              href="/#pricing"
+              className="text-gray-400 hover:text-white transition-colors text-sm"
+            >
+              Pricing
+            </Link>
+            <Link href="/about" className="text-white transition-colors text-sm">
+              About
+            </Link>
+            <Link href="/docs" className="text-gray-400 hover:text-white transition-colors text-sm">
+              Docs
+            </Link>
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login" className="text-gray-400 hover:text-white transition-colors text-sm hidden md:block">
+            <Link
+              href="/login"
+              className="text-gray-400 hover:text-white transition-colors text-sm hidden md:block"
+            >
               Login
             </Link>
             <Link href="/register">
@@ -53,7 +75,10 @@ export default function About() {
             What Is <span className="gradient-text">Adynami</span>?
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            Adynami is a conversational interface for Meta advertising. It connects directly to your Meta Ads account and lets you manage campaigns, pull reports, build audiences, and optimize spend by typing what you want in plain English. No dashboards, no clicking through menus, no exports. Just results.
+            Adynami is a conversational interface for Meta advertising. It connects directly to your
+            Meta Ads account and lets you manage campaigns, pull reports, build audiences, and
+            optimize spend by typing what you want in plain English. No dashboards, no clicking
+            through menus, no exports. Just results.
           </p>
         </div>
       </section>
@@ -73,7 +98,9 @@ export default function About() {
               </div>
               <h3 className="text-lg font-semibold mb-3">Too Many Clicks</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Ads Manager requires dozens of clicks to do what should take one sentence. Pausing a campaign, adjusting a budget, pulling a breakdown &mdash; every action is buried in menus.
+                Ads Manager requires dozens of clicks to do what should take one sentence. Pausing a
+                campaign, adjusting a budget, pulling a breakdown &mdash; every action is buried in
+                menus.
               </p>
             </div>
 
@@ -83,7 +110,9 @@ export default function About() {
               </div>
               <h3 className="text-lg font-semibold mb-3">Hours Wasted Weekly</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Media buyers spend hours each week on routine operations: checking performance, pausing losers, scaling winners, exporting data. That time should go toward strategy.
+                Media buyers spend hours each week on routine operations: checking performance,
+                pausing losers, scaling winners, exporting data. That time should go toward
+                strategy.
               </p>
             </div>
 
@@ -93,7 +122,8 @@ export default function About() {
               </div>
               <h3 className="text-lg font-semibold mb-3">Slow Decisions</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                By the time you export a report, format it, and analyze it, the data is stale. You need answers in real time, not after a 15-minute workflow.
+                By the time you export a report, format it, and analyze it, the data is stale. You
+                need answers in real time, not after a 15-minute workflow.
               </p>
             </div>
           </div>
@@ -116,7 +146,8 @@ export default function About() {
                 <div>
                   <h3 className="text-xl font-semibold mb-2">Connect your Meta account</h3>
                   <p className="text-gray-400 leading-relaxed">
-                    Authenticate through Meta&apos;s official OAuth flow. Adynami gets read and write access to your ad accounts via the Marketing API. Takes about two minutes.
+                    Authenticate through Meta&apos;s official OAuth flow. Adynami gets read and
+                    write access to your ad accounts via the Marketing API. Takes about two minutes.
                   </p>
                 </div>
               </div>
@@ -128,7 +159,10 @@ export default function About() {
                 <div>
                   <h3 className="text-xl font-semibold mb-2">Type what you want</h3>
                   <p className="text-gray-400 leading-relaxed">
-                    Describe your intent in plain English. &quot;Pause all campaigns with zero conversions this week.&quot; &quot;Show me my top 3 ad sets by ROAS.&quot; &quot;Launch a lookalike campaign at $50/day.&quot; Adynami understands how media buyers think.
+                    Describe your intent in plain English. &quot;Pause all campaigns with zero
+                    conversions this week.&quot; &quot;Show me my top 3 ad sets by ROAS.&quot;
+                    &quot;Launch a lookalike campaign at $50/day.&quot; Adynami understands how
+                    media buyers think.
                   </p>
                 </div>
               </div>
@@ -140,7 +174,9 @@ export default function About() {
                 <div>
                   <h3 className="text-xl font-semibold mb-2">It executes via the Meta API</h3>
                   <p className="text-gray-400 leading-relaxed">
-                    Adynami translates your request into the right API calls and runs them against your live account. Campaigns launch, budgets shift, reports surface &mdash; all in real time.
+                    Adynami translates your request into the right API calls and runs them against
+                    your live account. Campaigns launch, budgets shift, reports surface &mdash; all
+                    in real time.
                   </p>
                 </div>
               </div>
@@ -159,13 +195,18 @@ export default function About() {
 
           <div className="glass-card rounded-2xl p-8 md:p-12 gradient-border">
             <p className="text-lg text-gray-300 leading-relaxed mb-6">
-              Media buyers spend hours every week clicking through dashboards, exporting CSVs, and navigating wizard flows &mdash; just to do things they could describe in a single sentence.
+              Media buyers spend hours every week clicking through dashboards, exporting CSVs, and
+              navigating wizard flows &mdash; just to do things they could describe in a single
+              sentence.
             </p>
             <p className="text-lg text-gray-300 leading-relaxed mb-6">
-              We built Adynami because the gap between what advertisers know they want and how long it takes to execute it in Ads Manager is absurd. The interface is the bottleneck, not the strategy.
+              We built Adynami because the gap between what advertisers know they want and how long
+              it takes to execute it in Ads Manager is absurd. The interface is the bottleneck, not
+              the strategy.
             </p>
             <p className="text-lg text-gray-300 leading-relaxed">
-              Adynami removes the interface entirely. You say what you want. It happens. That&apos;s the product.
+              Adynami removes the interface entirely. You say what you want. It happens. That&apos;s
+              the product.
             </p>
           </div>
         </div>
@@ -182,7 +223,8 @@ export default function About() {
             Try It <span className="gradient-text">Free</span>
           </h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Connect your Meta account and start managing your ads with plain English. 7-day free trial on all plans.
+            Connect your Meta account and start managing your ads with plain English. 7-day free
+            trial on all plans.
           </p>
           <Link href="/login">
             <button className="gradient-bg px-10 py-5 rounded-xl font-semibold text-lg glow-btn inline-flex items-center gap-3">
@@ -205,18 +247,28 @@ export default function About() {
             </div>
 
             <div className="flex items-center gap-8 text-sm text-gray-400">
-              <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
-              <Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
-              <Link href="/about" className="hover:text-white transition-colors">About</Link>
-              <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/#features" className="hover:text-white transition-colors">
+                Features
+              </Link>
+              <Link href="/#pricing" className="hover:text-white transition-colors">
+                Pricing
+              </Link>
+              <Link href="/about" className="hover:text-white transition-colors">
+                About
+              </Link>
+              <Link href="/docs" className="hover:text-white transition-colors">
+                Docs
+              </Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-white transition-colors">
+                Terms
+              </Link>
             </div>
           </div>
 
-          <div className="text-center text-gray-600 text-sm mt-8">
-            &copy; 2026 Adynami
-          </div>
+          <div className="text-center text-gray-600 text-sm mt-8">&copy; 2026 Adynami</div>
         </div>
       </footer>
     </div>

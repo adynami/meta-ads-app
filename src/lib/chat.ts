@@ -68,11 +68,15 @@ export function injectAttachmentBlocks(
   const lastMsg = result[lastIdx];
   if (!lastMsg || lastMsg.role !== 'user') return result;
 
-  const originalText = typeof lastMsg.content === 'string'
-    ? lastMsg.content
-    : Array.isArray(lastMsg.content)
-      ? lastMsg.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join(' ')
-      : '';
+  const originalText =
+    typeof lastMsg.content === 'string'
+      ? lastMsg.content
+      : Array.isArray(lastMsg.content)
+        ? lastMsg.content
+            .filter((b: any) => b.type === 'text')
+            .map((b: any) => b.text)
+            .join(' ')
+        : '';
 
   const contentBlocks: Anthropic.ContentBlockParam[] = [];
 
@@ -122,14 +126,22 @@ export async function runChat(
 
   const systemBlocks: Anthropic.TextBlockParam[] = [
     { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    ...(isMultiAccount && accountNames ? [{
-      type: 'text' as const,
-      text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
-    }] : []),
-    ...(persist?.existingContext ? [{
-      type: 'text' as const,
-      text: `\nPrevious conversation context (update this in your <context> block):\n${persist.existingContext}`,
-    }] : []),
+    ...(isMultiAccount && accountNames
+      ? [
+          {
+            type: 'text' as const,
+            text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
+          },
+        ]
+      : []),
+    ...(persist?.existingContext
+      ? [
+          {
+            type: 'text' as const,
+            text: `\nPrevious conversation context (update this in your <context> block):\n${persist.existingContext}`,
+          },
+        ]
+      : []),
   ];
 
   let currentMessages: Anthropic.MessageParam[] = truncateOldToolResults([...messages]);
@@ -153,7 +165,9 @@ export async function runChat(
 
     const cacheRead = (response.usage as any).cache_read_input_tokens ?? 0;
     const cacheCreate = (response.usage as any).cache_creation_input_tokens ?? 0;
-    console.log(`[chat] round=${round} stop=${response.stop_reason} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`);
+    console.log(
+      `[chat] round=${round} stop=${response.stop_reason} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`,
+    );
 
     totalInputTokens += response.usage.input_tokens;
     totalOutputTokens += response.usage.output_tokens;
@@ -189,13 +203,23 @@ export async function runChat(
           // Execute against all accounts and aggregate
           const perAccount = await Promise.all(
             (ctx as TenantContext[]).map(async (tenantCtx, i) => {
-              const r = await executeTool(tenantCtx, block.name, block.input as Record<string, any>, attachmentStore);
+              const r = await executeTool(
+                tenantCtx,
+                block.name,
+                block.input as Record<string, any>,
+                attachmentStore,
+              );
               return { account: accountNames[i].name, result: r };
             }),
           );
           result = JSON.stringify(perAccount);
         } else {
-          result = await executeTool(ctx as TenantContext, block.name, block.input as Record<string, any>, attachmentStore);
+          result = await executeTool(
+            ctx as TenantContext,
+            block.name,
+            block.input as Record<string, any>,
+            attachmentStore,
+          );
         }
 
         toolCalls.push({
@@ -229,7 +253,16 @@ export async function runChat(
   let returnedConversationId: string | undefined;
   if (persist) {
     try {
-      returnedConversationId = await persistChatData(persist, messages, cleanText, totalInputTokens, totalOutputTokens, totalCacheCreationTokens, totalCacheReadTokens, extractedContext);
+      returnedConversationId = await persistChatData(
+        persist,
+        messages,
+        cleanText,
+        totalInputTokens,
+        totalOutputTokens,
+        totalCacheCreationTokens,
+        totalCacheReadTokens,
+        extractedContext,
+      );
 
       // Decrement bonus calls if this call consumed a bonus credit
       if (persist.useBonusCall) {
@@ -331,22 +364,20 @@ async function persistChatData(
         updatedAt: now,
         ...(context != null ? { context } : {}),
       })
-      .where(
-        and(
-          eq(conversations.id, conversationId),
-          eq(conversations.userId, persist.userId),
-        ),
-      );
+      .where(and(eq(conversations.id, conversationId), eq(conversations.userId, persist.userId)));
   } else {
     // Create new conversation
     const title = userText.slice(0, 100) || 'New conversation';
-    const [inserted] = await db.insert(conversations).values({
-      userId: persist.userId,
-      adAccountId: persist.adAccountId,
-      title,
-      messages: newMessages,
-      context: context ?? undefined,
-    }).returning({ id: conversations.id });
+    const [inserted] = await db
+      .insert(conversations)
+      .values({
+        userId: persist.userId,
+        adAccountId: persist.adAccountId,
+        title,
+        messages: newMessages,
+        context: context ?? undefined,
+      })
+      .returning({ id: conversations.id });
     conversationId = inserted.id;
   }
 
@@ -361,7 +392,12 @@ async function persistChatData(
       apiCalls: 1,
       inputTokens,
       outputTokens,
-      estimatedCostCents: estimateCostCents(inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens),
+      estimatedCostCents: estimateCostCents(
+        inputTokens,
+        outputTokens,
+        cacheCreationTokens,
+        cacheReadTokens,
+      ),
     })
     .onConflictDoUpdate({
       target: [usage.userId, usage.month],

@@ -7,7 +7,7 @@ export const MODEL_PRICING = {
     input: 3,
     output: 15,
     cacheWrite: 3.75,
-    cacheRead: 0.30,
+    cacheRead: 0.3,
   },
 } as const;
 

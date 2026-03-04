@@ -1,7 +1,7 @@
 'use client';
 
-import Link from "next/link";
-import { Lock, X } from "lucide-react";
+import Link from 'next/link';
+import { Lock, X } from 'lucide-react';
 
 export default function TrialExpired() {
   return (
@@ -21,15 +21,13 @@ export default function TrialExpired() {
 
         {/* Description */}
         <p className="text-gray-400 mb-8">
-          Your 7-day free trial has expired. Upgrade to a plan to continue
-          managing your Meta ad accounts with Adynami.
+          Your 7-day free trial has expired. Upgrade to a plan to continue managing your Meta ad
+          accounts with Adynami.
         </p>
 
         {/* What you'll lose */}
         <div className="text-left mb-8">
-          <p className="text-sm font-semibold text-gray-300 mb-3">
-            What you&apos;ll lose
-          </p>
+          <p className="text-sm font-semibold text-gray-300 mb-3">What you&apos;ll lose</p>
           <ul className="space-y-3">
             <li className="flex items-center gap-3 text-sm text-gray-400">
               <X className="w-4 h-4 text-red-400 flex-shrink-0" />

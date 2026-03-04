@@ -38,11 +38,7 @@ export async function DELETE() {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const dbUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const dbUser = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!dbUser[0]) {
     return Response.json({ error: 'User not found' }, { status: 404 });

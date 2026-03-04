@@ -7,11 +7,7 @@ import { NextRequest } from 'next/server';
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.email) return null;
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
   if (!user?.isAdmin) return null;
   return user;
 }
@@ -46,9 +42,7 @@ export async function GET() {
     .from(usage)
     .where(eq(usage.month, month));
 
-  const usageMap = new Map(
-    monthlyUsage.map((u) => [u.userId, u])
-  );
+  const usageMap = new Map(monthlyUsage.map((u) => [u.userId, u]));
 
   const merged = allUsers.map((u) => {
     const usg = usageMap.get(u.id);
@@ -101,7 +95,10 @@ export async function PATCH(req: NextRequest) {
 
   if (bonusCalls !== undefined) {
     if (!Number.isInteger(bonusCalls) || bonusCalls < 0 || bonusCalls > 100_000) {
-      return Response.json({ error: 'bonusCalls must be an integer between 0 and 100,000' }, { status: 400 });
+      return Response.json(
+        { error: 'bonusCalls must be an integer between 0 and 100,000' },
+        { status: 400 },
+      );
     }
   }
 

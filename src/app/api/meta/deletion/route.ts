@@ -34,7 +34,9 @@ function parseSignedRequest(signedRequest: string, secret: string): { user_id: s
   if (!match) return null;
 
   // Decode payload
-  const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+  const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(
+    'utf8',
+  );
   return JSON.parse(decoded);
 }
 

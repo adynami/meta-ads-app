@@ -20,7 +20,7 @@ interface TokenExchangeResult {
 }
 
 interface AdAccountInfo {
-  id: string;       // act_xxxxx
+  id: string; // act_xxxxx
   name: string;
   account_status: number;
   currency: string;
@@ -39,10 +39,9 @@ export async function exchangeForLongLivedToken(
     fb_exchange_token: shortLivedToken,
   });
 
-  const res = await fetch(
-    `${GRAPH_BASE}/${META_API_VERSION}/oauth/access_token?${params}`,
-    { signal: AbortSignal.timeout(15_000) },
-  );
+  const res = await fetch(`${GRAPH_BASE}/${META_API_VERSION}/oauth/access_token?${params}`, {
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (!res.ok) {
     const err = await res.json();
@@ -61,9 +60,7 @@ export async function exchangeForLongLivedToken(
  * Queries personal accounts via `me/adaccounts` and also discovers accounts
  * through all business managers the user belongs to (owned + client accounts).
  */
-export async function fetchAdAccounts(
-  accessToken: string,
-): Promise<AdAccountInfo[]> {
+export async function fetchAdAccounts(accessToken: string): Promise<AdAccountInfo[]> {
   const fields = 'id,name,account_status,currency';
   const seen = new Map<string, AdAccountInfo>();
 
@@ -93,10 +90,9 @@ export async function fetchAdAccounts(
     limit: '100',
   });
 
-  const bizRes = await fetch(
-    `${GRAPH_BASE}/${META_API_VERSION}/me/businesses?${bizParams}`,
-    { signal: AbortSignal.timeout(15_000) },
-  );
+  const bizRes = await fetch(`${GRAPH_BASE}/${META_API_VERSION}/me/businesses?${bizParams}`, {
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (bizRes.ok) {
     const bizData = await bizRes.json();
@@ -144,9 +140,7 @@ export async function fetchAdAccounts(
  * Refresh a long-lived token (extend expiry).
  * Works only if the token has not expired yet.
  */
-export async function refreshLongLivedToken(
-  currentToken: string,
-): Promise<TokenExchangeResult> {
+export async function refreshLongLivedToken(currentToken: string): Promise<TokenExchangeResult> {
   return exchangeForLongLivedToken(currentToken);
 }
 

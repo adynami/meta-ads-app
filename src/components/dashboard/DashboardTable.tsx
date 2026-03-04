@@ -70,20 +70,98 @@ function formatBudget(v: any): string {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'name', label: 'Name', align: 'left', levels: ['campaign', 'adset', 'ad'], format: (v) => v ?? '—' },
-  { key: 'campaign_name', label: 'Campaign', align: 'left', levels: ['adset', 'ad'], format: (v) => v ?? '—' },
+  {
+    key: 'name',
+    label: 'Name',
+    align: 'left',
+    levels: ['campaign', 'adset', 'ad'],
+    format: (v) => v ?? '—',
+  },
+  {
+    key: 'campaign_name',
+    label: 'Campaign',
+    align: 'left',
+    levels: ['adset', 'ad'],
+    format: (v) => v ?? '—',
+  },
   { key: 'adset_name', label: 'Ad Set', align: 'left', levels: ['ad'], format: (v) => v ?? '—' },
-  { key: 'status', label: 'Status', align: 'left', levels: ['campaign', 'adset', 'ad'], format: (v) => v ?? '—' },
-  { key: 'objective', label: 'Objective', align: 'left', levels: ['campaign'], format: (v) => v ?? '—' },
-  { key: 'daily_budget', label: 'Daily Budget', align: 'right', levels: ['campaign', 'adset'], format: formatBudget },
-  { key: 'spend', label: 'Spend', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatCurrency },
-  { key: 'impressions', label: 'Impr.', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatInt },
-  { key: 'clicks', label: 'Clicks', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatInt },
-  { key: 'ctr', label: 'CTR', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatPct },
-  { key: 'cpc', label: 'CPC', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatCurrency },
-  { key: 'conversions', label: 'Conv.', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatInt },
-  { key: 'cpa', label: 'CPA', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatCurrency },
-  { key: 'roas', label: 'ROAS', align: 'right', levels: ['campaign', 'adset', 'ad'], format: formatRatio },
+  {
+    key: 'status',
+    label: 'Status',
+    align: 'left',
+    levels: ['campaign', 'adset', 'ad'],
+    format: (v) => v ?? '—',
+  },
+  {
+    key: 'objective',
+    label: 'Objective',
+    align: 'left',
+    levels: ['campaign'],
+    format: (v) => v ?? '—',
+  },
+  {
+    key: 'daily_budget',
+    label: 'Daily Budget',
+    align: 'right',
+    levels: ['campaign', 'adset'],
+    format: formatBudget,
+  },
+  {
+    key: 'spend',
+    label: 'Spend',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatCurrency,
+  },
+  {
+    key: 'impressions',
+    label: 'Impr.',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+  },
+  {
+    key: 'clicks',
+    label: 'Clicks',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+  },
+  {
+    key: 'ctr',
+    label: 'CTR',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatPct,
+  },
+  {
+    key: 'cpc',
+    label: 'CPC',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatCurrency,
+  },
+  {
+    key: 'conversions',
+    label: 'Conv.',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+  },
+  {
+    key: 'cpa',
+    label: 'CPA',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatCurrency,
+  },
+  {
+    key: 'roas',
+    label: 'ROAS',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatRatio,
+  },
 ];
 
 interface DashboardTableProps {
@@ -155,11 +233,12 @@ export function DashboardTable({
             >
               <span className="inline-flex items-center gap-1">
                 {col.label}
-                {sortBy === col.key && (
-                  sortDir === 'asc'
-                    ? <ChevronUp className="w-3 h-3" />
-                    : <ChevronDown className="w-3 h-3" />
-                )}
+                {sortBy === col.key &&
+                  (sortDir === 'asc' ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  ))}
               </span>
             </th>
           ))}
@@ -169,10 +248,7 @@ export function DashboardTable({
         {rows.map((row, i) => (
           <tr key={row.id ?? i}>
             {visibleColumns.map((col) => (
-              <td
-                key={col.key}
-                className={cn(col.align === 'right' && 'text-right')}
-              >
+              <td key={col.key} className={cn(col.align === 'right' && 'text-right')}>
                 {col.key === 'status' && row.status ? (
                   <span
                     className={cn(

@@ -3,7 +3,12 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users, adAccounts } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
+import {
+  exchangeForLongLivedToken,
+  fetchAdAccounts,
+  connectAdAccount,
+  AdAccountLimitError,
+} from '@/lib/meta-auth';
 
 /**
  * GET /api/accounts — list user's connected ad accounts
@@ -14,11 +19,7 @@ export async function GET() {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
@@ -34,10 +35,7 @@ export async function GET() {
       createdAt: adAccounts.createdAt,
     })
     .from(adAccounts)
-    .where(and(
-      eq(adAccounts.userId, user.id),
-      eq(adAccounts.isActive, true),
-    ));
+    .where(and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true)));
 
   return Response.json({ accounts });
 }
@@ -56,11 +54,7 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: 'id is required' }, { status: 400 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
@@ -70,10 +64,7 @@ export async function DELETE(req: NextRequest) {
   await db
     .update(adAccounts)
     .set({ isActive: false })
-    .where(and(
-      eq(adAccounts.id, accountId),
-      eq(adAccounts.userId, user.id),
-    ));
+    .where(and(eq(adAccounts.id, accountId), eq(adAccounts.userId, user.id)));
 
   return Response.json({ success: true });
 }
@@ -88,11 +79,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });

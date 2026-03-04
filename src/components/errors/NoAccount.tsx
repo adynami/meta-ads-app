@@ -1,7 +1,7 @@
 'use client';
 
-import Link from "next/link";
-import { Plug } from "lucide-react";
+import Link from 'next/link';
+import { Plug } from 'lucide-react';
 
 export default function NoAccount() {
   return (
@@ -17,14 +17,11 @@ export default function NoAccount() {
         </div>
 
         {/* Heading */}
-        <h1 className="text-3xl font-bold mb-3">
-          Connect Your First Ad Account
-        </h1>
+        <h1 className="text-3xl font-bold mb-3">Connect Your First Ad Account</h1>
 
         {/* Description */}
         <p className="text-gray-400 mb-8">
-          Adynami needs access to at least one Meta ad account before you can
-          start chatting.
+          Adynami needs access to at least one Meta ad account before you can start chatting.
         </p>
 
         {/* Connect Button */}

@@ -10,11 +10,7 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const dbUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const dbUser = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!dbUser[0]) {
     return Response.json({ error: 'User not found' }, { status: 404 });
@@ -42,9 +38,10 @@ export async function GET(req: NextRequest) {
 
   // Filter by account — return most recent with messages
   if (accountId) {
-    const accountFilter = accountId === 'all'
-      ? and(eq(conversations.userId, userId), isNull(conversations.adAccountId))
-      : and(eq(conversations.userId, userId), eq(conversations.adAccountId, accountId));
+    const accountFilter =
+      accountId === 'all'
+        ? and(eq(conversations.userId, userId), isNull(conversations.adAccountId))
+        : and(eq(conversations.userId, userId), eq(conversations.adAccountId, accountId));
 
     const userConversations = await db
       .select()

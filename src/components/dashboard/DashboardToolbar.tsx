@@ -67,9 +67,10 @@ export function DashboardToolbar({
     }
   };
 
-  const buttonLabel = timeRange === 'custom' && customSince && customUntil
-    ? `${customSince} — ${customUntil}`
-    : TIME_RANGE_LABELS[timeRange];
+  const buttonLabel =
+    timeRange === 'custom' && customSince && customUntil
+      ? `${customSince} — ${customUntil}`
+      : TIME_RANGE_LABELS[timeRange];
 
   return (
     <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
@@ -82,9 +83,7 @@ export function DashboardToolbar({
               onClick={() => onLevelChange(l.key)}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                level === l.key
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:text-gray-200',
+                level === l.key ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200',
               )}
             >
               {l.label}
@@ -104,35 +103,15 @@ export function DashboardToolbar({
 
           {timeOpen && (
             <div className="absolute top-full left-0 mt-1 z-50 glass-card rounded-lg py-1 min-w-[200px]">
-              {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(
-                ([key, label]) => {
-                  if (key === 'custom') {
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setShowCustomPicker(true)}
-                        className={cn(
-                          'w-full text-left px-3 py-2 text-sm transition-colors',
-                          timeRange === 'custom'
-                            ? 'text-white bg-white/10'
-                            : 'text-gray-400 hover:text-white hover:bg-white/5',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    );
-                  }
+              {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => {
+                if (key === 'custom') {
                   return (
                     <button
                       key={key}
-                      onClick={() => {
-                        onTimeRangeChange(key);
-                        setTimeOpen(false);
-                        setShowCustomPicker(false);
-                      }}
+                      onClick={() => setShowCustomPicker(true)}
                       className={cn(
                         'w-full text-left px-3 py-2 text-sm transition-colors',
-                        timeRange === key
+                        timeRange === 'custom'
                           ? 'text-white bg-white/10'
                           : 'text-gray-400 hover:text-white hover:bg-white/5',
                       )}
@@ -140,8 +119,26 @@ export function DashboardToolbar({
                       {label}
                     </button>
                   );
-                },
-              )}
+                }
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      onTimeRangeChange(key);
+                      setTimeOpen(false);
+                      setShowCustomPicker(false);
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-sm transition-colors',
+                      timeRange === key
+                        ? 'text-white bg-white/10'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5',
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
 
               {showCustomPicker && (
                 <div className="border-t border-white/10 px-3 py-3 flex flex-col gap-2">

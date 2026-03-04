@@ -37,7 +37,9 @@ export function decrypt(encoded: string): string {
   const buf = Buffer.from(encoded, 'base64');
 
   if (buf.length < IV_LENGTH + TAG_LENGTH) {
-    throw new Error(`Ciphertext too short: expected at least ${IV_LENGTH + TAG_LENGTH} bytes, got ${buf.length}`);
+    throw new Error(
+      `Ciphertext too short: expected at least ${IV_LENGTH + TAG_LENGTH} bytes, got ${buf.length}`,
+    );
   }
 
   const iv = buf.subarray(0, IV_LENGTH);

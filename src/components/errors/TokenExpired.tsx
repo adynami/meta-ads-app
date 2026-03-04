@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from 'react';
+import Link from 'next/link';
+import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface TokenExpiredProps {
   accountName?: string;
@@ -23,13 +23,13 @@ export default function TokenExpired({ accountName }: TokenExpiredProps) {
 
         {/* Heading */}
         <h1 className="text-2xl font-bold text-center mb-3">
-          Reconnect {accountName || "Your Account"}
+          Reconnect {accountName || 'Your Account'}
         </h1>
 
         {/* Description */}
         <p className="text-gray-400 text-center mb-6">
-          Your Meta access token has expired. Meta requires re-authentication
-          every 60 days to keep your account secure.
+          Your Meta access token has expired. Meta requires re-authentication every 60 days to keep
+          your account secure.
         </p>
 
         {/* FAQ Toggle */}
@@ -39,18 +39,14 @@ export default function TokenExpired({ accountName }: TokenExpiredProps) {
             className="flex items-center justify-between w-full text-sm text-gray-400 hover:text-white transition-colors py-2"
           >
             <span>Why does this happen?</span>
-            {faqOpen ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            {faqOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           {faqOpen && (
             <div className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Meta access tokens expire every 60 days as a security measure.
-              This is a standard requirement of the Meta Marketing API and
-              applies to all third-party applications. Re-authenticating takes
-              less than 30 seconds and restores full access to your ad account.
+              Meta access tokens expire every 60 days as a security measure. This is a standard
+              requirement of the Meta Marketing API and applies to all third-party applications.
+              Re-authenticating takes less than 30 seconds and restores full access to your ad
+              account.
             </div>
           )}
         </div>

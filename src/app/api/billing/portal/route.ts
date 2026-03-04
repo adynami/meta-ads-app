@@ -14,11 +14,7 @@ export async function POST() {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user?.stripeCustomerId) {
     return Response.json(

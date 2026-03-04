@@ -50,7 +50,8 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
         <div className="flex items-center gap-2 text-sm">
           <span>{icon}</span>
           <span className="font-medium">
-            {expanded ? '' : 'Running: '}{displayName}
+            {expanded ? '' : 'Running: '}
+            {displayName}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -67,11 +68,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
         </div>
       </button>
 
-      {!expanded && (
-        <p className="text-xs text-gray-400 mt-1 ml-6">
-          {summarize(parsedResult)}
-        </p>
-      )}
+      {!expanded && <p className="text-xs text-gray-400 mt-1 ml-6">{summarize(parsedResult)}</p>}
 
       {expanded && (
         <div className="mt-3 space-y-3 text-xs">
@@ -83,7 +80,9 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
           </div>
           <div>
             <span className="font-medium text-gray-400 block mb-1">Result:</span>
-            <pre className={`mono bg-black/30 rounded-lg p-3 overflow-x-auto max-h-60 border border-white/5 ${isError ? 'text-red-400' : 'text-gray-300'}`}>
+            <pre
+              className={`mono bg-black/30 rounded-lg p-3 overflow-x-auto max-h-60 border border-white/5 ${isError ? 'text-red-400' : 'text-gray-300'}`}
+            >
               {typeof parsedResult === 'string'
                 ? parsedResult
                 : JSON.stringify(parsedResult, null, 2)}

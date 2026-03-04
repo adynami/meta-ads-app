@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Square, Search, TrendingUp, BarChart3, Target, Paperclip, X, Film, Plus } from 'lucide-react';
+import {
+  Send,
+  Square,
+  Search,
+  TrendingUp,
+  BarChart3,
+  Target,
+  Paperclip,
+  X,
+  Film,
+  Plus,
+} from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import type { AttachmentMeta } from '@/lib/attachments';
 import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
@@ -34,7 +45,13 @@ interface ChatWindowProps {
   onNewChat?: () => void;
 }
 
-export function ChatWindow({ accountId, conversationId, onConversationId, loadRecent, onNewChat }: ChatWindowProps) {
+export function ChatWindow({
+  accountId,
+  conversationId,
+  onConversationId,
+  loadRecent,
+  onNewChat,
+}: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -253,13 +270,16 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files);
-    }
-  }, [processFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (e.dataTransfer.files.length > 0) {
+        processFiles(e.dataTransfer.files);
+      }
+    },
+    [processFiles],
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -277,7 +297,10 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
       )}
 
       {/* Messages area */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 sm:px-6 py-6 sm:py-8" ref={scrollRef}>
+      <div
+        className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 sm:px-6 py-6 sm:py-8"
+        ref={scrollRef}
+      >
         {isLoadingHistory ? (
           <div className="flex items-center justify-center h-full">
             <div className="loading-dots text-purple-400 text-lg">
@@ -293,7 +316,8 @@ export function ChatWindow({ accountId, conversationId, onConversationId, loadRe
               </span>
             </div>
             <p className="text-gray-400 max-w-md mb-8">
-              Ask about your campaigns, analyse performance, create ads, or manage your Meta ad account.
+              Ask about your campaigns, analyse performance, create ads, or manage your Meta ad
+              account.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
               {suggestions.map((suggestion, i) => (

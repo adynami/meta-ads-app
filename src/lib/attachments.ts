@@ -20,18 +20,9 @@ export interface AttachmentMeta {
 
 export type AttachmentStore = Map<string, Attachment>;
 
-export const IMAGE_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-] as const;
+export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
-export const VIDEO_MIME_TYPES = [
-  'video/mp4',
-  'video/quicktime',
-  'video/webm',
-] as const;
+export const VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
 
 export const ALLOWED_MIME_TYPES = [...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES] as const;
 

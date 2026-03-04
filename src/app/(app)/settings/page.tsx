@@ -28,7 +28,12 @@ const GRADIENT_COLORS = [
 ];
 
 function getInitials(name: string): string {
-  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export default function SettingsPage() {
@@ -39,7 +44,8 @@ export default function SettingsPage() {
     return 'dark';
   });
   const [emailNotifications, setEmailNotifications] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('adynami_email_notif') !== 'false';
+    if (typeof window !== 'undefined')
+      return localStorage.getItem('adynami_email_notif') !== 'false';
     return true;
   });
   const [timeRange, setTimeRange] = useState(() => {
@@ -206,7 +212,9 @@ export default function SettingsPage() {
         {/* Connected Ad Accounts */}
         <div className="mb-12">
           <h2 className="text-xl font-semibold mb-2">Connected Ad Accounts</h2>
-          <p className="text-sm text-gray-400 mb-6">Meta ad accounts connected to your Adynami workspace.</p>
+          <p className="text-sm text-gray-400 mb-6">
+            Meta ad accounts connected to your Adynami workspace.
+          </p>
 
           {loading ? (
             <div className="glass-card rounded-xl p-6 text-center">
@@ -227,13 +235,19 @@ export default function SettingsPage() {
                 const expired = isTokenExpired(account);
                 return (
                   <div key={account.id}>
-                    <div className={`p-4 flex items-center justify-between ${expired ? 'bg-amber-500/10' : ''}`}>
+                    <div
+                      className={`p-4 flex items-center justify-between ${expired ? 'bg-amber-500/10' : ''}`}
+                    >
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${GRADIENT_COLORS[index % GRADIENT_COLORS.length]} flex items-center justify-center text-sm font-bold`}>
+                        <div
+                          className={`w-10 h-10 rounded-lg bg-gradient-to-br ${GRADIENT_COLORS[index % GRADIENT_COLORS.length]} flex items-center justify-center text-sm font-bold`}
+                        >
                           {getInitials(account.metaAccountName || account.metaAdAccountId)}
                         </div>
                         <div>
-                          <p className="font-medium">{account.metaAccountName || account.metaAdAccountId}</p>
+                          <p className="font-medium">
+                            {account.metaAccountName || account.metaAdAccountId}
+                          </p>
                           <p className="text-xs text-gray-500">ID: {account.metaAdAccountId}</p>
                           {expired && (
                             <p className="text-xs text-amber-400 flex items-center gap-1 mt-1">
@@ -295,8 +309,12 @@ export default function SettingsPage() {
           <div className="glass-card rounded-xl p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <span className="inline-block gradient-bg px-3 py-1 rounded-lg text-sm font-semibold mb-2">Current Plan</span>
-                <p className="text-sm text-gray-400 mt-1">Manage your subscription and billing details.</p>
+                <span className="inline-block gradient-bg px-3 py-1 rounded-lg text-sm font-semibold mb-2">
+                  Current Plan
+                </span>
+                <p className="text-sm text-gray-400 mt-1">
+                  Manage your subscription and billing details.
+                </p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -306,7 +324,9 @@ export default function SettingsPage() {
                 </button>
               </Link>
             </div>
-            <p className="text-xs text-gray-500 mt-4">To cancel or download invoices, use the Stripe billing portal.</p>
+            <p className="text-xs text-gray-500 mt-4">
+              To cancel or download invoices, use the Stripe billing portal.
+            </p>
           </div>
         </div>
 
@@ -319,17 +339,23 @@ export default function SettingsPage() {
             {plan !== 'agency' && (
               <>
                 <Lock className="w-4 h-4 text-gray-500" />
-                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded">Agency Plan</span>
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs font-semibold rounded">
+                  Agency Plan
+                </span>
               </>
             )}
           </div>
-          <p className="text-sm text-gray-400 mb-6">Generate API keys to use Adynami programmatically or integrate with Claude AI via MCP.</p>
+          <p className="text-sm text-gray-400 mb-6">
+            Generate API keys to use Adynami programmatically or integrate with Claude AI via MCP.
+          </p>
 
           {plan !== 'agency' ? (
             <>
               <div className="glass-card rounded-xl p-6 opacity-50 pointer-events-none">
                 <div className="bg-white/5 rounded-lg px-4 py-3 mb-4 flex items-center justify-between">
-                  <span className="text-sm font-mono text-gray-500 blur-sm">ady_sk_xxxxxxxxxxxxxxxxxxxx</span>
+                  <span className="text-sm font-mono text-gray-500 blur-sm">
+                    ady_sk_xxxxxxxxxxxxxxxxxxxx
+                  </span>
                   <button className="text-sm text-gray-500">Copy</button>
                 </div>
                 <button className="px-6 py-2.5 rounded-lg border border-white/20 text-sm font-medium">
@@ -348,12 +374,16 @@ export default function SettingsPage() {
               {keys.length > 0 && (
                 <div className="space-y-3 mb-6">
                   {keys.map((k) => (
-                    <div key={k.id} className="bg-white/5 rounded-lg px-4 py-3 flex items-center justify-between">
+                    <div
+                      key={k.id}
+                      className="bg-white/5 rounded-lg px-4 py-3 flex items-center justify-between"
+                    >
                       <div>
                         <p className="text-sm font-medium">{k.label || 'Unnamed key'}</p>
                         <p className="text-xs text-gray-500">
                           Created {new Date(k.createdAt).toLocaleDateString()}
-                          {k.lastUsedAt && ` · Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`}
+                          {k.lastUsedAt &&
+                            ` · Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`}
                         </p>
                       </div>
                       <button
@@ -423,9 +453,7 @@ export default function SettingsPage() {
                     key={t}
                     onClick={() => setTheme(t)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      theme === t
-                        ? 'gradient-bg'
-                        : 'bg-white/5 hover:bg-white/10'
+                      theme === t ? 'gradient-bg' : 'bg-white/5 hover:bg-white/10'
                     }`}
                   >
                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -437,7 +465,9 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Email Summaries</p>
-                <p className="text-xs text-gray-400">Receive weekly performance summaries via email</p>
+                <p className="text-xs text-gray-400">
+                  Receive weekly performance summaries via email
+                </p>
               </div>
               <div
                 className={`toggle-switch ${emailNotifications ? 'active' : ''}`}
@@ -474,7 +504,13 @@ export default function SettingsPage() {
               }}
               className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity flex items-center gap-2"
             >
-              {prefsSaved ? <><Check className="w-4 h-4" /> Saved</> : 'Save Preferences'}
+              {prefsSaved ? (
+                <>
+                  <Check className="w-4 h-4" /> Saved
+                </>
+              ) : (
+                'Save Preferences'
+              )}
             </button>
           </div>
         </div>
@@ -486,7 +522,10 @@ export default function SettingsPage() {
           <h2 className="text-xl font-semibold mb-6 text-red-400">Danger Zone</h2>
           <div className="danger-card rounded-xl p-6">
             <h3 className="text-lg font-semibold mb-2">Delete Account</h3>
-            <p className="text-sm text-gray-400 mb-4">Permanently delete your Adynami account and all associated data. This cannot be undone.</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Permanently delete your Adynami account and all associated data. This cannot be
+              undone.
+            </p>
 
             {!showDeleteConfirm ? (
               <button
@@ -498,7 +537,9 @@ export default function SettingsPage() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Type <span className="font-mono text-red-400">DELETE</span> to confirm</label>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    Type <span className="font-mono text-red-400">DELETE</span> to confirm
+                  </label>
                   <input
                     type="text"
                     value={deleteConfirmText}
@@ -536,7 +577,8 @@ export default function SettingsPage() {
           <div className="glass-card rounded-xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-2">Disconnect Account?</h3>
             <p className="text-sm text-gray-400 mb-6">
-              Are you sure? This will remove Adynami&apos;s access to this Meta account. You can reconnect it later.
+              Are you sure? This will remove Adynami&apos;s access to this Meta account. You can
+              reconnect it later.
             </p>
             <div className="flex gap-3">
               <button

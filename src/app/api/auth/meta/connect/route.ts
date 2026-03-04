@@ -3,7 +3,12 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { exchangeForLongLivedToken, fetchAdAccounts, connectAdAccount, AdAccountLimitError } from '@/lib/meta-auth';
+import {
+  exchangeForLongLivedToken,
+  fetchAdAccounts,
+  connectAdAccount,
+  AdAccountLimitError,
+} from '@/lib/meta-auth';
 
 /**
  * POST /api/auth/meta/connect
@@ -24,11 +29,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'access_token is required' }, { status: 400 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
@@ -39,9 +40,13 @@ export async function POST(req: NextRequest) {
     const accounts = await fetchAdAccounts(longLived.access_token);
 
     if (accounts.length === 0) {
-      return Response.json({
-        error: 'No ad accounts found. Make sure your Meta account has access to at least one ad account.',
-      }, { status: 400 });
+      return Response.json(
+        {
+          error:
+            'No ad accounts found. Make sure your Meta account has access to at least one ad account.',
+        },
+        { status: 400 },
+      );
     }
 
     // If no specific account selected, return the list for the user to choose

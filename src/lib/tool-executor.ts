@@ -5,26 +5,46 @@
 
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
 import {
-  managementTools, handleManagementTool,
-  analystTools, handleAnalystTool,
-  creatorTools, handleCreatorTool,
-  debugTools, handleDebugTool,
-  duplicatorTools, handleDuplicatorTool,
-  audienceTools, handleAudienceTool,
-  updaterTools, handleUpdaterTool,
-  pixelTools, handlePixelTool,
-  rulesTools, handleRulesTool,
-  leadsTools, handleLeadsTool,
-  libraryTools, handleLibraryTool,
-  conversionsTools, handleConversionsTool,
-  catalogTools, handleCatalogTool,
-  testingTools, handleTestingTool,
-  valueRulesTools, handleValueRulesTool,
-  budgetScheduleTools, handleBudgetScheduleTool,
-  copyTools, handleCopyTool,
-  briefTools, handleBriefTool,
-  adLibraryTools, handleAdLibraryTool,
-  performanceTools, handlePerformanceTool,
+  managementTools,
+  handleManagementTool,
+  analystTools,
+  handleAnalystTool,
+  creatorTools,
+  handleCreatorTool,
+  debugTools,
+  handleDebugTool,
+  duplicatorTools,
+  handleDuplicatorTool,
+  audienceTools,
+  handleAudienceTool,
+  updaterTools,
+  handleUpdaterTool,
+  pixelTools,
+  handlePixelTool,
+  rulesTools,
+  handleRulesTool,
+  leadsTools,
+  handleLeadsTool,
+  libraryTools,
+  handleLibraryTool,
+  conversionsTools,
+  handleConversionsTool,
+  catalogTools,
+  handleCatalogTool,
+  testingTools,
+  handleTestingTool,
+  valueRulesTools,
+  handleValueRulesTool,
+  budgetScheduleTools,
+  handleBudgetScheduleTool,
+  copyTools,
+  handleCopyTool,
+  briefTools,
+  handleBriefTool,
+  adLibraryTools,
+  handleAdLibraryTool,
+  performanceTools,
+  handlePerformanceTool,
 } from 'meta-mcp-server/tools';
 
 import type { McpToolDef } from './tools-schema';
@@ -56,7 +76,12 @@ export const ALL_TOOLS: McpToolDef[] = [
 
 // ── Dispatch map ─────────────────────────────────────────────────────────────
 
-type Handler = (ctx: TenantContext, name: string, args: Record<string, any>, attachmentStore?: Map<string, any>) => Promise<any>;
+type Handler = (
+  ctx: TenantContext,
+  name: string,
+  args: Record<string, any>,
+  attachmentStore?: Map<string, any>,
+) => Promise<any>;
 
 const dispatchMap = new Map<string, Handler>();
 
@@ -110,7 +135,11 @@ export async function executeTool(
       message = error.message;
       code = 'code' in error ? String((error as Record<string, unknown>).code) : undefined;
     } else if (error && typeof error === 'object') {
-      try { message = JSON.stringify(error); } catch { message = 'Unknown tool execution error'; }
+      try {
+        message = JSON.stringify(error);
+      } catch {
+        message = 'Unknown tool execution error';
+      }
     } else {
       message = 'Unknown tool execution error';
     }

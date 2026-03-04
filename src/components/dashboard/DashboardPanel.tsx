@@ -109,9 +109,7 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
       />
       <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-6 py-4">
         {error ? (
-          <div className="flex items-center justify-center h-64 text-red-400 text-sm">
-            {error}
-          </div>
+          <div className="flex items-center justify-center h-64 text-red-400 text-sm">{error}</div>
         ) : (
           <DashboardTable
             rows={sortedRows}

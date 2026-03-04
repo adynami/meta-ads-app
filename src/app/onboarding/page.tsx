@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 interface AdAccount {
-  id: string;           // act_xxxxx
+  id: string; // act_xxxxx
   name: string;
   account_status: number;
   currency: string;
@@ -146,28 +146,20 @@ export default function OnboardingPage() {
                   className="w-20 h-20 rounded-2xl flex items-center justify-center"
                   style={{ backgroundColor: '#1877F2' }}
                 >
-                  <svg
-                    className="w-10 h-10 text-white"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                  <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                 </div>
               </div>
 
-              <h2 className="text-3xl font-bold text-center mb-3">
-                Connect Your Meta Account
-              </h2>
+              <h2 className="text-3xl font-bold text-center mb-3">Connect Your Meta Account</h2>
               <p className="text-gray-400 text-center mb-8">
-                Adynami needs access to your Meta Ads account to read data and
-                execute actions on your behalf.
+                Adynami needs access to your Meta Ads account to read data and execute actions on
+                your behalf.
               </p>
 
               <div className="glass-card rounded-2xl p-6 mb-8">
-                <p className="text-sm font-medium text-gray-300 mb-4">
-                  Permissions requested:
-                </p>
+                <p className="text-sm font-medium text-gray-300 mb-4">Permissions requested:</p>
                 <div className="space-y-3">
                   {permissionBullets.map((perm) => (
                     <div key={perm} className="flex items-start gap-3">
@@ -184,11 +176,7 @@ export default function OnboardingPage() {
                 onClick={() => setStep(2)}
                 className="w-full gradient-bg text-white font-semibold py-4 px-6 rounded-xl glow-btn flex items-center justify-center gap-3 text-lg mb-6"
               >
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
                 Connect with Meta
@@ -219,12 +207,9 @@ export default function OnboardingPage() {
                 Back
               </button>
 
-              <h2 className="text-3xl font-bold mb-3">
-                Which account do you want to start with?
-              </h2>
+              <h2 className="text-3xl font-bold mb-3">Which account do you want to start with?</h2>
               <p className="text-gray-400 mb-8">
-                Select the Meta ad account you&apos;d like to manage first. You can
-                add more later.
+                Select the Meta ad account you&apos;d like to manage first. You can add more later.
               </p>
 
               {!loadingAccounts && accounts.length > 0 && (
@@ -245,85 +230,78 @@ export default function OnboardingPage() {
                   <div className="flex justify-center mb-4">
                     <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
                   </div>
-                  <p className="text-gray-400 text-sm">
-                    Loading your ad accounts...
-                  </p>
+                  <p className="text-gray-400 text-sm">Loading your ad accounts...</p>
                 </div>
               ) : accounts.length === 0 ? (
                 <div className="glass-card rounded-2xl p-12 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                     <Search className="w-8 h-8 text-gray-500" />
                   </div>
-                  <p className="text-gray-400 mb-2">
-                    No ad accounts found
-                  </p>
+                  <p className="text-gray-400 mb-2">No ad accounts found</p>
                   <p className="text-gray-500 text-sm">
-                    Make sure you have at least one Meta ad account linked to
-                    your business.
+                    Make sure you have at least one Meta ad account linked to your business.
                   </p>
                 </div>
-              ) : (() => {
-                const filteredAccounts = accounts.filter((account) => {
-                  if (!searchQuery) return true;
-                  const q = searchQuery.toLowerCase();
-                  return (
-                    (account.name || '').toLowerCase().includes(q) ||
-                    account.id.toLowerCase().includes(q)
-                  );
-                });
-                return filteredAccounts.length === 0 ? (
-                  <div className="glass-card rounded-2xl p-12 text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                      <Search className="w-8 h-8 text-gray-500" />
+              ) : (
+                (() => {
+                  const filteredAccounts = accounts.filter((account) => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      (account.name || '').toLowerCase().includes(q) ||
+                      account.id.toLowerCase().includes(q)
+                    );
+                  });
+                  return filteredAccounts.length === 0 ? (
+                    <div className="glass-card rounded-2xl p-12 text-center mb-8">
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                        <Search className="w-8 h-8 text-gray-500" />
+                      </div>
+                      <p className="text-gray-400 mb-2">No matching accounts</p>
+                      <p className="text-gray-500 text-sm">Try a different search term.</p>
                     </div>
-                    <p className="text-gray-400 mb-2">No matching accounts</p>
-                    <p className="text-gray-500 text-sm">
-                      Try a different search term.
-                    </p>
-                  </div>
-                ) : (
-                <div className="space-y-3 mb-8">
-                  {filteredAccounts.map((account, index) => (
-                    <button
-                      key={account.id}
-                      onClick={() => setSelectedAccount(account.id)}
-                      className={`w-full text-left glass-card rounded-xl p-4 flex items-center gap-4 transition-all duration-300 cursor-pointer ${
-                        selectedAccount === account.id
-                          ? 'border-purple-500/60 bg-white/[0.06] shadow-[0_0_30px_rgba(124,58,237,0.12)]'
-                          : 'hover:bg-white/[0.04] hover:border-white/15'
-                      }`}
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
-                          gradientColors[index % gradientColors.length]
-                        } flex items-center justify-center text-sm font-bold flex-shrink-0`}
-                      >
-                        {getInitials(account.name, account.id)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {account.name || 'Unnamed Account'}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {account.id}
-                        </p>
-                      </div>
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          selectedAccount === account.id
-                            ? 'border-purple-500'
-                            : 'border-white/30'
-                        }`}
-                      >
-                        {selectedAccount === account.id && (
-                          <div className="w-2.5 h-2.5 rounded-full gradient-bg" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                );
-              })()}
+                  ) : (
+                    <div className="space-y-3 mb-8">
+                      {filteredAccounts.map((account, index) => (
+                        <button
+                          key={account.id}
+                          onClick={() => setSelectedAccount(account.id)}
+                          className={`w-full text-left glass-card rounded-xl p-4 flex items-center gap-4 transition-all duration-300 cursor-pointer ${
+                            selectedAccount === account.id
+                              ? 'border-purple-500/60 bg-white/[0.06] shadow-[0_0_30px_rgba(124,58,237,0.12)]'
+                              : 'hover:bg-white/[0.04] hover:border-white/15'
+                          }`}
+                        >
+                          <div
+                            className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
+                              gradientColors[index % gradientColors.length]
+                            } flex items-center justify-center text-sm font-bold flex-shrink-0`}
+                          >
+                            {getInitials(account.name, account.id)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">
+                              {account.name || 'Unnamed Account'}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">{account.id}</p>
+                          </div>
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                              selectedAccount === account.id
+                                ? 'border-purple-500'
+                                : 'border-white/30'
+                            }`}
+                          >
+                            {selectedAccount === account.id && (
+                              <div className="w-2.5 h-2.5 rounded-full gradient-bg" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
 
               <button
                 onClick={async () => {
@@ -394,8 +372,7 @@ export default function OnboardingPage() {
                 You&apos;re all set. Let&apos;s start.
               </h2>
               <p className="text-gray-400 text-center mb-8">
-                Try one of these to see Adynami in action, or type your own
-                command.
+                Try one of these to see Adynami in action, or type your own command.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
@@ -408,9 +385,7 @@ export default function OnboardingPage() {
                       <card.icon className="w-5 h-5 text-purple-400" />
                     </div>
                     <p className="font-medium text-sm mb-1">{card.title}</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      {card.description}
-                    </p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{card.description}</p>
                   </div>
                 ))}
               </div>

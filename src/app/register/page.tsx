@@ -96,13 +96,12 @@ export default function RegisterPage() {
             </div>
 
             <h1 className="text-4xl font-bold mb-6 leading-tight">
-              Start controlling your<br />
-              Meta ads with{' '}
-              <span className="gradient-text">conversation</span>
+              Start controlling your
+              <br />
+              Meta ads with <span className="gradient-text">conversation</span>
             </h1>
             <p className="text-gray-400 text-lg mb-12">
-              Pick a plan, connect your account, and launch your first campaign
-              in minutes.
+              Pick a plan, connect your account, and launch your first campaign in minutes.
             </p>
 
             <div className="space-y-5">
@@ -145,12 +144,9 @@ export default function RegisterPage() {
           <div className="relative z-10">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
               <p className="text-gray-400 italic mb-3">
-                &quot;I cut my weekly Ads Manager time from 6 hours to under 30
-                minutes.&quot;
+                &quot;I cut my weekly Ads Manager time from 6 hours to under 30 minutes.&quot;
               </p>
-              <p className="text-sm text-gray-500">
-                — Sarah K., Head of Growth
-              </p>
+              <p className="text-sm text-gray-500">— Sarah K., Head of Growth</p>
             </div>
           </div>
         </div>
@@ -186,9 +182,7 @@ export default function RegisterPage() {
                         {/* Radio selector */}
                         <div
                           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                            selectedPlan === plan.id
-                              ? 'border-purple-500'
-                              : 'border-white/30'
+                            selectedPlan === plan.id ? 'border-purple-500' : 'border-white/30'
                           }`}
                         >
                           {selectedPlan === plan.id && (
@@ -197,9 +191,7 @@ export default function RegisterPage() {
                         </div>
                         <h3 className="text-lg font-semibold">{plan.name}</h3>
                       </div>
-                      <p className="text-gray-400 text-sm ml-8 mb-3">
-                        {plan.description}
-                      </p>
+                      <p className="text-gray-400 text-sm ml-8 mb-3">{plan.description}</p>
                       <div className="ml-8 flex flex-wrap gap-2">
                         <span className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">
                           {plan.accounts}
@@ -232,10 +224,7 @@ export default function RegisterPage() {
                 {plans
                   .find((p) => p.id === selectedPlan)
                   ?.features.map((feature) => (
-                    <div
-                      key={feature}
-                      className="flex items-center gap-2 text-sm text-gray-300"
-                    >
+                    <div key={feature} className="flex items-center gap-2 text-sm text-gray-300">
                       <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                       {feature}
                     </div>
@@ -246,37 +235,26 @@ export default function RegisterPage() {
             {/* Continue Button */}
             <Link href="/login" className="block">
               <button className="w-full gradient-bg text-white font-semibold py-4 px-6 rounded-xl glow-btn flex items-center justify-center gap-3 text-lg">
-                Continue with{' '}
-                {plans.find((p) => p.id === selectedPlan)?.name}
+                Continue with {plans.find((p) => p.id === selectedPlan)?.name}
                 <ArrowRight className="w-5 h-5" />
               </button>
             </Link>
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              7-day free trial. You&apos;ll connect your Meta account on the next
-              step.
+              7-day free trial. You&apos;ll connect your Meta account on the next step.
             </p>
 
             <div className="flex items-center justify-center gap-4 text-xs text-gray-500 mt-6 flex-wrap">
-              <span className="flex items-center gap-1">
-                &#x1F512; 256-bit encryption
-              </span>
+              <span className="flex items-center gap-1">&#x1F512; 256-bit encryption</span>
               <span>·</span>
-              <span className="flex items-center gap-1">
-                &#x1F6E1; Meta API Partner
-              </span>
+              <span className="flex items-center gap-1">&#x1F6E1; Meta API Partner</span>
               <span>·</span>
               <span>Cancel anytime</span>
             </div>
 
             <p className="text-center mt-6">
-              <span className="text-sm text-gray-400">
-                Already have an account?{' '}
-              </span>
-              <Link
-                href="/login"
-                className="text-sm gradient-text font-medium hover:underline"
-              >
+              <span className="text-sm text-gray-400">Already have an account? </span>
+              <Link href="/login" className="text-sm gradient-text font-medium hover:underline">
                 Sign in
               </Link>
             </p>

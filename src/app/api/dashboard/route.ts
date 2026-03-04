@@ -17,7 +17,16 @@ export async function POST(req: NextRequest) {
     const { accountId, level, timeRange, statusFilter, limit, since, until } = body as {
       accountId: string;
       level: 'campaign' | 'adset' | 'ad';
-      timeRange: 'last_7d' | 'last_14d' | 'last_30d' | 'last_90d' | 'this_month' | 'last_month' | 'today' | 'yesterday' | 'custom';
+      timeRange:
+        | 'last_7d'
+        | 'last_14d'
+        | 'last_30d'
+        | 'last_90d'
+        | 'this_month'
+        | 'last_month'
+        | 'today'
+        | 'yesterday'
+        | 'custom';
       statusFilter?: string[];
       limit?: number;
       since?: string;
@@ -25,11 +34,17 @@ export async function POST(req: NextRequest) {
     };
 
     if (!accountId || !level || !timeRange) {
-      return Response.json({ error: 'accountId, level, and timeRange are required' }, { status: 400 });
+      return Response.json(
+        { error: 'accountId, level, and timeRange are required' },
+        { status: 400 },
+      );
     }
 
     if (accountId === 'all') {
-      return Response.json({ error: 'Dashboard does not support "All Accounts" mode' }, { status: 400 });
+      return Response.json(
+        { error: 'Dashboard does not support "All Accounts" mode' },
+        { status: 400 },
+      );
     }
 
     let ctx: TenantContext;
@@ -46,10 +61,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (isTrialExpired(user.plan, user.trialEndsAt)) {
-        return Response.json({
-          error: 'Your trial has expired. Please subscribe to continue.',
-          code: 'TRIAL_EXPIRED',
-        }, { status: 403 });
+        return Response.json(
+          {
+            error: 'Your trial has expired. Please subscribe to continue.',
+            code: 'TRIAL_EXPIRED',
+          },
+          { status: 403 },
+        );
       }
 
       const [account] = await db
@@ -95,8 +113,10 @@ export async function POST(req: NextRequest) {
     const entityLimit = limit ?? 50;
 
     const listToolName =
-      level === 'campaign' ? 'meta_list_campaigns'
-        : level === 'adset' ? 'meta_list_adsets'
+      level === 'campaign'
+        ? 'meta_list_campaigns'
+        : level === 'adset'
+          ? 'meta_list_adsets'
           : 'meta_list_ads';
 
     const listArgs: Record<string, any> = {
@@ -132,8 +152,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build entity map by name
-    const entityList: any[] =
-      entities.campaigns ?? entities.adsets ?? entities.ads ?? [];
+    const entityList: any[] = entities.campaigns ?? entities.adsets ?? entities.ads ?? [];
 
     const entityMap = new Map<string, any>();
     for (const e of entityList) {
@@ -141,11 +160,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Normalize insights to array and filter out "Account" fallback rows
-    const insightRows: any[] = (Array.isArray(insights)
-      ? insights
-      : insights.error
-        ? []
-        : [insights]
+    const insightRows: any[] = (
+      Array.isArray(insights) ? insights : insights.error ? [] : [insights]
     ).filter((row: any) => row.name && row.name !== 'Account');
 
     // Merge: enrich insight rows with entity metadata
@@ -198,9 +214,6 @@ export async function POST(req: NextRequest) {
     return Response.json({ rows });
   } catch (error: any) {
     console.error('[dashboard/route] Error:', error);
-    return Response.json(
-      { error: error?.message ?? 'Internal server error' },
-      { status: 500 },
-    );
+    return Response.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }
