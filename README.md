@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# meta-ads-app
+
+Conversational AI for Meta Ads management. Chat with Claude to manage campaigns, audiences, creatives, and analytics across your Meta ad accounts.
+
+**Stack:** Next.js 16, React 19, TypeScript, Drizzle ORM + Neon Postgres, Anthropic SDK, Stripe, NextAuth v5
+
+## Prerequisites
+
+- Node.js 22+
+- npm
+- A Neon Postgres database
+- Meta Developer App (for OAuth + Marketing API)
+- Stripe account (for billing)
+- Anthropic API key
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Build the MCP server (required before app can import)
+cd packages/meta-mcp-server && npm run build && cd ../..
+
+# Copy env template and fill in values
+cp .env.example .env.local
+
+# Push DB schema to Neon
+npx drizzle-kit push
+
+# Start dev server (auto-builds MCP server via predev script)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Dev Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server (auto-builds MCP server) |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm run format` | Format with Prettier |
+| `npm run format:check` | Check formatting |
+| `npm test` | Run tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npx drizzle-kit push` | Push schema changes to DB |
+| `npx drizzle-kit generate` | Generate migration files |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
 
-## Learn More
+```
+src/
+├── app/api/          # Next.js API routes
+│   ├── auth/         # NextAuth + Meta OAuth
+│   ├── billing/      # Stripe checkout + webhooks
+│   ├── chat/         # Main chat endpoint → Claude agentic loop
+│   └── keys/         # API key management (Agency plan)
+├── components/       # React components (shadcn/ui)
+├── lib/              # Shared logic
+│   ├── chat.ts       # runChat agentic loop + message helpers
+│   ├── crypto.ts     # AES-256-GCM encrypt/decrypt
+│   ├── db/           # Drizzle ORM client + schema
+│   ├── plans.ts      # Plan limits + trial expiry
+│   ├── stripe.ts     # Stripe client + price IDs
+│   └── tool-executor.ts  # Claude tool_use → MCP handler bridge
+└── middleware.ts     # Auth + security headers
 
-To learn more about Next.js, take a look at the following resources:
+packages/meta-mcp-server/   # MCP server (76+ Meta API tools)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Chat flow:** User message → `POST /api/chat` → Claude agentic loop (max 10 tool rounds) → MCP tool handlers → Meta Marketing API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Auth flow:** Meta OAuth → short-lived token → long-lived token (~60 days) → AES-256-GCM encrypted → stored in DB
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See `CLAUDE.md` for full list. Required:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `DATABASE_URL` — Neon Postgres connection string
+- `AUTH_SECRET` — NextAuth secret
+- `ENCRYPTION_KEY` — 32-byte hex key for AES-256-GCM
+- `META_APP_ID` / `META_APP_SECRET` — Meta developer app
+- `ANTHROPIC_API_KEY` — Anthropic API key
+- `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — Stripe billing
+- `NEXT_PUBLIC_STRIPE_*_PRICE_ID` — Stripe price IDs
+
+## CI
+
+GitHub Actions runs on push/PR to `main`: format check → lint → typecheck → test → build.

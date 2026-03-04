@@ -14,11 +14,7 @@ export async function GET() {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user || user.plan !== 'agency') {
     return Response.json(
@@ -51,11 +47,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user || user.plan !== 'agency') {
     return Response.json(
@@ -96,19 +88,13 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: 'id is required' }, { status: 400 });
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
-  await db
-    .delete(apiKeys)
-    .where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, user.id)));
+  await db.delete(apiKeys).where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, user.id)));
 
   return Response.json({ success: true });
 }

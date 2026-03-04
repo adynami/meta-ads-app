@@ -37,10 +37,13 @@ export async function POST(req: NextRequest) {
 
       // Check trial/subscription status
       if (isTrialExpired(user.plan, user.trialEndsAt)) {
-        return Response.json({
-          error: 'Your trial has expired. Please subscribe to continue.',
-          code: 'TRIAL_EXPIRED',
-        }, { status: 403 });
+        return Response.json(
+          {
+            error: 'Your trial has expired. Please subscribe to continue.',
+            code: 'TRIAL_EXPIRED',
+          },
+          { status: 403 },
+        );
       }
 
       // Check monthly API call limit
@@ -56,17 +59,24 @@ export async function POST(req: NextRequest) {
 
       const planCallsLeft = planLimits.monthlyApiCalls - (monthUsage?.apiCalls ?? 0);
       if (planCallsLeft <= 0 && (user.bonusCalls ?? 0) <= 0) {
-        return Response.json({
-          error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade or buy more calls.`,
-          code: 'RATE_LIMITED',
-          canTopUp: true,
-          usage: { current: monthUsage?.apiCalls ?? 0, limit: planLimits.monthlyApiCalls },
-        }, { status: 429 });
+        return Response.json(
+          {
+            error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade or buy more calls.`,
+            code: 'RATE_LIMITED',
+            canTopUp: true,
+            usage: { current: monthUsage?.apiCalls ?? 0, limit: planLimits.monthlyApiCalls },
+          },
+          { status: 429 },
+        );
       }
 
       // Get the user's active ad account (use account_id from request or first active)
       const body = await req.json();
-      const { messages, accountId, attachments: rawAttachments } = body as {
+      const {
+        messages,
+        accountId,
+        attachments: rawAttachments,
+      } = body as {
         messages: Anthropic.MessageParam[];
         accountId?: string;
         attachments?: Attachment[];
@@ -102,9 +112,13 @@ export async function POST(req: NextRequest) {
           .where(and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true)));
 
         if (allAccounts.length === 0) {
-          return Response.json({
-            error: 'No connected ad accounts found. Go to Settings to connect your Meta ad account.',
-          }, { status: 400 });
+          return Response.json(
+            {
+              error:
+                'No connected ad accounts found. Go to Settings to connect your Meta ad account.',
+            },
+            { status: 400 },
+          );
         }
 
         const contexts: TenantContext[] = [];
@@ -122,10 +136,13 @@ export async function POST(req: NextRequest) {
           }
         }
         if (contexts.length === 0) {
-          return Response.json({
-            error: 'Failed to decrypt tokens for all accounts. Please reconnect in Settings.',
-            code: 'TOKEN_DECRYPT_FAILED',
-          }, { status: 400 });
+          return Response.json(
+            {
+              error: 'Failed to decrypt tokens for all accounts. Please reconnect in Settings.',
+              code: 'TOKEN_DECRYPT_FAILED',
+            },
+            { status: 400 },
+          );
         }
 
         const accountNames = allAccounts.map((a) => ({
@@ -135,29 +152,39 @@ export async function POST(req: NextRequest) {
 
         const messagesWithAttachments = injectAttachmentBlocks(messages, attachmentStore);
 
-        return await runChat(contexts, messagesWithAttachments, {
-          userId: user.id,
-          adAccountId: null,
-          conversationId: body.conversationId,
-          useBonusCall: planCallsLeft <= 0,
-          existingContext,
-        }, accountNames, attachmentStore, req.signal);
+        return await runChat(
+          contexts,
+          messagesWithAttachments,
+          {
+            userId: user.id,
+            adAccountId: null,
+            conversationId: body.conversationId,
+            useBonusCall: planCallsLeft <= 0,
+            existingContext,
+          },
+          accountNames,
+          attachmentStore,
+          req.signal,
+        );
       }
 
       const accountFilter = accountId
-        ? and(eq(adAccounts.userId, user.id), eq(adAccounts.id, accountId), eq(adAccounts.isActive, true))
+        ? and(
+            eq(adAccounts.userId, user.id),
+            eq(adAccounts.id, accountId),
+            eq(adAccounts.isActive, true),
+          )
         : and(eq(adAccounts.userId, user.id), eq(adAccounts.isActive, true));
 
-      const [account] = await db
-        .select()
-        .from(adAccounts)
-        .where(accountFilter)
-        .limit(1);
+      const [account] = await db.select().from(adAccounts).where(accountFilter).limit(1);
 
       if (!account) {
-        return Response.json({
-          error: 'No connected ad account found. Go to Settings to connect your Meta ad account.',
-        }, { status: 400 });
+        return Response.json(
+          {
+            error: 'No connected ad account found. Go to Settings to connect your Meta ad account.',
+          },
+          { status: 400 },
+        );
       }
 
       try {
@@ -168,21 +195,31 @@ export async function POST(req: NextRequest) {
           dryRun: false,
         };
       } catch {
-        return Response.json({
-          error: 'Failed to decrypt token. Please reconnect in Settings.',
-          code: 'TOKEN_DECRYPT_FAILED',
-        }, { status: 400 });
+        return Response.json(
+          {
+            error: 'Failed to decrypt token. Please reconnect in Settings.',
+            code: 'TOKEN_DECRYPT_FAILED',
+          },
+          { status: 400 },
+        );
       }
 
       const messagesWithAttachmentsSingle = injectAttachmentBlocks(messages, attachmentStore);
 
-      return await runChat(ctx, messagesWithAttachmentsSingle, {
-        userId: user.id,
-        adAccountId: account.id,
-        conversationId: body.conversationId,
-        useBonusCall: planCallsLeft <= 0,
-        existingContext,
-      }, undefined, attachmentStore, req.signal);
+      return await runChat(
+        ctx,
+        messagesWithAttachmentsSingle,
+        {
+          userId: user.id,
+          adAccountId: account.id,
+          conversationId: body.conversationId,
+          useBonusCall: planCallsLeft <= 0,
+          existingContext,
+        },
+        undefined,
+        attachmentStore,
+        req.signal,
+      );
     }
 
     // Fallback: env var credentials (dev/demo mode)
@@ -223,9 +260,6 @@ export async function POST(req: NextRequest) {
     return await runChat(ctx, envMessages, undefined, undefined, envAttachmentStore, req.signal);
   } catch (error: any) {
     console.error('[chat/route] Error:', error);
-    return Response.json(
-      { error: error?.message ?? 'Internal server error' },
-      { status: 500 },
-    );
+    return Response.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }

@@ -3,7 +3,14 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { getStripe, PRICE_IDS, TOPUP_PRICE_IDS, type PricePlan, type TopupPack } from '@/lib/stripe';
+import {
+  getStripe,
+  PRICE_IDS,
+  TOPUP_PRICE_IDS,
+  type PricePlan,
+  type TopupPack,
+} from '@/lib/stripe';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/billing/checkout
@@ -17,13 +24,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { allowed } = rateLimit(`checkout:${session.user.email}`, {
+    windowMs: 60_000,
+    maxRequests: 5,
+  });
+  if (!allowed) {
+    return Response.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const body = await req.json();
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email))
-    .limit(1);
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
 
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
@@ -41,10 +52,7 @@ export async function POST(req: NextRequest) {
     });
     customerId = customer.id;
 
-    await db
-      .update(users)
-      .set({ stripeCustomerId: customerId })
-      .where(eq(users.id, user.id));
+    await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
   }
 
   // Top-up credit pack (one-time payment)

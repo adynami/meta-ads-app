@@ -9,9 +9,11 @@ Conversational AI for Meta Ads management. Users chat with Claude to manage camp
 
 ```bash
 # App
-npm run dev          # next dev --webpack
+npm run dev          # next dev --webpack (auto-builds MCP server via predev)
 npm run build        # next build --webpack
 npm run lint         # eslint
+npm run format       # prettier --write
+npm run format:check # prettier --check
 npm test             # vitest run
 npm run test:watch   # vitest (watch mode)
 
@@ -19,11 +21,13 @@ npm run test:watch   # vitest (watch mode)
 npx drizzle-kit push       # push schema to Neon
 npx drizzle-kit generate   # generate migration files
 
-# MCP server (must build before app can import)
+# MCP server (must build before app can import; predev handles this automatically)
 cd packages/meta-mcp-server
 npm run build        # rm -rf dist && tsc
 npm run dev          # tsx src/index.ts (stdio mode)
 ```
+
+**CI:** GitHub Actions runs format:check → lint → typecheck → test → build on push/PR to main.
 
 ## Architecture
 
@@ -173,7 +177,7 @@ Trial expires 7 days after signup. Bonus calls can be added by admin.
 - [x] ~~Webhook has no idempotency dedup~~ -> `webhook_events` table, check before processing, record after (`src/app/api/billing/webhook/route.ts`)
 - [x] ~~Conversations JSONB grows unbounded~~ -> MAX_STORED_MESSAGES (200) trim in persistChatData (`src/app/api/chat/route.ts`)
 - [x] ~~FK references have no onDelete~~ -> cascade on all child tables, set null on conversations.adAccountId (`src/lib/db/schema.ts`)
-- [ ] No rate limiting on auth or billing checkout endpoints
+- [x] ~~No rate limiting on auth or billing checkout endpoints~~ -> sliding-window rate limiter (`src/lib/rate-limit.ts`), applied to checkout (5/60s), webhook (30/60s), auth POST (15/300s)
 
 ### P1 — Code Quality
 - [x] ~~Duplicated `Message`/`ToolCall` interfaces in `ChatWindow.tsx` and `MessageBubble.tsx`~~ -> extracted to `src/types/chat.ts`
@@ -192,16 +196,16 @@ Priority targets for first test suite:
 - [x] ~~`src/lib/crypto.ts` — encrypt/decrypt roundtrip, invalid key handling~~
 - [x] ~~`src/lib/plans.ts` — trial expiry edge cases, plan limit checks~~
 - [x] ~~`src/lib/tools-schema.ts` — MCP-to-Anthropic tool format conversion~~
-- [ ] `src/app/api/billing/webhook/route.ts` — Stripe event handling (mocked)
-- [ ] `src/app/api/chat/route.ts` — auth checks, rate limiting, trial expiry
-- [ ] `src/app/api/keys/route.ts` — ownership isolation
+- [x] ~~`src/app/api/billing/webhook/route.ts` — Stripe event handling (mocked)~~
+- [x] ~~`src/app/api/chat/route.ts` — auth checks, rate limiting, trial expiry~~
+- [x] ~~`src/app/api/keys/route.ts` — ownership isolation~~
 
 ### P3 — DevEx
-- [ ] No CI/CD pipeline -> add GitHub Actions for lint + typecheck + build
-- [ ] No Prettier config -> add `.prettierrc` and format codebase
-- [ ] No pre-commit hooks -> add Husky + lint-staged
-- [ ] Default Next.js README.md -> replace with real project docs
-- [ ] MCP server `dist/` build dependency undocumented -> add to dev setup instructions
+- [x] ~~No CI/CD pipeline~~ -> `.github/workflows/ci.yml` (format:check, lint, typecheck, test, build)
+- [x] ~~No Prettier config~~ -> `.prettierrc` + `npm run format` / `format:check`
+- [x] ~~No pre-commit hooks~~ -> Husky + lint-staged (prettier + eslint on staged .ts/.tsx)
+- [x] ~~Default Next.js README.md~~ -> replaced with real project docs
+- [x] ~~MCP server `dist/` build dependency undocumented~~ -> `predev` script auto-builds, documented in README + CI
 
 ### P4 — Feature Enhancements
 - [ ] Streaming responses (SSE) for chat -> improve perceived latency on multi-tool rounds

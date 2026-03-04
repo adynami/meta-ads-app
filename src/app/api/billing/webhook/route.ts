@@ -3,12 +3,19 @@ import { getStripe } from '@/lib/stripe';
 import { db } from '@/lib/db';
 import { users, webhookEvents } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/billing/webhook
  * Handles Stripe webhook events for subscription lifecycle and top-up payments.
  */
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const { allowed } = rateLimit(`webhook:${ip}`, { windowMs: 60_000, maxRequests: 30 });
+  if (!allowed) {
+    return Response.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const body = await req.text();
   const sig = req.headers.get('stripe-signature');
 
@@ -26,11 +33,7 @@ export async function POST(req: NextRequest) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      webhookSecret,
-    );
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error('[webhook] Signature verification failed:', err.message);
     return Response.json({ error: 'Invalid signature' }, { status: 400 });
@@ -61,7 +64,9 @@ export async function POST(req: NextRequest) {
           if (metadata?.type === 'topup' && metadata.userId && metadata.credits) {
             const credits = parseInt(metadata.credits, 10);
             if (isNaN(credits) || credits <= 0) {
-              console.error(`[webhook] Invalid credits value in top-up metadata: ${metadata.credits}`);
+              console.error(
+                `[webhook] Invalid credits value in top-up metadata: ${metadata.credits}`,
+              );
               break;
             }
             await db
@@ -98,10 +103,7 @@ export async function POST(req: NextRequest) {
       const plan = subscription.metadata?.plan;
 
       if (userId && plan) {
-        await db
-          .update(users)
-          .set({ plan })
-          .where(eq(users.id, userId));
+        await db.update(users).set({ plan }).where(eq(users.id, userId));
       }
       break;
     }
