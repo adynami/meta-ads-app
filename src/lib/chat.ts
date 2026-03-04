@@ -13,13 +13,13 @@ import { estimateCostCents } from '@/lib/pricing';
 // ── Constants ──────────────────────────────────────────────────────────
 
 const CONTEXT_REGEX = /<context>\s*([\s\S]*?)\s*<\/context>/i;
-const MAX_TOOL_ROUNDS = 10;
+export const MAX_TOOL_ROUNDS = 10;
 const MAX_MESSAGES = 100;
 const VALID_ROLES = new Set(['user', 'assistant']);
 const MAX_STORED_MESSAGES = 200;
 
 let _anthropicTools: Anthropic.Tool[] | null = null;
-function getAnthropicTools() {
+export function getAnthropicTools() {
   if (!_anthropicTools) _anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
   return _anthropicTools;
 }
@@ -113,6 +113,32 @@ export function injectAttachmentBlocks(
   return result;
 }
 
+export function buildSystemBlocks(
+  isMultiAccount: boolean,
+  accountNames?: AccountLabel[],
+  existingContext?: string | null,
+): Anthropic.TextBlockParam[] {
+  return [
+    { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ...(isMultiAccount && accountNames
+      ? [
+          {
+            type: 'text' as const,
+            text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
+          },
+        ]
+      : []),
+    ...(existingContext
+      ? [
+          {
+            type: 'text' as const,
+            text: `\nPrevious conversation context (update this in your <context> block):\n${existingContext}`,
+          },
+        ]
+      : []),
+  ];
+}
+
 export async function runChat(
   ctx: TenantContext | TenantContext[],
   messages: Anthropic.MessageParam[],
@@ -124,25 +150,7 @@ export async function runChat(
   const client = getAnthropicClient();
   const isMultiAccount = Array.isArray(ctx);
 
-  const systemBlocks: Anthropic.TextBlockParam[] = [
-    { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    ...(isMultiAccount && accountNames
-      ? [
-          {
-            type: 'text' as const,
-            text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
-          },
-        ]
-      : []),
-    ...(persist?.existingContext
-      ? [
-          {
-            type: 'text' as const,
-            text: `\nPrevious conversation context (update this in your <context> block):\n${persist.existingContext}`,
-          },
-        ]
-      : []),
-  ];
+  const systemBlocks = buildSystemBlocks(isMultiAccount, accountNames, persist?.existingContext);
 
   let currentMessages: Anthropic.MessageParam[] = truncateOldToolResults([...messages]);
   let finalText = '';
@@ -283,9 +291,12 @@ export async function runChat(
   });
 }
 
-// ── Internal functions ─────────────────────────────────────────────────
+// ── Exported helpers (also used by chat-streaming.ts) ─────────────────
 
-function extractAndStripContext(text: string): { cleanText: string; context: string | null } {
+export function extractAndStripContext(text: string): {
+  cleanText: string;
+  context: string | null;
+} {
   const match = text.match(CONTEXT_REGEX);
   if (!match) return { cleanText: text, context: null };
   let context = match[1].trim();
@@ -298,7 +309,7 @@ function extractAndStripContext(text: string): { cleanText: string; context: str
  * Keeps the last `recentToKeep` messages fully intact; older tool results
  * are replaced entirely since conversation context carries the key data.
  */
-function truncateOldToolResults(
+export function truncateOldToolResults(
   messages: Anthropic.MessageParam[],
   recentToKeep = 6,
 ): Anthropic.MessageParam[] {
@@ -315,7 +326,7 @@ function truncateOldToolResults(
   });
 }
 
-async function persistChatData(
+export async function persistChatData(
   persist: PersistenceContext,
   messages: Anthropic.MessageParam[],
   assistantText: string,

@@ -4,6 +4,35 @@ import { conversations, users } from '@/lib/db/schema';
 import { eq, desc, and, isNull } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.email, session.user.email)).limit(1);
+  if (!user) {
+    return Response.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+  if (!id) {
+    return Response.json({ error: 'Missing conversation id' }, { status: 400 });
+  }
+
+  const deleted = await db
+    .delete(conversations)
+    .where(and(eq(conversations.id, id), eq(conversations.userId, user.id)))
+    .returning({ id: conversations.id });
+
+  if (deleted.length === 0) {
+    return Response.json({ error: 'Conversation not found' }, { status: 404 });
+  }
+
+  return Response.json({ success: true });
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.email) {

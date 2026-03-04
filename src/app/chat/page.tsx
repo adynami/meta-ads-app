@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
+import { ConversationList } from '@/components/chat/ConversationList';
 import { DashboardPanel } from '@/components/dashboard/DashboardPanel';
 import NoAccount from '@/components/errors/NoAccount';
 import TokenExpired from '@/components/errors/TokenExpired';
@@ -75,6 +76,7 @@ export default function ChatPage() {
   // Track whether this is a "new chat" press vs account switch
   const [loadRecent, setLoadRecent] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
   const handleNewChat = () => {
     setConversationId(null);
@@ -235,6 +237,17 @@ export default function ChatPage() {
               </button>
             </Link>
           </div>
+
+          <ConversationList
+            accountId={selectedAccountId}
+            activeConversationId={conversationId}
+            onSelect={(id) => {
+              setConversationId(id);
+              setLoadRecent(false);
+              setNewChatKey((k) => k + 1);
+            }}
+            refreshKey={sidebarRefreshKey}
+          />
         </div>
 
         {/* User Profile - Pinned Bottom */}
@@ -357,7 +370,10 @@ export default function ChatPage() {
               key={`${selectedAccountId}-${newChatKey}`}
               accountId={selectedAccountId}
               conversationId={conversationId}
-              onConversationId={setConversationId}
+              onConversationId={(id) => {
+                setConversationId(id);
+                setSidebarRefreshKey((k) => k + 1);
+              }}
               loadRecent={loadRecent}
               onNewChat={handleNewChat}
             />

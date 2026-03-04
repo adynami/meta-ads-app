@@ -208,8 +208,8 @@ Priority targets for first test suite:
 - [x] ~~MCP server `dist/` build dependency undocumented~~ -> `predev` script auto-builds, documented in README + CI
 
 ### P4 — Feature Enhancements
-- [ ] Streaming responses (SSE) for chat -> improve perceived latency on multi-tool rounds
-- [ ] Auto-refresh expiring Meta tokens (`lib/meta-auth.ts:refreshLongLivedToken()` exists but is never called)
-- [ ] Conversation history sidebar (backend `GET /api/conversations` exists, no UI)
-- [ ] React error boundaries for graceful crash recovery
+- [x] ~~Streaming responses (SSE) for chat~~ -> `runChatStreaming()` in `src/lib/chat-streaming.ts`, SSE reader in ChatWindow, `stream: true` flag in chat route
+- [x] ~~Auto-refresh expiring Meta tokens~~ -> `refreshAccountTokenIfNeeded()` in `src/lib/meta-auth.ts`, fire-and-forget in chat route, manual `POST /api/accounts/refresh` endpoint
+- [x] ~~Conversation history sidebar~~ -> `ConversationList` component, `DELETE /api/conversations`, load-by-id in ChatWindow, sidebar integration in chat page
+- [x] ~~React error boundaries~~ -> `error.tsx` in root, chat, and (app) route groups with consistent dark styling
 - [ ] Attachment store uses in-memory Map -> won't work across serverless invocations in production

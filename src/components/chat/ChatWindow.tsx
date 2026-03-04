@@ -63,8 +63,31 @@ export function ChatWindow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Load most recent conversation on mount (when loadRecent is true)
+  // Load conversation on mount: by ID if provided, or most recent if loadRecent
   useEffect(() => {
+    if (conversationId) {
+      // Load specific conversation by ID (sidebar click)
+      setIsLoadingHistory(true);
+      fetch(`/api/conversations?id=${encodeURIComponent(conversationId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.conversation) {
+            const conv = data.conversation;
+            const restored: Message[] = (conv.messages || []).map((m: any) => ({
+              role: m.role,
+              content: m.content,
+              toolCalls: m.toolCalls,
+            }));
+            if (restored.length > 0) {
+              setMessages(restored);
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingHistory(false));
+      return;
+    }
+
     if (!loadRecent || !accountId) {
       setIsLoadingHistory(false);
       return;
@@ -200,6 +223,7 @@ export function ChatWindow({
           messages: apiMessages,
           accountId,
           conversationId,
+          stream: true,
           attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
         }),
         signal: controller.signal,
@@ -218,19 +242,97 @@ export function ChatWindow({
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
-      const data = await res.json();
+      // SSE streaming response
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
 
-      if (data.conversationId) {
-        onConversationId(data.conversationId);
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulatedText = '';
+      const streamToolCalls: { id: string; name: string; input: any; result: string }[] = [];
+
+      // Add empty assistant message that will be updated as stream arrives
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6);
+          let event: any;
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+
+          switch (event.type) {
+            case 'text-delta':
+              accumulatedText += event.text;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === 'assistant') {
+                  updated[updated.length - 1] = { ...last, content: accumulatedText };
+                }
+                return updated;
+              });
+              break;
+
+            case 'tool-start':
+              streamToolCalls.push({
+                id: event.id,
+                name: event.name,
+                input: event.input,
+                result: '...',
+              });
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === 'assistant') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    toolCalls: [...streamToolCalls],
+                  };
+                }
+                return updated;
+              });
+              break;
+
+            case 'tool-result': {
+              const tc = streamToolCalls.find((t) => t.id === event.id);
+              if (tc) tc.result = event.result;
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === 'assistant') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    toolCalls: [...streamToolCalls],
+                  };
+                }
+                return updated;
+              });
+              break;
+            }
+
+            case 'done':
+              if (event.conversationId) {
+                onConversationId(event.conversationId);
+              }
+              break;
+
+            case 'error':
+              throw new Error(event.message);
+          }
+        }
       }
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.text,
-        toolCalls: data.toolCalls,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
       if (error.name === 'AbortError') return; // user cancelled — no error message
       const errorMessage: Message = {
@@ -340,17 +442,20 @@ export function ChatWindow({
           </div>
         )}
 
-        {isLoading && (
-          <div className="max-w-4xl mx-auto mt-6">
-            <div className="flex justify-start">
-              <div className="message-assistant px-5 py-4">
-                <div className="loading-dots text-purple-400 text-lg">
-                  <span>&#x25CF;</span> <span>&#x25CF;</span> <span>&#x25CF;</span>
+        {isLoading &&
+          (messages.length === 0 ||
+            messages[messages.length - 1]?.role !== 'assistant' ||
+            !messages[messages.length - 1]?.content) && (
+            <div className="max-w-4xl mx-auto mt-6">
+              <div className="flex justify-start">
+                <div className="message-assistant px-5 py-4">
+                  <div className="loading-dots text-purple-400 text-lg">
+                    <span>&#x25CF;</span> <span>&#x25CF;</span> <span>&#x25CF;</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Input Bar */}

@@ -6,7 +6,7 @@
 import { db } from '@/lib/db';
 import { adAccounts } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { encrypt } from '@/lib/crypto';
+import { encrypt, decrypt } from '@/lib/crypto';
 import { canAddAccount, type Plan } from '@/lib/plans';
 
 export const META_API_VERSION = 'v25.0';
@@ -142,6 +142,56 @@ export async function fetchAdAccounts(accessToken: string): Promise<AdAccountInf
  */
 export async function refreshLongLivedToken(currentToken: string): Promise<TokenExchangeResult> {
   return exchangeForLongLivedToken(currentToken);
+}
+
+/**
+ * Refresh an account's long-lived token if it expires within `withinDays`.
+ * Non-throwing: catches errors, logs, and returns false.
+ */
+export async function refreshAccountTokenIfNeeded(
+  accountId: string,
+  withinDays = 7,
+): Promise<boolean> {
+  try {
+    const [account] = await db
+      .select({
+        tokenExpiresAt: adAccounts.tokenExpiresAt,
+        accessTokenEnc: adAccounts.accessTokenEnc,
+      })
+      .from(adAccounts)
+      .where(eq(adAccounts.id, accountId))
+      .limit(1);
+
+    if (!account?.tokenExpiresAt) return false;
+
+    const expiresAt = new Date(account.tokenExpiresAt).getTime();
+    const threshold = Date.now() + withinDays * 24 * 60 * 60 * 1000;
+
+    // Not within threshold or already expired
+    if (expiresAt > threshold || expiresAt <= Date.now()) return false;
+
+    const currentToken = decrypt(account.accessTokenEnc);
+    const result = await exchangeForLongLivedToken(currentToken);
+    const newExpiresAt = result.expires_in
+      ? new Date(Date.now() + result.expires_in * 1000)
+      : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+
+    await db
+      .update(adAccounts)
+      .set({
+        accessTokenEnc: encrypt(result.access_token),
+        tokenExpiresAt: newExpiresAt,
+      })
+      .where(eq(adAccounts.id, accountId));
+
+    console.log(
+      `[meta-auth] Refreshed token for account ${accountId}, new expiry: ${newExpiresAt.toISOString()}`,
+    );
+    return true;
+  } catch (err) {
+    console.error(`[meta-auth] Token refresh failed for account ${accountId}:`, err);
+    return false;
+  }
 }
 
 // ── Ad-account connection ─────────────────────────────────────────────

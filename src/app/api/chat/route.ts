@@ -8,8 +8,9 @@ import { decrypt } from '@/lib/crypto';
 import { isTrialExpired, PLAN_LIMITS, type Plan } from '@/lib/plans';
 import type { TenantContext } from 'meta-mcp-server/tenant-context';
 import type { Attachment, AttachmentStore } from '@/lib/attachments';
-import { META_API_VERSION } from '@/lib/meta-auth';
+import { META_API_VERSION, refreshAccountTokenIfNeeded } from '@/lib/meta-auth';
 import { runChat, validateMessages, injectAttachmentBlocks } from '@/lib/chat';
+import { runChatStreaming } from '@/lib/chat-streaming';
 
 // Increase body size limit for base64-encoded image/video attachments
 export const config = {
@@ -76,10 +77,12 @@ export async function POST(req: NextRequest) {
         messages,
         accountId,
         attachments: rawAttachments,
+        stream: useStreaming,
       } = body as {
         messages: Anthropic.MessageParam[];
         accountId?: string;
         attachments?: Attachment[];
+        stream?: boolean;
       };
 
       // Build attachment store from request body
@@ -121,6 +124,13 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        // Fire-and-forget token refresh for accounts expiring soon
+        for (const a of allAccounts) {
+          if (a.tokenExpiresAt) {
+            refreshAccountTokenIfNeeded(a.id, 7).catch(() => {});
+          }
+        }
+
         const contexts: TenantContext[] = [];
         const failedAccounts: string[] = [];
         for (const a of allAccounts) {
@@ -152,16 +162,29 @@ export async function POST(req: NextRequest) {
 
         const messagesWithAttachments = injectAttachmentBlocks(messages, attachmentStore);
 
+        const persistCtx = {
+          userId: user.id,
+          adAccountId: null,
+          conversationId: body.conversationId,
+          useBonusCall: planCallsLeft <= 0,
+          existingContext,
+        };
+
+        if (useStreaming) {
+          return runChatStreaming(
+            contexts,
+            messagesWithAttachments,
+            persistCtx,
+            accountNames,
+            attachmentStore,
+            req.signal,
+          );
+        }
+
         return await runChat(
           contexts,
           messagesWithAttachments,
-          {
-            userId: user.id,
-            adAccountId: null,
-            conversationId: body.conversationId,
-            useBonusCall: planCallsLeft <= 0,
-            existingContext,
-          },
+          persistCtx,
           accountNames,
           attachmentStore,
           req.signal,
@@ -204,18 +227,36 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Fire-and-forget token refresh if expiring soon
+      if (account.tokenExpiresAt) {
+        refreshAccountTokenIfNeeded(account.id, 7).catch(() => {});
+      }
+
       const messagesWithAttachmentsSingle = injectAttachmentBlocks(messages, attachmentStore);
+
+      const singlePersistCtx = {
+        userId: user.id,
+        adAccountId: account.id,
+        conversationId: body.conversationId,
+        useBonusCall: planCallsLeft <= 0,
+        existingContext,
+      };
+
+      if (useStreaming) {
+        return runChatStreaming(
+          ctx,
+          messagesWithAttachmentsSingle,
+          singlePersistCtx,
+          undefined,
+          attachmentStore,
+          req.signal,
+        );
+      }
 
       return await runChat(
         ctx,
         messagesWithAttachmentsSingle,
-        {
-          userId: user.id,
-          adAccountId: account.id,
-          conversationId: body.conversationId,
-          useBonusCall: planCallsLeft <= 0,
-          existingContext,
-        },
+        singlePersistCtx,
         undefined,
         attachmentStore,
         req.signal,
