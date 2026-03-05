@@ -613,8 +613,8 @@ export default function Home() {
             Simple Pricing. Serious Capability.
           </h2>
           <p className="text-gray-400 text-center mb-8 text-lg">
-            No command limits. No feature gates on core functionality. Just a tool that pays for
-            itself.
+            Generous limits on every plan. No feature gates on core functionality. Just a tool that
+            pays for itself.
           </p>
 
           {/* Billing Toggle */}
@@ -924,6 +924,25 @@ export default function Home() {
           <div className="text-center text-gray-600 text-sm mt-8">&copy; 2026 Adynami</div>
         </div>
       </footer>
+
+      {/* FAQ structured data for rich snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((faq) => ({
+              '@type': 'Question',
+              name: faq.q,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.a,
+              },
+            })),
+          }),
+        }}
+      />
     </div>
   );
 }
