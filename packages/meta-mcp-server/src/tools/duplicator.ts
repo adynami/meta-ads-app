@@ -518,7 +518,7 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
   // Step 1: Fetch existing creative
   const qp = new URLSearchParams({
     access_token: ctx.accessToken,
-    fields: 'id,name,object_story_spec,asset_feed_spec',
+    fields: 'id,name,object_story_spec,asset_feed_spec,degrees_of_freedom_spec',
   });
   const response = await fetch(
     `https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`,
@@ -529,45 +529,84 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
     throw new Error(e.message ?? `HTTP ${response.status}`);
   }
 
-  if (!creative.object_story_spec) {
-    throw new Error(
-      'Creative does not have an object_story_spec — cannot clone this type of creative.',
-    );
-  }
+  const isDco = !!creative.asset_feed_spec;
+  let creativeParams: Record<string, any>;
 
-  // Step 2: Deep-clone and apply overrides
-  const spec = JSON.parse(JSON.stringify(creative.object_story_spec));
+  if (isDco) {
+    // DCO/flex creative: preserve asset_feed_spec with all variations
+    const feedSpec = JSON.parse(JSON.stringify(creative.asset_feed_spec));
 
-  const applyToLinkData = (ld: any) => {
-    if (!ld) return;
-    if (body_override) ld.message = body_override;
-    if (headline_override) ld.name = headline_override;
-    if (url_override) ld.link = url_override;
-    if (cta_type_override && ld.call_to_action) ld.call_to_action.type = cta_type_override;
-    if (url_override && ld.child_attachments) {
-      for (const card of ld.child_attachments) {
-        if (card.link) card.link = url_override;
+    if (headline_override) feedSpec.titles = [{ text: headline_override }];
+    if (body_override) feedSpec.bodies = [{ text: body_override }];
+    if (url_override) {
+      feedSpec.link_urls = (feedSpec.link_urls ?? []).map((entry: any) => ({
+        ...entry,
+        website_url: url_override,
+        display_url: new URL(url_override).hostname,
+      }));
+      if (feedSpec.link_urls.length === 0) {
+        feedSpec.link_urls = [
+          { website_url: url_override, display_url: new URL(url_override).hostname },
+        ];
       }
     }
-  };
+    if (cta_type_override) feedSpec.call_to_action_types = [cta_type_override];
 
-  applyToLinkData(spec.link_data);
+    creativeParams = {
+      name: new_name ?? `${creative.name} Copy`,
+      asset_feed_spec: feedSpec,
+    };
 
-  if (spec.video_data) {
-    if (body_override) spec.video_data.message = body_override;
-    if (url_override && spec.video_data.call_to_action?.value) {
-      spec.video_data.call_to_action.value.link = url_override;
+    // object_story_spec carries page_id — include if present
+    if (creative.object_story_spec) {
+      creativeParams.object_story_spec = JSON.parse(JSON.stringify(creative.object_story_spec));
     }
-    if (cta_type_override && spec.video_data.call_to_action) {
-      spec.video_data.call_to_action.type = cta_type_override;
+
+    if (creative.degrees_of_freedom_spec) {
+      creativeParams.degrees_of_freedom_spec = JSON.parse(
+        JSON.stringify(creative.degrees_of_freedom_spec),
+      );
     }
+  } else {
+    // Standard creative
+    if (!creative.object_story_spec) {
+      throw new Error(
+        'Creative does not have an object_story_spec or asset_feed_spec — cannot clone this type of creative.',
+      );
+    }
+
+    const spec = JSON.parse(JSON.stringify(creative.object_story_spec));
+
+    const applyToLinkData = (ld: any) => {
+      if (!ld) return;
+      if (body_override) ld.message = body_override;
+      if (headline_override) ld.name = headline_override;
+      if (url_override) ld.link = url_override;
+      if (cta_type_override && ld.call_to_action) ld.call_to_action.type = cta_type_override;
+      if (url_override && ld.child_attachments) {
+        for (const card of ld.child_attachments) {
+          if (card.link) card.link = url_override;
+        }
+      }
+    };
+
+    applyToLinkData(spec.link_data);
+
+    if (spec.video_data) {
+      if (body_override) spec.video_data.message = body_override;
+      if (url_override && spec.video_data.call_to_action?.value) {
+        spec.video_data.call_to_action.value.link = url_override;
+      }
+      if (cta_type_override && spec.video_data.call_to_action) {
+        spec.video_data.call_to_action.type = cta_type_override;
+      }
+    }
+
+    creativeParams = {
+      name: new_name ?? `${creative.name} Copy`,
+      object_story_spec: spec,
+    };
   }
-
-  // Step 3: Create new creative
-  const creativeParams: Record<string, any> = {
-    name: new_name ?? `${creative.name} Copy`,
-    object_story_spec: spec,
-  };
 
   const newCreative = await rateLimitedCall(() =>
     graphPost(ctx, `${ctx.adAccountId}/adcreatives`, creativeParams),
@@ -578,6 +617,7 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
     new_creative_id: newCreative.id,
     new_name: creativeParams.name,
     account_id: ctx.adAccountId,
+    ...(isDco && { is_dco: true }),
   };
 }
 
