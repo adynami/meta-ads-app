@@ -48,6 +48,10 @@ export async function fetchAdSets(ctx, fields, params) {
 export async function fetchAds(ctx, fields, params) {
     return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
 }
+export async function fetchAdSetAds(ctx, adSetId, fields, params) {
+    validateMetaId(adSetId);
+    return rateLimitedCall(() => graphGet(ctx, `${adSetId}/ads`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+}
 export async function fetchAccountInsights(ctx, params) {
     return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','), ...params })).then(r => r.data ?? []);
 }
@@ -370,7 +374,7 @@ export async function getAdDetails(ctx, adId) {
 export async function getAdSetDetails(ctx, adSetId) {
     validateMetaId(adSetId);
     return rateLimitedCall(() => graphGet(ctx, adSetId, {
-        fields: 'id,name,status,effective_status,campaign_id,daily_budget,lifetime_budget,budget_remaining,bid_strategy,bid_amount,optimization_goal,billing_event,start_time,end_time,targeting,promoted_object,frequency_cap,pacing_type,attribution_spec,created_time,updated_time',
+        fields: 'id,name,status,effective_status,campaign_id,daily_budget,lifetime_budget,budget_remaining,bid_strategy,bid_amount,optimization_goal,billing_event,start_time,end_time,targeting,promoted_object,frequency_control_specs,pacing_type,attribution_spec,created_time,updated_time',
     }));
 }
 export async function batchUpdateStatus(ctx, ids, status) {

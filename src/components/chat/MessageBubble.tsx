@@ -60,7 +60,7 @@ export function MessageBubble({ message }: { message: Message }) {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-full sm:max-w-2xl">
+      <div className="max-w-full sm:max-w-2xl overflow-hidden">
         {isUser && message.attachments && message.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2 justify-end">
             {message.attachments.map((att) => (
@@ -100,9 +100,11 @@ export function MessageBubble({ message }: { message: Message }) {
             }
           >
             {isUser ? (
-              <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
+              <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {message.content}
+              </div>
             ) : (
-              <div className="text-sm leading-relaxed text-gray-300 prose-chat">
+              <div className="text-sm leading-relaxed text-gray-300 prose-chat break-words">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {message.content}
                 </ReactMarkdown>

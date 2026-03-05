@@ -4,6 +4,7 @@ import {
   fetchCampaigns,
   fetchAdSets,
   fetchAds,
+  fetchAdSetAds,
   fetchAccountInsights,
   fetchCampaignInsights,
   updateCampaignStatus as apiUpdateStatus,
@@ -830,14 +831,18 @@ function summarizeTargeting(t: any): string {
 async function listAds(ctx: TenantContext, args: any): Promise<any> {
   const limit = args.limit ?? 5;
   const params: Record<string, any> = { limit };
-  const filtering: any[] = [];
-  if (args.adset_id) filtering.push({ field: 'adset_id', operator: 'EQUAL', value: args.adset_id });
-  if (args.campaign_id)
-    filtering.push({ field: 'campaign_id', operator: 'EQUAL', value: args.campaign_id });
-  if (filtering.length) params.filtering = filtering;
-
   const fields = ['id', 'name', 'status', 'effective_status'];
-  const raw = await fetchAds(ctx, fields, params);
+
+  let raw: any[];
+  if (args.adset_id) {
+    raw = await fetchAdSetAds(ctx, args.adset_id, fields, params);
+  } else {
+    const filtering: any[] = [];
+    if (args.campaign_id)
+      filtering.push({ field: 'campaign_id', operator: 'EQUAL', value: args.campaign_id });
+    if (filtering.length) params.filtering = filtering;
+    raw = await fetchAds(ctx, fields, params);
+  }
 
   return {
     ads: raw.slice(0, limit).map((a: any) => ({
@@ -1139,7 +1144,7 @@ async function getAdSetDetails(ctx: TenantContext, args: any): Promise<any> {
     end_time: s.end_time ?? null,
     targeting: s.targeting ?? null,
     promoted_object: s.promoted_object ?? null,
-    frequency_cap: s.frequency_cap ?? null,
+    frequency_control_specs: s.frequency_control_specs ?? null,
     attribution_spec: s.attribution_spec ?? null,
     created: s.created_time,
     updated: s.updated_time,

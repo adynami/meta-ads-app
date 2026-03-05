@@ -1,5 +1,5 @@
 import { rateLimitedCall } from '../utils/rate-limiter.js';
-import { fetchCampaigns, fetchAdSets, fetchAds, fetchAccountInsights, fetchCampaignInsights, updateCampaignStatus as apiUpdateStatus, readCampaign, getAccountContext, createAd, searchTargeting, searchTargetingExtended, searchGeoLocations, getInterestSuggestions, estimateAudienceSize, getCreativeDetails, downloadImageAsBase64, getAdDetails as apiGetAdDetails, getAdSetDetails as apiGetAdSetDetails, listPages, batchUpdateStatus, } from '../meta-client.js';
+import { fetchCampaigns, fetchAdSets, fetchAds, fetchAdSetAds, fetchAccountInsights, fetchCampaignInsights, updateCampaignStatus as apiUpdateStatus, readCampaign, getAccountContext, createAd, searchTargeting, searchTargetingExtended, searchGeoLocations, getInterestSuggestions, estimateAudienceSize, getCreativeDetails, downloadImageAsBase64, getAdDetails as apiGetAdDetails, getAdSetDetails as apiGetAdSetDetails, listPages, batchUpdateStatus, } from '../meta-client.js';
 import { graphGet } from '../utils/graph.js';
 import { buildTargetingSpec } from '../utils/targeting.js';
 import { resolveRange } from '../utils/date-ranges.js';
@@ -12,7 +12,12 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max campaigns to return (default 5)' },
+                limit: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 50,
+                    description: 'Max campaigns to return (default 5)',
+                },
                 status_filter: {
                     type: 'array',
                     items: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'] },
@@ -33,7 +38,10 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                campaign_id: { type: 'string', description: 'Meta campaign ID (numeric string, e.g. "23851234567890")' },
+                campaign_id: {
+                    type: 'string',
+                    description: 'Meta campaign ID (numeric string, e.g. "23851234567890")',
+                },
             },
             required: ['campaign_id'],
         },
@@ -79,18 +87,40 @@ export const managementTools = [
             properties: {
                 time_range: {
                     type: 'string',
-                    enum: ['today', 'yesterday', 'last_3d', 'last_7d', 'last_14d', 'last_30d', 'last_90d', 'this_month', 'last_month', 'custom'],
+                    enum: [
+                        'today',
+                        'yesterday',
+                        'last_3d',
+                        'last_7d',
+                        'last_14d',
+                        'last_30d',
+                        'last_90d',
+                        'this_month',
+                        'last_month',
+                        'custom',
+                    ],
                     description: 'Time period to analyze (default: last_7d). Use "custom" with since+until for arbitrary date ranges.',
                 },
-                since: { type: 'string', description: 'Start date in YYYY-MM-DD format. Required when time_range is "custom".' },
-                until: { type: 'string', description: 'End date in YYYY-MM-DD format. Required when time_range is "custom".' },
+                since: {
+                    type: 'string',
+                    description: 'Start date in YYYY-MM-DD format. Required when time_range is "custom".',
+                },
+                until: {
+                    type: 'string',
+                    description: 'End date in YYYY-MM-DD format. Required when time_range is "custom".',
+                },
                 campaign_id: { type: 'string', description: 'Restrict insights to this campaign' },
                 level: {
                     type: 'string',
                     enum: ['account', 'campaign', 'adset', 'ad'],
                     description: 'Aggregation level (default: account). Use "campaign" for per-campaign breakdown.',
                 },
-                limit: { type: 'number', minimum: 1, maximum: 25, description: 'Max rows for non-account levels (default 5)' },
+                limit: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 25,
+                    description: 'Max rows for non-account levels (default 5)',
+                },
                 response_format: {
                     type: 'string',
                     enum: ['concise', 'detailed'],
@@ -106,7 +136,11 @@ export const managementTools = [
             type: 'object',
             properties: {
                 campaign_id: { type: 'string', description: 'Campaign ID to update' },
-                status: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'], description: 'Target status' },
+                status: {
+                    type: 'string',
+                    enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'],
+                    description: 'Target status',
+                },
             },
             required: ['campaign_id', 'status'],
         },
@@ -127,7 +161,10 @@ export const managementTools = [
                     enum: ['interest', 'behavior'],
                     description: 'interest = Facebook interest categories (hobbies, topics, pages). behavior = purchase behaviors, device usage, travel patterns, etc.',
                 },
-                query: { type: 'string', description: 'Keyword to search for (e.g. "fitness", "travel", "luxury", "small business")' },
+                query: {
+                    type: 'string',
+                    description: 'Keyword to search for (e.g. "fitness", "travel", "luxury", "small business")',
+                },
             },
             required: ['type', 'query'],
         },
@@ -138,7 +175,10 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                query: { type: 'string', description: 'Keyword to search (e.g. "yoga", "travel", "coffee")' },
+                query: {
+                    type: 'string',
+                    description: 'Keyword to search (e.g. "yoga", "travel", "coffee")',
+                },
                 limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 25)' },
             },
             required: ['query'],
@@ -150,7 +190,10 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                query: { type: 'string', description: 'Keyword to search (e.g. "frequent traveler", "online shopper")' },
+                query: {
+                    type: 'string',
+                    description: 'Keyword to search (e.g. "frequent traveler", "online shopper")',
+                },
                 limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 25)' },
             },
             required: ['query'],
@@ -164,10 +207,26 @@ export const managementTools = [
             properties: {
                 class: {
                     type: 'string',
-                    enum: ['life_events', 'industries', 'income', 'user_device', 'user_os', 'generation', 'household_composition', 'parents', 'politics', 'relationship_statuses', 'work_employers', 'work_positions'],
+                    enum: [
+                        'life_events',
+                        'industries',
+                        'income',
+                        'user_device',
+                        'user_os',
+                        'generation',
+                        'household_composition',
+                        'parents',
+                        'politics',
+                        'relationship_statuses',
+                        'work_employers',
+                        'work_positions',
+                    ],
                     description: 'Demographic category to search within',
                 },
-                query: { type: 'string', description: 'Keyword to filter within the class (optional — omit to browse)' },
+                query: {
+                    type: 'string',
+                    description: 'Keyword to filter within the class (optional — omit to browse)',
+                },
                 limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 25)' },
             },
             required: ['class'],
@@ -179,10 +238,25 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                query: { type: 'string', description: 'Location name to search (e.g. "Paris", "California", "90210")' },
+                query: {
+                    type: 'string',
+                    description: 'Location name to search (e.g. "Paris", "California", "90210")',
+                },
                 location_types: {
                     type: 'array',
-                    items: { type: 'string', enum: ['country', 'region', 'city', 'zip', 'geo_market', 'electoral_district', 'country_group', 'place'] },
+                    items: {
+                        type: 'string',
+                        enum: [
+                            'country',
+                            'region',
+                            'city',
+                            'zip',
+                            'geo_market',
+                            'electoral_district',
+                            'country_group',
+                            'place',
+                        ],
+                    },
                     description: 'Filter by location type (default: all types)',
                 },
                 limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max results (default 25)' },
@@ -201,7 +275,12 @@ export const managementTools = [
                     items: { type: 'string' },
                     description: 'Array of interest IDs to expand from (get IDs from meta_search_interests)',
                 },
-                limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max suggestions to return (default 25)' },
+                limit: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 50,
+                    description: 'Max suggestions to return (default 25)',
+                },
             },
             required: ['interest_ids'],
         },
@@ -223,14 +302,37 @@ export const managementTools = [
                             type: 'object',
                             properties: { countries: { type: 'array', items: { type: 'string' } } },
                         },
-                        interests: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } }, required: ['id'] } },
-                        behaviors: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } }, required: ['id'] } },
+                        interests: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                                required: ['id'],
+                            },
+                        },
+                        behaviors: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                                required: ['id'],
+                            },
+                        },
                     },
                     required: ['geo_locations'],
                 },
                 optimization_goal: {
                     type: 'string',
-                    enum: ['IMPRESSIONS', 'REACH', 'LINK_CLICKS', 'CONVERSIONS', 'LANDING_PAGE_VIEWS', 'VIDEO_VIEWS', 'LEAD_GENERATION', 'QUALITY_LEAD'],
+                    enum: [
+                        'IMPRESSIONS',
+                        'REACH',
+                        'LINK_CLICKS',
+                        'CONVERSIONS',
+                        'LANDING_PAGE_VIEWS',
+                        'VIDEO_VIEWS',
+                        'LEAD_GENERATION',
+                        'QUALITY_LEAD',
+                    ],
                     description: 'Optimization goal (default: IMPRESSIONS)',
                 },
             },
@@ -244,7 +346,10 @@ export const managementTools = [
             type: 'object',
             properties: {
                 ad_id: { type: 'string', description: 'Ad ID to fetch the creative image for' },
-                creative_id: { type: 'string', description: 'Creative ID to fetch the image for directly (faster if you already have it)' },
+                creative_id: {
+                    type: 'string',
+                    description: 'Creative ID to fetch the image for directly (faster if you already have it)',
+                },
             },
         },
     },
@@ -287,7 +392,12 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                limit: { type: 'number', minimum: 1, maximum: 50, description: 'Max pages to return (default 25)' },
+                limit: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 50,
+                    description: 'Max pages to return (default 25)',
+                },
             },
         },
     },
@@ -308,8 +418,22 @@ export const managementTools = [
                             type: 'object',
                             properties: { countries: { type: 'array', items: { type: 'string' } } },
                         },
-                        interests: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } }, required: ['id'] } },
-                        behaviors: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } }, required: ['id'] } },
+                        interests: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                                required: ['id'],
+                            },
+                        },
+                        behaviors: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                                required: ['id'],
+                            },
+                        },
                     },
                     required: ['geo_locations'],
                 },
@@ -319,7 +443,15 @@ export const managementTools = [
                 },
                 optimization_goal: {
                     type: 'string',
-                    enum: ['IMPRESSIONS', 'REACH', 'LINK_CLICKS', 'CONVERSIONS', 'LANDING_PAGE_VIEWS', 'VIDEO_VIEWS', 'LEAD_GENERATION'],
+                    enum: [
+                        'IMPRESSIONS',
+                        'REACH',
+                        'LINK_CLICKS',
+                        'CONVERSIONS',
+                        'LANDING_PAGE_VIEWS',
+                        'VIDEO_VIEWS',
+                        'LEAD_GENERATION',
+                    ],
                     description: 'Optimization goal (default: IMPRESSIONS)',
                 },
             },
@@ -357,7 +489,21 @@ export const managementTools = [
                 ad_id: { type: 'string', description: 'Ad ID to preview' },
                 ad_format: {
                     type: 'string',
-                    enum: ['DESKTOP_FEED_STANDARD', 'MOBILE_FEED_STANDARD', 'MOBILE_FEED_BASIC', 'MOBILE_INTERSTITIAL', 'MOBILE_BANNER', 'MOBILE_MEDIUM_RECTANGLE', 'MOBILE_NATIVE', 'INSTAGRAM_STANDARD', 'INSTAGRAM_STORY', 'AUDIENCE_NETWORK_OUTSTREAM_VIDEO', 'MESSENGER_MOBILE_INBOX_MEDIA', 'FACEBOOK_STORY_MOBILE', 'MARKETPLACE_MOBILE'],
+                    enum: [
+                        'DESKTOP_FEED_STANDARD',
+                        'MOBILE_FEED_STANDARD',
+                        'MOBILE_FEED_BASIC',
+                        'MOBILE_INTERSTITIAL',
+                        'MOBILE_BANNER',
+                        'MOBILE_MEDIUM_RECTANGLE',
+                        'MOBILE_NATIVE',
+                        'INSTAGRAM_STANDARD',
+                        'INSTAGRAM_STORY',
+                        'AUDIENCE_NETWORK_OUTSTREAM_VIDEO',
+                        'MESSENGER_MOBILE_INBOX_MEDIA',
+                        'FACEBOOK_STORY_MOBILE',
+                        'MARKETPLACE_MOBILE',
+                    ],
                     description: 'Preview format (default: DESKTOP_FEED_STANDARD)',
                 },
             },
@@ -375,7 +521,12 @@ export const managementTools = [
         inputSchema: {
             type: 'object',
             properties: {
-                limit: { type: 'number', minimum: 1, maximum: 25, description: 'Max recommendations to return (default 10)' },
+                limit: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 25,
+                    description: 'Max recommendations to return (default 10)',
+                },
             },
         },
     },
@@ -394,7 +545,18 @@ export const managementTools = [
                 link_url: { type: 'string', description: 'Destination URL when ad is clicked' },
                 call_to_action: {
                     type: 'string',
-                    enum: ['LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'BOOK_TRAVEL', 'CONTACT_US', 'DOWNLOAD', 'GET_OFFER', 'GET_QUOTE', 'SUBSCRIBE', 'APPLY_NOW'],
+                    enum: [
+                        'LEARN_MORE',
+                        'SHOP_NOW',
+                        'SIGN_UP',
+                        'BOOK_TRAVEL',
+                        'CONTACT_US',
+                        'DOWNLOAD',
+                        'GET_OFFER',
+                        'GET_QUOTE',
+                        'SUBSCRIBE',
+                        'APPLY_NOW',
+                    ],
                     description: 'CTA button text (default: LEARN_MORE)',
                 },
                 status: {
@@ -410,32 +572,58 @@ export const managementTools = [
 // ── Handlers ──
 export async function handleManagementTool(ctx, name, args) {
     switch (name) {
-        case 'meta_list_campaigns': return listCampaigns(ctx, args);
-        case 'meta_get_campaign': return getCampaignDetails(ctx, args);
-        case 'meta_list_adsets': return listAdSets(ctx, args);
-        case 'meta_list_ads': return listAds(ctx, args);
-        case 'meta_get_insights': return getInsights(ctx, args);
-        case 'meta_update_campaign_status': return updateStatus(ctx, args);
-        case 'meta_get_account': return getAccountContext(ctx);
-        case 'meta_search_targeting': return handleSearchTargeting(ctx, args);
-        case 'meta_add_ad': return addAd(ctx, args);
-        case 'meta_search_interests': return handleSearchInterests(ctx, args);
-        case 'meta_search_behaviors': return handleSearchBehaviors(ctx, args);
-        case 'meta_search_demographics': return handleSearchDemographics(ctx, args);
-        case 'meta_search_geo_locations': return handleSearchGeoLocations(ctx, args);
-        case 'meta_get_interest_suggestions': return handleGetInterestSuggestions(ctx, args);
-        case 'meta_estimate_audience_size': return handleEstimateAudienceSize(ctx, args);
-        case 'meta_get_ad_image': return handleGetAdImage(ctx, args);
-        case 'meta_get_ad_details': return getAdDetails(ctx, args);
-        case 'meta_get_adset_details': return getAdSetDetails(ctx, args);
-        case 'meta_get_creative_details': return handleGetCreativeDetails(ctx, args);
-        case 'meta_list_pages': return handleListPages(ctx, args);
-        case 'meta_predict_reach': return handlePredictReach(ctx, args);
-        case 'meta_bulk_update_status': return handleBulkUpdateStatus(ctx, args);
-        case 'meta_get_ad_preview': return handleGetAdPreview(ctx, args);
-        case 'meta_get_account_billing': return handleGetAccountBilling(ctx);
-        case 'meta_get_recommendations': return handleGetRecommendations(ctx, args);
-        default: throw new Error(`Unknown tool: ${name}`);
+        case 'meta_list_campaigns':
+            return listCampaigns(ctx, args);
+        case 'meta_get_campaign':
+            return getCampaignDetails(ctx, args);
+        case 'meta_list_adsets':
+            return listAdSets(ctx, args);
+        case 'meta_list_ads':
+            return listAds(ctx, args);
+        case 'meta_get_insights':
+            return getInsights(ctx, args);
+        case 'meta_update_campaign_status':
+            return updateStatus(ctx, args);
+        case 'meta_get_account':
+            return getAccountContext(ctx);
+        case 'meta_search_targeting':
+            return handleSearchTargeting(ctx, args);
+        case 'meta_add_ad':
+            return addAd(ctx, args);
+        case 'meta_search_interests':
+            return handleSearchInterests(ctx, args);
+        case 'meta_search_behaviors':
+            return handleSearchBehaviors(ctx, args);
+        case 'meta_search_demographics':
+            return handleSearchDemographics(ctx, args);
+        case 'meta_search_geo_locations':
+            return handleSearchGeoLocations(ctx, args);
+        case 'meta_get_interest_suggestions':
+            return handleGetInterestSuggestions(ctx, args);
+        case 'meta_estimate_audience_size':
+            return handleEstimateAudienceSize(ctx, args);
+        case 'meta_get_ad_image':
+            return handleGetAdImage(ctx, args);
+        case 'meta_get_ad_details':
+            return getAdDetails(ctx, args);
+        case 'meta_get_adset_details':
+            return getAdSetDetails(ctx, args);
+        case 'meta_get_creative_details':
+            return handleGetCreativeDetails(ctx, args);
+        case 'meta_list_pages':
+            return handleListPages(ctx, args);
+        case 'meta_predict_reach':
+            return handlePredictReach(ctx, args);
+        case 'meta_bulk_update_status':
+            return handleBulkUpdateStatus(ctx, args);
+        case 'meta_get_ad_preview':
+            return handleGetAdPreview(ctx, args);
+        case 'meta_get_account_billing':
+            return handleGetAccountBilling(ctx);
+        case 'meta_get_recommendations':
+            return handleGetRecommendations(ctx, args);
+        default:
+            throw new Error(`Unknown tool: ${name}`);
     }
 }
 async function listCampaigns(ctx, args) {
@@ -447,13 +635,26 @@ async function listCampaigns(ctx, args) {
     }
     if (args.after)
         params.after = args.after;
-    const fields = ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'buying_type'];
+    const fields = [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'objective',
+        'daily_budget',
+        'lifetime_budget',
+        'buying_type',
+    ];
     const raw = await fetchCampaigns(ctx, fields, params);
     const hasMore = raw.length > limit;
     const items = raw.slice(0, limit);
     if (concise) {
         return {
-            campaigns: items.map((c) => ({ id: c.id, name: c.name, status: c.effective_status ?? c.status })),
+            campaigns: items.map((c) => ({
+                id: c.id,
+                name: c.name,
+                status: c.effective_status ?? c.status,
+            })),
             has_more: hasMore,
         };
     }
@@ -464,14 +665,29 @@ async function listCampaigns(ctx, args) {
             status: c.effective_status ?? c.status,
             objective: c.objective,
             daily_budget: c.daily_budget ? `${(parseInt(c.daily_budget) / 100).toFixed(2)}` : null,
-            lifetime_budget: c.lifetime_budget ? `${(parseInt(c.lifetime_budget) / 100).toFixed(2)}` : null,
+            lifetime_budget: c.lifetime_budget
+                ? `${(parseInt(c.lifetime_budget) / 100).toFixed(2)}`
+                : null,
             buying_type: c.buying_type,
         })),
         has_more: hasMore,
     };
 }
 async function getCampaignDetails(ctx, args) {
-    const fields = ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'buying_type', 'bid_strategy', 'created_time', 'start_time', 'stop_time'];
+    const fields = [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'objective',
+        'daily_budget',
+        'lifetime_budget',
+        'buying_type',
+        'bid_strategy',
+        'created_time',
+        'start_time',
+        'stop_time',
+    ];
     const c = await readCampaign(ctx, args.campaign_id, fields);
     return {
         id: c.id,
@@ -500,10 +716,24 @@ async function listAdSets(ctx, args) {
             { field: 'effective_status', operator: 'IN', value: args.status_filter },
         ];
     }
-    const fields = ['id', 'name', 'status', 'effective_status', 'daily_budget', 'lifetime_budget', 'bid_strategy', 'optimization_goal', 'targeting'];
+    const fields = [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'daily_budget',
+        'lifetime_budget',
+        'bid_strategy',
+        'optimization_goal',
+        'targeting',
+    ];
     const raw = await fetchAdSets(ctx, fields, params);
     if (concise) {
-        return { adsets: raw.slice(0, limit).map((s) => ({ id: s.id, name: s.name, status: s.effective_status ?? s.status })) };
+        return {
+            adsets: raw
+                .slice(0, limit)
+                .map((s) => ({ id: s.id, name: s.name, status: s.effective_status ?? s.status })),
+        };
     }
     return {
         adsets: raw.slice(0, limit).map((s) => ({
@@ -511,7 +741,9 @@ async function listAdSets(ctx, args) {
             name: s.name,
             status: s.effective_status ?? s.status,
             daily_budget: s.daily_budget ? `${(parseInt(s.daily_budget) / 100).toFixed(2)}` : null,
-            lifetime_budget: s.lifetime_budget ? `${(parseInt(s.lifetime_budget) / 100).toFixed(2)}` : null,
+            lifetime_budget: s.lifetime_budget
+                ? `${(parseInt(s.lifetime_budget) / 100).toFixed(2)}`
+                : null,
             bid_strategy: s.bid_strategy ?? null,
             optimization_goal: s.optimization_goal ?? null,
             targeting_summary: summarizeTargeting(s.targeting),
@@ -527,7 +759,7 @@ function summarizeTargeting(t) {
     if (t.geo_locations?.countries)
         parts.push(t.geo_locations.countries.join(', '));
     if (t.genders?.length) {
-        const g = t.genders.map((n) => n === 1 ? 'M' : n === 2 ? 'F' : 'All');
+        const g = t.genders.map((n) => (n === 1 ? 'M' : n === 2 ? 'F' : 'All'));
         parts.push(g.join('/'));
     }
     return parts.join(' | ') || 'Broad';
@@ -535,15 +767,19 @@ function summarizeTargeting(t) {
 async function listAds(ctx, args) {
     const limit = args.limit ?? 5;
     const params = { limit };
-    const filtering = [];
-    if (args.adset_id)
-        filtering.push({ field: 'adset_id', operator: 'EQUAL', value: args.adset_id });
-    if (args.campaign_id)
-        filtering.push({ field: 'campaign_id', operator: 'EQUAL', value: args.campaign_id });
-    if (filtering.length)
-        params.filtering = filtering;
     const fields = ['id', 'name', 'status', 'effective_status'];
-    const raw = await fetchAds(ctx, fields, params);
+    let raw;
+    if (args.adset_id) {
+        raw = await fetchAdSetAds(ctx, args.adset_id, fields, params);
+    }
+    else {
+        const filtering = [];
+        if (args.campaign_id)
+            filtering.push({ field: 'campaign_id', operator: 'EQUAL', value: args.campaign_id });
+        if (filtering.length)
+            params.filtering = filtering;
+        raw = await fetchAds(ctx, fields, params);
+    }
     return {
         ads: raw.slice(0, limit).map((a) => ({
             id: a.id,
@@ -579,7 +815,19 @@ async function getInsights(ctx, args) {
     if (!raw.length) {
         return concise
             ? { spend: 0, conversions: 0, roas: 0 }
-            : { entity: 'Account', period: `${range.since} to ${range.until}`, spend: 0, impressions: 0, clicks: 0, ctr: 0, cpc: 0, cpm: 0, conversions: 0, roas: 0, cpa: 0 };
+            : {
+                entity: 'Account',
+                period: `${range.since} to ${range.until}`,
+                spend: 0,
+                impressions: 0,
+                clicks: 0,
+                ctr: 0,
+                cpc: 0,
+                cpm: 0,
+                conversions: 0,
+                roas: 0,
+                cpa: 0,
+            };
     }
     const mapRow = (row) => {
         const m = computeMetrics(row);
@@ -592,12 +840,22 @@ async function getInsights(ctx, args) {
             campaign_name: row.campaign_name ?? null,
             adset_name: row.adset_name ?? null,
             period: `${row.date_start} to ${row.date_stop}`,
-            spend: m.spend, impressions: m.impressions, clicks: m.clicks,
-            ctr: m.ctr, cpc: m.cpc, cpm: m.cpm,
-            conversions: m.conversions, conversion_value: m.conversion_value,
-            roas: m.roas, cpa: m.cpa, frequency: m.frequency, reach: m.reach,
+            spend: m.spend,
+            impressions: m.impressions,
+            clicks: m.clicks,
+            ctr: m.ctr,
+            cpc: m.cpc,
+            cpm: m.cpm,
+            conversions: m.conversions,
+            conversion_value: m.conversion_value,
+            roas: m.roas,
+            cpa: m.cpa,
+            frequency: m.frequency,
+            reach: m.reach,
             ...(m.conversion_breakdown && { conversion_breakdown: m.conversion_breakdown }),
-            ...(m.conversion_value_breakdown && { conversion_value_breakdown: m.conversion_value_breakdown }),
+            ...(m.conversion_value_breakdown && {
+                conversion_value_breakdown: m.conversion_value_breakdown,
+            }),
             ...(m.video && { video: m.video }),
             ...(m.quality_ranking && { quality_ranking: m.quality_ranking }),
             ...(m.engagement_rate_ranking && { engagement_rate_ranking: m.engagement_rate_ranking }),
@@ -644,7 +902,9 @@ function formatTargetingRow(r) {
     };
 }
 async function handleSearchInterests(ctx, args) {
-    const results = await searchTargetingExtended(ctx, 'adinterest', args.query, { limit: args.limit ?? 25 });
+    const results = await searchTargetingExtended(ctx, 'adinterest', args.query, {
+        limit: args.limit ?? 25,
+    });
     return {
         query: args.query,
         results: results.map(formatTargetingRow),
@@ -652,7 +912,10 @@ async function handleSearchInterests(ctx, args) {
     };
 }
 async function handleSearchBehaviors(ctx, args) {
-    const results = await searchTargetingExtended(ctx, 'adTargetingCategory', args.query, { class: 'behaviors', limit: args.limit ?? 25 });
+    const results = await searchTargetingExtended(ctx, 'adTargetingCategory', args.query, {
+        class: 'behaviors',
+        limit: args.limit ?? 25,
+    });
     return {
         query: args.query,
         results: results.map(formatTargetingRow),
@@ -660,7 +923,10 @@ async function handleSearchBehaviors(ctx, args) {
     };
 }
 async function handleSearchDemographics(ctx, args) {
-    const results = await searchTargetingExtended(ctx, 'adTargetingCategory', args.query ?? '', { class: args.class, limit: args.limit ?? 25 });
+    const results = await searchTargetingExtended(ctx, 'adTargetingCategory', args.query ?? '', {
+        class: args.class,
+        limit: args.limit ?? 25,
+    });
     return {
         class: args.class,
         query: args.query ?? '',
@@ -696,7 +962,10 @@ async function handleEstimateAudienceSize(ctx, args) {
     const goal = args.optimization_goal ?? 'IMPRESSIONS';
     const estimate = await estimateAudienceSize(ctx, targetingSpec, goal);
     if (!estimate)
-        return { estimate_ready: false, message: 'No estimate available for this targeting configuration.' };
+        return {
+            estimate_ready: false,
+            message: 'No estimate available for this targeting configuration.',
+        };
     return {
         estimate_ready: estimate.estimate_ready,
         lower_bound: estimate.estimate_dau?.lower_bound ?? estimate.daily_outcomes_curve?.[0]?.reach ?? null,
@@ -718,7 +987,7 @@ async function handleGetAdImage(ctx, args) {
             fields: 'creative{id,thumbnail_url,image_url}',
         });
         const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/${args.ad_id}?${qp.toString()}`);
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             throw new Error(e.message ?? `HTTP ${response.status}`);
@@ -751,13 +1020,15 @@ async function getAdDetails(ctx, args) {
         bid_amount: ad.bid_amount ? `${(parseInt(ad.bid_amount) / 100).toFixed(2)}` : null,
         created: ad.created_time,
         updated: ad.updated_time,
-        creative: ad.creative ? {
-            id: ad.creative.id,
-            name: ad.creative.name,
-            thumbnail_url: ad.creative.thumbnail_url ?? null,
-            has_object_story_spec: !!ad.creative.object_story_spec,
-            has_asset_feed_spec: !!ad.creative.asset_feed_spec,
-        } : null,
+        creative: ad.creative
+            ? {
+                id: ad.creative.id,
+                name: ad.creative.name,
+                thumbnail_url: ad.creative.thumbnail_url ?? null,
+                has_object_story_spec: !!ad.creative.object_story_spec,
+                has_asset_feed_spec: !!ad.creative.asset_feed_spec,
+            }
+            : null,
         tracking_specs: ad.tracking_specs ?? null,
     };
 }
@@ -770,7 +1041,9 @@ async function getAdSetDetails(ctx, args) {
         campaign_id: s.campaign_id,
         daily_budget: s.daily_budget ? `${(parseInt(s.daily_budget) / 100).toFixed(2)}` : null,
         lifetime_budget: s.lifetime_budget ? `${(parseInt(s.lifetime_budget) / 100).toFixed(2)}` : null,
-        budget_remaining: s.budget_remaining ? `${(parseInt(s.budget_remaining) / 100).toFixed(2)}` : null,
+        budget_remaining: s.budget_remaining
+            ? `${(parseInt(s.budget_remaining) / 100).toFixed(2)}`
+            : null,
         bid_strategy: s.bid_strategy ?? null,
         bid_amount: s.bid_amount ? `${(parseInt(s.bid_amount) / 100).toFixed(2)}` : null,
         optimization_goal: s.optimization_goal ?? null,
@@ -779,7 +1052,7 @@ async function getAdSetDetails(ctx, args) {
         end_time: s.end_time ?? null,
         targeting: s.targeting ?? null,
         promoted_object: s.promoted_object ?? null,
-        frequency_cap: s.frequency_cap ?? null,
+        frequency_control_specs: s.frequency_control_specs ?? null,
         attribution_spec: s.attribution_spec ?? null,
         created: s.created_time,
         updated: s.updated_time,
@@ -815,7 +1088,10 @@ async function handlePredictReach(ctx, args) {
     const budgetCents = args.daily_budget_usd ? Math.round(args.daily_budget_usd * 100) : undefined;
     const estimate = await estimateAudienceSize(ctx, targetingSpec, goal, budgetCents);
     if (!estimate)
-        return { estimate_ready: false, message: 'No estimate available for this targeting configuration.' };
+        return {
+            estimate_ready: false,
+            message: 'No estimate available for this targeting configuration.',
+        };
     const result = {
         estimate_ready: estimate.estimate_ready,
         daily_reach_lower: estimate.estimate_dau?.lower_bound ?? null,
@@ -835,16 +1111,24 @@ async function handlePredictReach(ctx, args) {
 }
 async function handleBulkUpdateStatus(ctx, args) {
     if (ctx.dryRun) {
-        return { dry_run: true, message: `Simulated: set ${args.ids.length} objects to ${args.status}`, ids: args.ids };
+        return {
+            dry_run: true,
+            message: `Simulated: set ${args.ids.length} objects to ${args.status}`,
+            ids: args.ids,
+        };
     }
     const results = await batchUpdateStatus(ctx, args.ids, args.status);
     const summary = results.map((r, i) => {
-        const body = r.body ? (() => { try {
-            return JSON.parse(r.body);
-        }
-        catch {
-            return {};
-        } })() : {};
+        const body = r.body
+            ? (() => {
+                try {
+                    return JSON.parse(r.body);
+                }
+                catch {
+                    return {};
+                }
+            })()
+            : {};
         return {
             id: args.ids[i],
             http_status: r.code,
@@ -882,7 +1166,13 @@ async function addAd(ctx, args) {
                 },
             },
         });
-        return { success: true, ad_id: result.id, ad_name: args.ad_name, adset_id: args.adset_id, status: args.status ?? 'PAUSED' };
+        return {
+            success: true,
+            ad_id: result.id,
+            ad_name: args.ad_name,
+            adset_id: args.adset_id,
+            status: args.status ?? 'PAUSED',
+        };
     }
     catch (error) {
         const fbErr = error?.response?.error ??
@@ -951,7 +1241,9 @@ async function handleGetRecommendations(ctx, args) {
     return {
         recommendations,
         total: recommendations.length,
-        note: recommendations.length === 0 ? 'No recommendations found — account is well optimized.' : undefined,
+        note: recommendations.length === 0
+            ? 'No recommendations found — account is well optimized.'
+            : undefined,
     };
 }
 //# sourceMappingURL=management.js.map
