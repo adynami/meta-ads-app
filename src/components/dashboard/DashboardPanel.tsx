@@ -112,7 +112,7 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
   });
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       <DashboardToolbar
         level={level}
         timeRange={timeRange}
