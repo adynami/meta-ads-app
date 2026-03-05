@@ -434,11 +434,62 @@ export const creatorTools = [
           ],
           description: 'Campaign objective. Ask the user if not specified.',
         },
+
+        // --- Budget level ---
+        budget_level: {
+          type: 'string',
+          enum: ['CBO', 'ABO'],
+          description:
+            'CBO = Advantage Campaign Budget — Meta auto-allocates one campaign-level budget across ad sets (best for scaling). ABO = Ad Set Budget — you control budget per ad set manually (best for controlled testing). Always ask the user which they prefer if not specified. Default: CBO.',
+        },
+        budget_type: {
+          type: 'string',
+          enum: ['daily', 'lifetime'],
+          description:
+            'daily (default) = spend this amount per day indefinitely. lifetime = spend this total amount over the campaign duration (requires end_time).',
+        },
         daily_budget: {
           type: 'number',
           minimum: 1,
-          description: 'Daily budget in major currency units (e.g. 50 for $50)',
+          description:
+            'Budget amount in major currency units (e.g. 50 for $50). Used as daily budget when budget_type=daily, or total lifetime budget when budget_type=lifetime.',
         },
+        end_time: {
+          type: 'string',
+          description:
+            'Required when budget_type=lifetime. Campaign end date/time in ISO 8601 format (e.g. 2025-12-31T23:59:59Z).',
+        },
+
+        // --- Bid strategy ---
+        bid_strategy: {
+          type: 'string',
+          enum: [
+            'LOWEST_COST_WITHOUT_CAP',
+            'LOWEST_COST_WITH_BID_CAP',
+            'COST_CAP',
+            'LOWEST_COST_WITH_MIN_ROAS',
+          ],
+          description: [
+            'LOWEST_COST_WITHOUT_CAP (default): Meta bids to maximise results within your budget. No bid control. Best for volume/scaling.',
+            'LOWEST_COST_WITH_BID_CAP: You set a hard max bid per auction (bid_amount required). Meta will not bid above this. Best for strict CPA control with some volume sacrifice.',
+            'COST_CAP: You set a target average cost per result (bid_amount required). Meta may exceed it occasionally but targets the average. Best for CPA targets with flexibility.',
+            'LOWEST_COST_WITH_MIN_ROAS: You set a minimum acceptable ROAS floor (min_roas required). Meta only enters auctions expected to meet it. Best for revenue-focused campaigns.',
+          ].join(' | '),
+        },
+        bid_amount: {
+          type: 'number',
+          minimum: 0.01,
+          description:
+            'Required for LOWEST_COST_WITH_BID_CAP and COST_CAP. The bid cap or target cost per result in major currency units (e.g. 15 for $15 per purchase). Not used for LOWEST_COST_WITHOUT_CAP or LOWEST_COST_WITH_MIN_ROAS.',
+        },
+        min_roas: {
+          type: 'number',
+          minimum: 0.01,
+          description:
+            'Required for LOWEST_COST_WITH_MIN_ROAS. Minimum acceptable return on ad spend as a multiplier (e.g. 2.5 means $2.50 revenue per $1 spent). Meta converts this internally to basis points.',
+        },
+
+        // --- Creative ---
         image_hashes: {
           type: 'array',
           items: { type: 'string' },
@@ -480,25 +531,187 @@ export const creatorTools = [
         page_id: { type: 'string', description: 'Facebook Page ID to run ads from' },
         targeting: {
           type: 'object',
-          description: 'Audience targeting. Same structure as meta_deploy_campaign targeting.',
+          description: 'Audience targeting specification',
           properties: {
-            age_min: { type: 'number', minimum: 18, maximum: 65 },
-            age_max: { type: 'number', minimum: 18, maximum: 65 },
-            genders: { type: 'array', items: { type: 'number', enum: [0, 1, 2] } },
+            age_min: {
+              type: 'number',
+              minimum: 18,
+              maximum: 65,
+              description: 'Minimum age (default 18)',
+            },
+            age_max: {
+              type: 'number',
+              minimum: 18,
+              maximum: 65,
+              description: 'Maximum age (default 65)',
+            },
+            genders: {
+              type: 'array',
+              items: { type: 'number', enum: [0, 1, 2] },
+              description: '0=All, 1=Male, 2=Female (default [0])',
+            },
             geo_locations: {
               type: 'object',
-              properties: { countries: { type: 'array', items: { type: 'string' } } },
+              properties: {
+                countries: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 2, maxLength: 2 },
+                  description: '2-letter ISO country codes (default ["US"])',
+                },
+              },
+            },
+            interests: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: { id: { type: 'string' }, name: { type: 'string' } },
+              },
+              description:
+                'Interest targeting — use meta_search_targeting to find IDs. Example: [{ "id": "6003107902433", "name": "Fitness" }]',
+            },
+            behaviors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: { id: { type: 'string' }, name: { type: 'string' } },
+              },
+              description:
+                'Behavior targeting — use meta_search_targeting to find IDs. Example: [{ "id": "6002714895372", "name": "Frequent travelers" }]',
             },
             custom_audiences: {
               type: 'array',
               items: { type: 'object', properties: { id: { type: 'string' } } },
+              description: 'Custom audience IDs to include. Example: [{ "id": "12345678" }]',
+            },
+            excluded_custom_audiences: {
+              type: 'array',
+              items: { type: 'object', properties: { id: { type: 'string' } } },
+              description:
+                'Custom audience IDs to exclude (suppression lists). Example: [{ "id": "12345678" }]',
+            },
+            placements: {
+              type: 'object',
+              description:
+                'Manual placement control. Omit to use Advantage+ Placements (Meta auto-selects best placements — recommended for most campaigns). If the user has not specified placements, ask whether they want Advantage+ Placements (auto) or manual placement control before deploying.',
+              properties: {
+                publisher_platforms: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['facebook', 'instagram', 'audience_network', 'messenger', 'threads'],
+                  },
+                  description:
+                    'Platforms to run on. Include "threads" for Threads feed placement (requires 4:5 or 1:1 aspect ratio images).',
+                },
+                facebook_positions: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: [
+                      'feed',
+                      'story',
+                      'marketplace',
+                      'video_feeds',
+                      'right_hand_column',
+                      'reels',
+                      'instream_video',
+                      'search',
+                    ],
+                  },
+                  description: 'Facebook placements',
+                },
+                instagram_positions: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['stream', 'story', 'reels', 'explore', 'explore_home'],
+                  },
+                  description: 'Instagram placements',
+                },
+                audience_network_positions: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['classic', 'instream_video'] },
+                  description: 'Audience Network placements',
+                },
+                messenger_positions: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['messenger_home', 'story'] },
+                  description: 'Messenger placements',
+                },
+                threads_positions: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['feed'] },
+                  description:
+                    'Threads placements. Requires publisher_platforms to include "threads". Use 4:5 or 1:1 image aspect ratio for best results.',
+                },
+              },
             },
           },
         },
+
+        // --- Schedule ---
+        start_time: {
+          type: 'string',
+          description:
+            'Campaign start time in ISO 8601 format (e.g. 2025-06-01T00:00:00Z). Omit to start immediately.',
+        },
+
         pixel_id: {
           type: 'string',
           description:
-            'Pixel ID for conversion tracking. Required for OUTCOME_SALES and OUTCOME_LEADS.',
+            'Meta Pixel ID for conversion tracking. Required for OUTCOME_SALES and OUTCOME_LEADS. Use meta_list_pixels to find your pixel ID.',
+        },
+        custom_event_type: {
+          type: 'string',
+          enum: [
+            'PURCHASE',
+            'LEAD',
+            'COMPLETE_REGISTRATION',
+            'ADD_TO_CART',
+            'ADD_TO_WISHLIST',
+            'INITIATED_CHECKOUT',
+            'ADD_PAYMENT_INFO',
+            'CONTENT_VIEW',
+            'SEARCH',
+            'SUBSCRIBE',
+            'START_TRIAL',
+            'CONTACT',
+            'FIND_LOCATION',
+            'SCHEDULE',
+            'SUBMIT_APPLICATION',
+            'DONATE',
+            'OTHER',
+          ],
+          description:
+            'Conversion event to optimize for. Overrides the default (PURCHASE for OUTCOME_SALES, LEAD for OUTCOME_LEADS). Use when the pixel fires a non-standard event you want to optimize for.',
+        },
+        destination_type: {
+          type: 'string',
+          enum: [
+            'WEBSITE',
+            'MESSENGER',
+            'WHATSAPP',
+            'INSTAGRAM_DIRECT',
+            'PHONE_CALL',
+            'APP',
+            'ON_AD',
+          ],
+          description:
+            'Where users are sent after clicking the ad. Default: WEBSITE. Use MESSENGER/WHATSAPP to open a chat, ON_AD for lead forms and instant experiences.',
+        },
+        url_tags: {
+          type: 'string',
+          description:
+            'UTM parameters appended to the destination URL for tracking. Example: "utm_source=facebook&utm_medium=cpc&utm_campaign=summer_sale". Meta auto-substitutes {{campaign.id}}, {{adset.id}}, {{ad.id}}, {{placement}}, etc.',
+        },
+        special_ad_categories: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['CREDIT', 'EMPLOYMENT', 'HOUSING', 'ISSUES_ELECTIONS_POLITICS'],
+          },
+          description:
+            'REQUIRED if advertising credit, housing, employment, or political content. Meta applies special audience restrictions. Always ask the user if any of these apply — running regulated ads without declaring the category can result in account suspension.',
         },
         use_advantage_audience: {
           type: 'boolean',
@@ -884,7 +1097,7 @@ function objectiveToOptimization(objective: string): string {
 async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
   const { image_hashes, headlines, bodies, link_url, page_id } = args;
 
-  // Validate inputs
+  // Validate creative inputs
   if (!image_hashes?.length || image_hashes.length < 2) {
     return {
       success: false,
@@ -905,6 +1118,35 @@ async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
         'Provide at least 2 body texts for DCO. Ask the user which body text variations to test.',
     };
   }
+
+  const budgetLevel = (args.budget_level ?? 'CBO') as 'CBO' | 'ABO';
+  const budgetType = (args.budget_type ?? 'daily') as 'daily' | 'lifetime';
+  const bidStrategy = (args.bid_strategy ?? 'LOWEST_COST_WITHOUT_CAP') as string;
+
+  // Validate bid/budget constraints
+  if (
+    (bidStrategy === 'LOWEST_COST_WITH_BID_CAP' || bidStrategy === 'COST_CAP') &&
+    !args.bid_amount
+  ) {
+    return {
+      success: false,
+      error: `bid_amount is required when bid_strategy is ${bidStrategy}. Provide a value in major currency units (e.g. 15 for $15).`,
+    };
+  }
+  if (bidStrategy === 'LOWEST_COST_WITH_MIN_ROAS' && !args.min_roas) {
+    return {
+      success: false,
+      error:
+        'min_roas is required when bid_strategy is LOWEST_COST_WITH_MIN_ROAS. Provide a multiplier (e.g. 2.5 for 2.5x ROAS).',
+    };
+  }
+  if (budgetType === 'lifetime' && !args.end_time) {
+    return {
+      success: false,
+      error:
+        'end_time is required when budget_type is lifetime. Provide an ISO 8601 datetime (e.g. 2025-12-31T23:59:59Z).',
+    };
+  }
   if (
     (args.objective === 'OUTCOME_SALES' || args.objective === 'OUTCOME_LEADS') &&
     !args.pixel_id
@@ -923,42 +1165,46 @@ async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
     return {
       dry_run: true,
       message: `Simulated DCO campaign: "${args.campaign_name}" with ${image_hashes.length} images x ${headlines.length} headlines x ${bodies.length} bodies = ${image_hashes.length * headlines.length * bodies.length} combinations`,
+      budget_level: budgetLevel,
+      budget_type: budgetType,
+      bid_strategy: bidStrategy,
+      ...(args.bid_amount && { bid_amount: args.bid_amount }),
+      ...(args.min_roas && { min_roas: `${args.min_roas}x` }),
+      status,
     };
   }
 
   const account = await getAccountContext(ctx);
   let campaignId: string | null = null;
   let adsetId: string | null = null;
+  const steps: string[] = [];
 
   try {
-    // Campaign
-    const campaignResult = await createCampaign(ctx, {
+    // --- Campaign ---
+    const campaignParams: Record<string, any> = {
       name: args.campaign_name,
       objective: args.objective,
       status,
-      special_ad_categories: [],
-      daily_budget: budgetCents.toString(),
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-    });
-    campaignId = campaignResult.id;
-
-    // Build targeting
-    const t = args.targeting;
-    const targeting: Record<string, any> = {
-      age_min: t?.age_min ?? 18,
-      age_max: t?.age_max ?? 65,
-      genders: t?.genders ?? [0],
-      geo_locations: {
-        countries: t?.geo_locations?.countries ?? ['US'],
-        location_types: ['home', 'recent'],
-      },
-      targeting_automation: { advantage_audience: args.use_advantage_audience ? 1 : 0 },
+      special_ad_categories: args.special_ad_categories ?? [],
     };
-    if (t?.custom_audiences?.length)
-      targeting.custom_audiences = t.custom_audiences.map((a: any) => ({ id: a.id }));
 
-    // Ad set with is_dynamic_creative: true
-    const adsetResult = await createAdSet(ctx, {
+    if (budgetLevel === 'CBO') {
+      campaignParams[budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget'] =
+        budgetCents.toString();
+      campaignParams.bid_strategy = bidStrategy;
+    }
+    if (args.start_time) campaignParams.start_time = args.start_time;
+    if (budgetType === 'lifetime' && args.end_time) campaignParams.stop_time = args.end_time;
+
+    const campaignResult = await createCampaign(ctx, campaignParams);
+    campaignId = campaignResult.id;
+    steps.push(`Campaign ${campaignId}`);
+
+    // --- Targeting ---
+    const targeting = buildTargetingSpec(args.targeting, args.use_advantage_audience === true);
+
+    // --- Ad Set ---
+    const adsetParams: Record<string, any> = {
       campaign_id: campaignId,
       name: `${args.campaign_name} - DCO Ad Set`,
       billing_event: 'IMPRESSIONS',
@@ -966,17 +1212,47 @@ async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
       targeting,
       status,
       is_dynamic_creative: true,
-      is_adset_budget_sharing_enabled: true,
-      ...(args.objective === 'OUTCOME_SALES' && {
-        promoted_object: { pixel_id: args.pixel_id, custom_event_type: 'PURCHASE' },
-      }),
-      ...(args.objective === 'OUTCOME_LEADS' && {
-        promoted_object: { pixel_id: args.pixel_id, custom_event_type: 'LEAD' },
-      }),
-    });
-    adsetId = adsetResult.id;
+    };
 
-    // Build asset_feed_spec
+    if (budgetLevel === 'ABO') {
+      adsetParams[budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget'] =
+        budgetCents.toString();
+      adsetParams.bid_strategy = bidStrategy;
+      if (budgetType === 'lifetime' && args.end_time) adsetParams.end_time = args.end_time;
+      adsetParams.is_adset_budget_sharing_enabled = false;
+    } else {
+      adsetParams.is_adset_budget_sharing_enabled = true;
+    }
+
+    if (args.start_time) adsetParams.start_time = args.start_time;
+    if (args.destination_type) adsetParams.destination_type = args.destination_type;
+
+    if (bidStrategy === 'LOWEST_COST_WITH_BID_CAP' || bidStrategy === 'COST_CAP') {
+      adsetParams.bid_amount = Math.round(args.bid_amount * 100).toString();
+    }
+    if (bidStrategy === 'LOWEST_COST_WITH_MIN_ROAS') {
+      adsetParams.bid_constraints = {
+        roas_average_floor: Math.round(args.min_roas * 10000),
+      };
+    }
+
+    if (args.objective === 'OUTCOME_SALES') {
+      adsetParams.promoted_object = {
+        pixel_id: args.pixel_id,
+        custom_event_type: args.custom_event_type ?? 'PURCHASE',
+      };
+    } else if (args.objective === 'OUTCOME_LEADS') {
+      adsetParams.promoted_object = {
+        pixel_id: args.pixel_id,
+        custom_event_type: args.custom_event_type ?? 'LEAD',
+      };
+    }
+
+    const adsetResult = await createAdSet(ctx, adsetParams);
+    adsetId = adsetResult.id;
+    steps.push(`Ad Set ${adsetId}`);
+
+    // --- Ad with asset_feed_spec ---
     const asset_feed_spec = {
       images: image_hashes.map((hash: string) => ({ hash })),
       titles: headlines.map((text: string) => ({ text })),
@@ -988,17 +1264,20 @@ async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
       ad_formats: ['SINGLE_IMAGE'],
     };
 
+    const creative: Record<string, any> = {
+      object_story_spec: { page_id },
+      asset_feed_spec,
+      degrees_of_freedom_spec: {
+        creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
+      },
+    };
+    if (args.url_tags) creative.url_tags = args.url_tags;
+
     const adResult = await createAd(ctx, {
       adset_id: adsetId,
       name: `${args.campaign_name} - DCO Ad`,
       status,
-      creative: {
-        object_story_spec: { page_id },
-        asset_feed_spec,
-        degrees_of_freedom_spec: {
-          creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
-        },
-      },
+      creative,
     });
 
     return {
@@ -1011,30 +1290,73 @@ async function handleDeployDco(ctx: TenantContext, args: any): Promise<any> {
       images_count: image_hashes.length,
       headlines_count: headlines.length,
       bodies_count: bodies.length,
-      budget: `${account.currency} ${args.daily_budget}/day`,
+      budget_level: budgetLevel,
+      budget_type: budgetType,
+      budget: `${account.currency} ${args.daily_budget}${budgetType === 'daily' ? '/day' : ' lifetime'}`,
+      bid_strategy: bidStrategy,
+      ...(args.bid_amount && { bid_amount: `${account.currency} ${args.bid_amount}` }),
+      ...(args.min_roas && { min_roas: `${args.min_roas}x ROAS floor` }),
       note: 'Meta will automatically test all creative combinations and optimize delivery toward the best performers.',
     };
   } catch (error: any) {
+    const rollbackErrors: string[] = [];
     if (adsetId) {
       try {
         await deleteAdSet(ctx, adsetId);
-      } catch {
-        /**/
+      } catch (e: any) {
+        rollbackErrors.push(e.message);
       }
     }
     if (campaignId) {
       try {
         await deleteCampaign(ctx, campaignId);
-      } catch {
-        /**/
+      } catch (e: any) {
+        rollbackErrors.push(e.message);
       }
     }
 
-    const fbErr = error?.response?.error ?? error?.error ?? null;
-    const errorDetail = fbErr
-      ? `[Meta API ${fbErr.code ?? '?'}] ${fbErr.error_user_title ?? fbErr.message ?? 'Unknown'}${fbErr.error_user_msg ? ` — ${fbErr.error_user_msg}` : ''}`
-      : (error?.message ?? String(error));
+    // Dump full error to stderr for debugging
+    console.error(
+      '[meta-mcp] deploy_dco_campaign error at step:',
+      steps.length === 0 ? 'campaign' : steps.length === 1 ? 'adset' : 'ad',
+    );
+    console.error('[meta-mcp] error.message:', error?.message);
+    console.error('[meta-mcp] error.response:', JSON.stringify(error?.response, null, 2));
+    console.error(
+      '[meta-mcp] error.response?.data:',
+      JSON.stringify(error?.response?.data, null, 2),
+    );
+    console.error('[meta-mcp] error.body:', JSON.stringify(error?.body, null, 2));
+    console.error('[meta-mcp] error.data:', JSON.stringify(error?.data, null, 2));
+    const rawError = JSON.stringify(error, Object.getOwnPropertyNames(error ?? {}), 2);
+    console.error('[meta-mcp] full error object:', rawError);
 
-    return { success: false, error: errorDetail, rolled_back: true };
+    // Try every known path the FB SDK uses to store API errors
+    const fbErr =
+      error?.response?.error ??
+      error?.response?.data?.error ??
+      error?.body?.error ??
+      error?.data?.error ??
+      error?.error ??
+      null;
+
+    let errorDetail: string;
+    if (fbErr) {
+      errorDetail = `[Meta API ${fbErr.code ?? '?'}] ${fbErr.error_user_title ?? fbErr.message ?? 'Unknown'}`;
+      if (fbErr.error_user_msg) errorDetail += ` — ${fbErr.error_user_msg}`;
+      if (fbErr.error_subcode) errorDetail += ` (subcode ${fbErr.error_subcode})`;
+      if (fbErr.fbtrace_id) errorDetail += ` [trace: ${fbErr.fbtrace_id}]`;
+    } else {
+      errorDetail = error?.message ?? rawError ?? String(error);
+    }
+
+    return {
+      success: false,
+      error: errorDetail,
+      error_raw: rawError?.slice(0, 2000),
+      failed_at: steps.length === 0 ? 'campaign' : steps.length === 1 ? 'adset' : 'ad',
+      rolled_back: rollbackErrors.length === 0,
+      ...(rollbackErrors.length && { rollback_errors: rollbackErrors }),
+    };
   }
 }

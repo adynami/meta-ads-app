@@ -367,7 +367,36 @@ export declare const creatorTools: (
             enum: string[];
             description: string;
           };
+          budget_level: {
+            type: string;
+            enum: string[];
+            description: string;
+          };
+          budget_type: {
+            type: string;
+            enum: string[];
+            description: string;
+          };
           daily_budget: {
+            type: string;
+            minimum: number;
+            description: string;
+          };
+          end_time: {
+            type: string;
+            description: string;
+          };
+          bid_strategy: {
+            type: string;
+            enum: string[];
+            description: string;
+          };
+          bid_amount: {
+            type: string;
+            minimum: number;
+            description: string;
+          };
+          min_roas: {
             type: string;
             minimum: number;
             description: string;
@@ -420,13 +449,13 @@ export declare const creatorTools: (
                 type: string;
                 minimum: number;
                 maximum: number;
-                description?: undefined;
+                description: string;
               };
               age_max: {
                 type: string;
                 minimum: number;
                 maximum: number;
-                description?: undefined;
+                description: string;
               };
               genders: {
                 type: string;
@@ -434,7 +463,7 @@ export declare const creatorTools: (
                   type: string;
                   enum: number[];
                 };
-                description?: undefined;
+                description: string;
               };
               geo_locations: {
                 type: string;
@@ -443,12 +472,42 @@ export declare const creatorTools: (
                     type: string;
                     items: {
                       type: string;
-                      minLength?: undefined;
-                      maxLength?: undefined;
+                      minLength: number;
+                      maxLength: number;
                     };
-                    description?: undefined;
+                    description: string;
                   };
                 };
+              };
+              interests: {
+                type: string;
+                items: {
+                  type: string;
+                  properties: {
+                    id: {
+                      type: string;
+                    };
+                    name: {
+                      type: string;
+                    };
+                  };
+                };
+                description: string;
+              };
+              behaviors: {
+                type: string;
+                items: {
+                  type: string;
+                  properties: {
+                    id: {
+                      type: string;
+                    };
+                    name: {
+                      type: string;
+                    };
+                  };
+                };
+                description: string;
               };
               custom_audiences: {
                 type: string;
@@ -460,16 +519,104 @@ export declare const creatorTools: (
                     };
                   };
                 };
-                description?: undefined;
+                description: string;
               };
-              interests?: undefined;
-              behaviors?: undefined;
-              excluded_custom_audiences?: undefined;
-              placements?: undefined;
+              excluded_custom_audiences: {
+                type: string;
+                items: {
+                  type: string;
+                  properties: {
+                    id: {
+                      type: string;
+                    };
+                  };
+                };
+                description: string;
+              };
+              placements: {
+                type: string;
+                description: string;
+                properties: {
+                  publisher_platforms: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                  facebook_positions: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                  instagram_positions: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                  audience_network_positions: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                  messenger_positions: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                  threads_positions: {
+                    type: string;
+                    items: {
+                      type: string;
+                      enum: string[];
+                    };
+                    description: string;
+                  };
+                };
+              };
             };
+          };
+          start_time: {
+            type: string;
+            description: string;
           };
           pixel_id: {
             type: string;
+            description: string;
+          };
+          custom_event_type: {
+            type: string;
+            enum: string[];
+            description: string;
+          };
+          destination_type: {
+            type: string;
+            enum: string[];
+            description: string;
+          };
+          url_tags: {
+            type: string;
+            description: string;
+          };
+          special_ad_categories: {
+            type: string;
+            items: {
+              type: string;
+              enum: string[];
+            };
             description: string;
           };
           use_advantage_audience: {
@@ -481,23 +628,12 @@ export declare const creatorTools: (
             description: string;
           };
           target_campaign_id?: undefined;
-          budget_level?: undefined;
-          budget_type?: undefined;
-          end_time?: undefined;
-          bid_strategy?: undefined;
-          bid_amount?: undefined;
-          min_roas?: undefined;
-          start_time?: undefined;
           ad_schedule?: undefined;
           creative_type?: undefined;
           image_hash?: undefined;
           video_id?: undefined;
           cards?: undefined;
           ad_copy?: undefined;
-          custom_event_type?: undefined;
-          destination_type?: undefined;
-          url_tags?: undefined;
-          special_ad_categories?: undefined;
         };
         required: string[];
       };
