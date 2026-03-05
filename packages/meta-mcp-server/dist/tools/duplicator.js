@@ -9,9 +9,18 @@ export const duplicatorTools = [
             type: 'object',
             properties: {
                 adset_id: { type: 'string', description: 'ID of the ad set to duplicate' },
-                target_campaign_id: { type: 'string', description: 'Campaign to copy the ad set into (default: same campaign)' },
-                new_name: { type: 'string', description: 'Name for the new ad set (default: original name + " Copy")' },
-                deep_copy: { type: 'boolean', description: 'Copy ads inside the ad set as well (default: true)' },
+                target_campaign_id: {
+                    type: 'string',
+                    description: 'Campaign to copy the ad set into (default: same campaign)',
+                },
+                new_name: {
+                    type: 'string',
+                    description: 'Name for the new ad set (default: original name + " Copy")',
+                },
+                deep_copy: {
+                    type: 'boolean',
+                    description: 'Copy ads inside the ad set as well (default: true)',
+                },
                 status: {
                     type: 'string',
                     enum: ['PAUSED', 'ACTIVE', 'INHERITED_FROM_SOURCE'],
@@ -33,10 +42,24 @@ export const duplicatorTools = [
                 headline_override: { type: 'string', description: 'Replace the headline' },
                 cta_type_override: {
                     type: 'string',
-                    enum: ['LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'BOOK_TRAVEL', 'CONTACT_US', 'DOWNLOAD', 'GET_OFFER', 'GET_QUOTE', 'SUBSCRIBE', 'APPLY_NOW'],
+                    enum: [
+                        'LEARN_MORE',
+                        'SHOP_NOW',
+                        'SIGN_UP',
+                        'BOOK_TRAVEL',
+                        'CONTACT_US',
+                        'DOWNLOAD',
+                        'GET_OFFER',
+                        'GET_QUOTE',
+                        'SUBSCRIBE',
+                        'APPLY_NOW',
+                    ],
                     description: 'Replace the CTA button type',
                 },
-                url_override: { type: 'string', description: 'Replace destination URL in all link placements' },
+                url_override: {
+                    type: 'string',
+                    description: 'Replace destination URL in all link placements',
+                },
             },
             required: ['creative_id'],
         },
@@ -73,10 +96,14 @@ export const duplicatorTools = [
 // ── Handler ──
 export async function handleDuplicatorTool(ctx, name, args) {
     switch (name) {
-        case 'meta_duplicate_campaign': return duplicateCampaign(ctx, args);
-        case 'meta_duplicate_adset': return duplicateAdSet(ctx, args);
-        case 'meta_duplicate_creative': return duplicateCreative(ctx, args);
-        default: throw new Error(`Unknown tool: ${name}`);
+        case 'meta_duplicate_campaign':
+            return duplicateCampaign(ctx, args);
+        case 'meta_duplicate_adset':
+            return duplicateAdSet(ctx, args);
+        case 'meta_duplicate_creative':
+            return duplicateCreative(ctx, args);
+        default:
+            throw new Error(`Unknown tool: ${name}`);
     }
 }
 // ── Helpers ──
@@ -101,7 +128,7 @@ async function pollAsyncSession(ctx, sessionId, maxAttempts = 50) {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         if (attempt > 0) {
             const delay = Math.min(BASE_MS * Math.pow(2, attempt - 1), MAX_MS);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
         const session = await rateLimitedCall(() => graphGet(ctx, sessionId, {
             fields: 'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
@@ -123,13 +150,18 @@ async function pollAsyncSession(ctx, sessionId, maxAttempts = 50) {
                     if (campaignId)
                         return campaignId;
                 }
-                catch { /* fall through */ }
+                catch {
+                    /* fall through */
+                }
             }
             throw new Error(`Async session ${sessionId} completed but no copied_campaign_id found. Raw: ${JSON.stringify(session)}`);
         }
         if (status === 'failed' || status === 'error') {
             // Surface v25 error fields for actionable diagnostics
-            const userMsg = session.error_user_msg ?? session.error_user_title ?? session.error_message ?? JSON.stringify(session);
+            const userMsg = session.error_user_msg ??
+                session.error_user_title ??
+                session.error_message ??
+                JSON.stringify(session);
             const code = session.error_code ? ` (code ${session.error_code})` : '';
             const subcode = session.error_subcode ? ` (subcode ${session.error_subcode})` : '';
             throw new Error(`Async copy session ${sessionId} failed: ${userMsg}${code}${subcode}`);
@@ -179,7 +211,7 @@ async function tryAsyncBatchCopy(ctx, relativeUrl, bodyParams, idField) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const result = await response.json();
+        const result = (await response.json());
         if (!response.ok || result.error) {
             const e = result.error ?? {};
             const err = new Error(e.message ?? `HTTP ${response.status}`);
@@ -247,6 +279,7 @@ async function decomposeCampaignCopy(ctx, campaignId, newName) {
             status_option: 'PAUSED',
             rename_strategy: 'DEEP_RENAME',
             campaign_id: newCampaignId,
+            targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
         };
         await copyWithTieredFallback(ctx, adSet.id, `${adSet.id}/copies`, adSetBodyParams, 'copied_adset_id');
     }
@@ -300,6 +333,7 @@ async function duplicateAdSet(ctx, args) {
         deep_copy: deep_copy ? '1' : '0',
         status_option: status === 'INHERITED_FROM_SOURCE' ? 'INHERITED_FROM_SOURCE' : status,
         rename_strategy: 'DEEP_RENAME',
+        targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
     };
     if (new_name)
         bodyParams.name = new_name;
@@ -320,7 +354,7 @@ async function pollAsyncSessionForAdSet(ctx, sessionId, maxAttempts = 50) {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         if (attempt > 0) {
             const delay = Math.min(BASE_MS * Math.pow(2, attempt - 1), MAX_MS);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
         const session = await rateLimitedCall(() => graphGet(ctx, sessionId, {
             fields: 'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
@@ -328,8 +362,7 @@ async function pollAsyncSessionForAdSet(ctx, sessionId, maxAttempts = 50) {
         const status = (session.status ?? '').toLowerCase();
         if (status === 'completed') {
             // Try direct fields first
-            const directId = session.copied_adset_id ??
-                session.result?.copied_adset_id;
+            const directId = session.copied_adset_id ?? session.result?.copied_adset_id;
             if (directId)
                 return directId;
             // Try batch results array
@@ -343,12 +376,17 @@ async function pollAsyncSessionForAdSet(ctx, sessionId, maxAttempts = 50) {
                     if (adsetId)
                         return adsetId;
                 }
-                catch { /* fall through */ }
+                catch {
+                    /* fall through */
+                }
             }
             throw new Error(`Async session ${sessionId} completed but no copied_adset_id found. Raw: ${JSON.stringify(session)}`);
         }
         if (status === 'failed' || status === 'error') {
-            const userMsg = session.error_user_msg ?? session.error_user_title ?? session.error_message ?? JSON.stringify(session);
+            const userMsg = session.error_user_msg ??
+                session.error_user_title ??
+                session.error_message ??
+                JSON.stringify(session);
             const code = session.error_code ? ` (code ${session.error_code})` : '';
             const subcode = session.error_subcode ? ` (subcode ${session.error_subcode})` : '';
             throw new Error(`Async copy session ${sessionId} failed: ${userMsg}${code}${subcode}`);
@@ -357,7 +395,7 @@ async function pollAsyncSessionForAdSet(ctx, sessionId, maxAttempts = 50) {
     throw new Error(`Async copy session ${sessionId} did not complete within ~20 minutes.`);
 }
 async function duplicateCreative(ctx, args) {
-    const { creative_id, new_name, body_override, headline_override, cta_type_override, url_override } = args;
+    const { creative_id, new_name, body_override, headline_override, cta_type_override, url_override, } = args;
     if (ctx.dryRun) {
         return {
             dry_run: true,
@@ -370,7 +408,7 @@ async function duplicateCreative(ctx, args) {
         fields: 'id,name,object_story_spec,asset_feed_spec',
     });
     const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`);
-    const creative = await response.json();
+    const creative = (await response.json());
     if (!response.ok || creative.error) {
         const e = creative.error ?? {};
         throw new Error(e.message ?? `HTTP ${response.status}`);
@@ -469,7 +507,10 @@ async function duplicateCampaign(ctx, args) {
         }
         // Swap funnel URLs if provided
         if (funnelUrl) {
-            const adsResponse = await rateLimitedCall(() => graphGet(ctx, `${adSet.id}/ads`, { fields: 'id,name,creative{id,object_story_spec}', limit: 50 }));
+            const adsResponse = await rateLimitedCall(() => graphGet(ctx, `${adSet.id}/ads`, {
+                fields: 'id,name,creative{id,object_story_spec}',
+                limit: 50,
+            }));
             const ads = adsResponse.data ?? [];
             for (const ad of ads) {
                 const creative = ad.creative;

@@ -10,7 +10,24 @@ export const conversionsTools = [
                 pixel_id: { type: 'string', description: 'Meta Pixel ID (from meta_list_pixels)' },
                 event_name: {
                     type: 'string',
-                    enum: ['Purchase', 'Lead', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo', 'CompleteRegistration', 'Search', 'Subscribe', 'Contact', 'Donate', 'FindLocation', 'Schedule', 'StartTrial', 'SubmitApplication', 'Other'],
+                    enum: [
+                        'Purchase',
+                        'Lead',
+                        'ViewContent',
+                        'AddToCart',
+                        'InitiateCheckout',
+                        'AddPaymentInfo',
+                        'CompleteRegistration',
+                        'Search',
+                        'Subscribe',
+                        'Contact',
+                        'Donate',
+                        'FindLocation',
+                        'Schedule',
+                        'StartTrial',
+                        'SubmitApplication',
+                        'Other',
+                    ],
                     description: 'Standard Meta event name. Use "Other" + custom_event_name for non-standard events.',
                 },
                 custom_event_name: {
@@ -27,7 +44,17 @@ export const conversionsTools = [
                 },
                 action_source: {
                     type: 'string',
-                    enum: ['website', 'app', 'crm', 'chat', 'email', 'phone_call', 'physical_store', 'system_generated', 'other'],
+                    enum: [
+                        'website',
+                        'app',
+                        'crm',
+                        'chat',
+                        'email',
+                        'phone_call',
+                        'physical_store',
+                        'system_generated',
+                        'other',
+                    ],
                     description: 'Where the conversion happened (default: website)',
                 },
                 event_id: {
@@ -38,19 +65,43 @@ export const conversionsTools = [
                     type: 'object',
                     description: 'User signals for matching. More signals = better match rate. All PII is hashed before sending.',
                     properties: {
-                        email: { type: 'string', description: 'User email (plaintext — SHA-256 hashed before sending)' },
-                        phone: { type: 'string', description: 'Phone number (plaintext — normalized + SHA-256 hashed)' },
-                        first_name: { type: 'string', description: 'First name (plaintext — lowercased + hashed)' },
-                        last_name: { type: 'string', description: 'Last name (plaintext — lowercased + hashed)' },
+                        email: {
+                            type: 'string',
+                            description: 'User email (plaintext — SHA-256 hashed before sending)',
+                        },
+                        phone: {
+                            type: 'string',
+                            description: 'Phone number (plaintext — normalized + SHA-256 hashed)',
+                        },
+                        first_name: {
+                            type: 'string',
+                            description: 'First name (plaintext — lowercased + hashed)',
+                        },
+                        last_name: {
+                            type: 'string',
+                            description: 'Last name (plaintext — lowercased + hashed)',
+                        },
                         city: { type: 'string', description: 'City (plaintext — lowercased + hashed)' },
                         state: { type: 'string', description: '2-letter state code — lowercased + hashed' },
                         zip: { type: 'string', description: 'Postal code — hashed' },
-                        country: { type: 'string', description: '2-letter ISO country code — lowercased + hashed' },
+                        country: {
+                            type: 'string',
+                            description: '2-letter ISO country code — lowercased + hashed',
+                        },
                         external_id: { type: 'string', description: 'Your internal customer/user ID — hashed' },
-                        client_ip_address: { type: 'string', description: 'IPv4 or IPv6 — sent as-is (not hashed)' },
-                        client_user_agent: { type: 'string', description: 'Browser user agent string — sent as-is' },
+                        client_ip_address: {
+                            type: 'string',
+                            description: 'IPv4 or IPv6 — sent as-is (not hashed)',
+                        },
+                        client_user_agent: {
+                            type: 'string',
+                            description: 'Browser user agent string — sent as-is',
+                        },
                         fbc: { type: 'string', description: 'Facebook click ID from _fbc cookie — sent as-is' },
-                        fbp: { type: 'string', description: 'Facebook browser ID from _fbp cookie — sent as-is' },
+                        fbp: {
+                            type: 'string',
+                            description: 'Facebook browser ID from _fbp cookie — sent as-is',
+                        },
                     },
                 },
                 custom_data: {
@@ -58,13 +109,27 @@ export const conversionsTools = [
                     description: 'Event-specific data. For Purchase: include value + currency. For ViewContent/AddToCart: include content_ids.',
                     properties: {
                         value: { type: 'number', description: 'Monetary value (e.g. 59.99 for $59.99)' },
-                        currency: { type: 'string', description: '3-letter ISO currency code (e.g. "USD"). Required when value is set.' },
-                        content_ids: { type: 'array', items: { type: 'string' }, description: 'Product IDs from your catalog' },
-                        content_type: { type: 'string', enum: ['product', 'product_group'], description: 'Type of content_ids' },
+                        currency: {
+                            type: 'string',
+                            description: '3-letter ISO currency code (e.g. "USD"). Required when value is set.',
+                        },
+                        content_ids: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Product IDs from your catalog',
+                        },
+                        content_type: {
+                            type: 'string',
+                            enum: ['product', 'product_group'],
+                            description: 'Type of content_ids',
+                        },
                         content_name: { type: 'string', description: 'Name of the product or page' },
                         num_items: { type: 'number', description: 'Number of items in the order' },
                         order_id: { type: 'string', description: 'Order/transaction ID' },
-                        predicted_ltv: { type: 'number', description: 'Predicted lifetime value of this customer' },
+                        predicted_ltv: {
+                            type: 'number',
+                            description: 'Predicted lifetime value of this customer',
+                        },
                         search_string: { type: 'string', description: 'Search query (for Search events)' },
                     },
                 },
@@ -79,8 +144,10 @@ export const conversionsTools = [
 ];
 export async function handleConversionsTool(ctx, name, args) {
     switch (name) {
-        case 'meta_send_conversions_event': return sendConversionsEvent(ctx, args);
-        default: throw new Error(`Unknown tool: ${name}`);
+        case 'meta_send_conversions_event':
+            return sendConversionsEvent(ctx, args);
+        default:
+            throw new Error(`Unknown tool: ${name}`);
     }
 }
 function sha256(value) {
@@ -182,7 +249,7 @@ async function sendConversionsEvent(ctx, args) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             const err = new Error(e.message ?? `HTTP ${response.status}`);

@@ -58,8 +58,10 @@ const AD_LIBRARY_FIELDS = [
 // ── Handler ──────────────────────────────────────────────────────────────────
 export async function handleAdLibraryTool(ctx, name, args) {
     switch (name) {
-        case 'meta_search_ad_library': return searchAdLibrary(ctx, args);
-        default: throw new Error(`Unknown ad library tool: ${name}`);
+        case 'meta_search_ad_library':
+            return searchAdLibrary(ctx, args);
+        default:
+            throw new Error(`Unknown ad library tool: ${name}`);
     }
 }
 async function searchAdLibrary(ctx, args) {
@@ -82,7 +84,7 @@ async function searchAdLibrary(ctx, args) {
         }
         const url = `https://graph.facebook.com/${ctx.apiVersion}/ads_archive?${qp.toString()}`;
         const response = await fetch(url);
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             // Surface a helpful message for the most common Ad Library auth issue
@@ -121,8 +123,12 @@ function normaliseAd(ad) {
     const description = (ad.ad_creative_link_descriptions ?? [])[0] ?? null;
     const caption = (ad.ad_creative_link_captions ?? [])[0] ?? null;
     // Spend/impression ranges
-    const spend = ad.spend ? { lower: ad.spend.lower_bound, upper: ad.spend.upper_bound, currency: ad.spend.currency } : null;
-    const impressions = ad.impressions ? { lower: ad.impressions.lower_bound, upper: ad.impressions.upper_bound } : null;
+    const spend = ad.spend
+        ? { lower: ad.spend.lower_bound, upper: ad.spend.upper_bound, currency: ad.spend.currency }
+        : null;
+    const impressions = ad.impressions
+        ? { lower: ad.impressions.lower_bound, upper: ad.impressions.upper_bound }
+        : null;
     return {
         id: ad.id,
         page_name: ad.page_name ?? null,
@@ -144,8 +150,10 @@ function normaliseAd(ad) {
         impression_estimate: impressions,
         ad_snapshot_url: ad.ad_snapshot_url ?? null,
         performance_signal: run_days !== null
-            ? run_days >= 30 ? 'long_runner_likely_profitable'
-                : run_days >= 14 ? 'medium_run_testing'
+            ? run_days >= 30
+                ? 'long_runner_likely_profitable'
+                : run_days >= 14
+                    ? 'medium_run_testing'
                     : 'short_run_or_new'
             : null,
     };

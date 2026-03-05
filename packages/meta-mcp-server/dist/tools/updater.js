@@ -133,6 +133,10 @@ export const updaterTools = [
                         required: ['event_type', 'window_days'],
                     },
                 },
+                use_advantage_audience: {
+                    type: 'boolean',
+                    description: 'Enable or disable Meta Advantage+ audience (targeting_automation). true = Meta expands beyond your defined audience, false = strict targeting only. Only set when explicitly requested to avoid unintended overrides.',
+                },
             },
             required: ['adset_id'],
         },
@@ -244,7 +248,14 @@ async function handleUpdateAdSet(ctx, args) {
             if (p.threads_positions?.length)
                 targeting.threads_positions = p.threads_positions;
         }
+        if (args.use_advantage_audience != null) {
+            targeting.targeting_automation = { advantage_audience: args.use_advantage_audience ? 1 : 0 };
+        }
         params.targeting = targeting;
+    }
+    else if (args.use_advantage_audience != null) {
+        // Allow setting advantage_audience even without a full targeting replacement
+        params.targeting = { targeting_automation: { advantage_audience: args.use_advantage_audience ? 1 : 0 } };
     }
     if (args.ad_schedule?.length)
         params.adset_schedule = args.ad_schedule;

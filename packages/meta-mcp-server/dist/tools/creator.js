@@ -268,6 +268,7 @@ export const creatorTools = [
                     },
                 },
                 pixel_id: { type: 'string', description: 'Pixel ID for conversion tracking. Required for OUTCOME_SALES and OUTCOME_LEADS.' },
+                use_advantage_audience: { type: 'boolean', description: 'Enable Meta Advantage+ audience targeting — Meta expands your defined audience when it predicts better results. Default: false.' },
                 start_immediately: { type: 'boolean', description: 'true = ACTIVE, false = PAUSED (default: true)' },
             },
             required: ['campaign_name', 'objective', 'daily_budget', 'image_hashes', 'headlines', 'bodies', 'link_url', 'page_id', 'targeting'],
@@ -597,7 +598,7 @@ async function handleDeployDco(ctx, args) {
             age_max: t?.age_max ?? 65,
             genders: t?.genders ?? [0],
             geo_locations: { countries: t?.geo_locations?.countries ?? ['US'], location_types: ['home', 'recent'] },
-            targeting_automation: { advantage_audience: 0 },
+            targeting_automation: { advantage_audience: args.use_advantage_audience ? 1 : 0 },
         };
         if (t?.custom_audiences?.length)
             targeting.custom_audiences = t.custom_audiences.map((a) => ({ id: a.id }));

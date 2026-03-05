@@ -295,7 +295,7 @@ async function decomposeAdSetCopy(
   bodyParams: Record<string, string>,
 ): Promise<string> {
   // Shallow copy (structure only, no ads)
-  const shallowParams = { ...bodyParams, deep_copy: '0' };
+  const shallowParams: Record<string, string> = { ...bodyParams, deep_copy: '0' };
   const shallowResult = await rateLimitedCall(() =>
     graphPost(ctx, `${adsetId}/copies`, shallowParams),
   );
@@ -345,6 +345,7 @@ async function decomposeCampaignCopy(
       status_option: 'PAUSED',
       rename_strategy: 'DEEP_RENAME',
       campaign_id: newCampaignId,
+      targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
     };
     await copyWithTieredFallback(
       ctx,
@@ -412,6 +413,7 @@ async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
     deep_copy: deep_copy ? '1' : '0',
     status_option: status === 'INHERITED_FROM_SOURCE' ? 'INHERITED_FROM_SOURCE' : status,
     rename_strategy: 'DEEP_RENAME',
+    targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
   };
   if (new_name) bodyParams.name = new_name;
   if (target_campaign_id) bodyParams.campaign_id = target_campaign_id;
