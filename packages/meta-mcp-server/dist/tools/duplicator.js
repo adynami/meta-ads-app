@@ -186,6 +186,11 @@ function isBudgetSharingRequired(err) {
     const e = err?.response?.error;
     return e?.error_subcode === 4834011;
 }
+/** Check if a campaign uses Campaign Budget Optimization (has budget at campaign level). */
+async function isCBOCampaign(ctx, campaignId) {
+    const campaign = await rateLimitedCall(() => graphGet(ctx, campaignId, { fields: 'daily_budget,lifetime_budget' }));
+    return !!(campaign.daily_budget || campaign.lifetime_budget);
+}
 /** Fetch all ad IDs in an ad set (paginated). */
 async function fetchAdIdsForAdSet(ctx, adsetId) {
     const ids = [];
@@ -283,12 +288,14 @@ async function decomposeCampaignCopy(ctx, campaignId, newName) {
         throw new Error(`Shallow campaign copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
     // Copy each ad set from original into new campaign (using tiered fallback)
     const adSets = await fetchAllAdSets(ctx, campaignId);
+    const cbo = await isCBOCampaign(ctx, newCampaignId);
     for (const adSet of adSets) {
         const adSetBodyParams = {
             deep_copy: '1',
             status_option: 'PAUSED',
             rename_strategy: 'DEEP_RENAME',
             campaign_id: newCampaignId,
+            is_adset_budget_sharing_enabled: cbo ? 'true' : 'false',
         };
         await copyAdSetWithFallbacks(ctx, adSet.id, adSetBodyParams);
     }
@@ -370,8 +377,11 @@ async function duplicateAdSet(ctx, args) {
     };
     if (new_name)
         bodyParams.name = new_name;
-    if (target_campaign_id)
+    if (target_campaign_id) {
         bodyParams.campaign_id = target_campaign_id;
+        const cbo = await isCBOCampaign(ctx, target_campaign_id);
+        bodyParams.is_adset_budget_sharing_enabled = cbo ? 'true' : 'false';
+    }
     const newAdSetId = await copyAdSetWithFallbacks(ctx, adset_id, bodyParams);
     return {
         success: true,
