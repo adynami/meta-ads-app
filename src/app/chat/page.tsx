@@ -296,7 +296,7 @@ function ChatPageContent() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full">
         {/* Chat Header */}
-        <div className="h-16 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 shrink-0">
+        <div className="h-16 border-b border-white/5 flex items-center gap-2 px-3 sm:px-6 shrink-0">
           <div className="flex items-center gap-3">
             <button className="block lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="w-5 h-5 text-gray-400" />
@@ -364,7 +364,7 @@ function ChatPageContent() {
             </button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4 ml-auto">
             <Link href="/settings" className="text-gray-400 hover:text-white transition-colors">
               <Settings className="w-5 h-5" />
             </Link>

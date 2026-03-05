@@ -122,23 +122,19 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
         onRefresh={fetchData}
         isLoading={isLoading}
       />
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-4">
-        <div className="overflow-x-auto px-3 sm:px-6">
-          {error ? (
-            <div className="flex items-center justify-center h-64 text-red-400 text-sm">
-              {error}
-            </div>
-          ) : (
-            <DashboardTable
-              rows={sortedRows}
-              level={level}
-              isLoading={isLoading}
-              sortBy={sortBy}
-              sortDir={sortDir}
-              onSort={handleSort}
-            />
-          )}
-        </div>
+      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-3 sm:px-6 py-4">
+        {error ? (
+          <div className="flex items-center justify-center h-64 text-red-400 text-sm">{error}</div>
+        ) : (
+          <DashboardTable
+            rows={sortedRows}
+            level={level}
+            isLoading={isLoading}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={handleSort}
+          />
+        )}
       </div>
     </div>
   );
