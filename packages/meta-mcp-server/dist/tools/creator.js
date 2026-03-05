@@ -1144,9 +1144,6 @@ async function handleDeployDco(ctx, args) {
         const creative = {
             object_story_spec: { page_id },
             asset_feed_spec,
-            degrees_of_freedom_spec: {
-                creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
-            },
         };
         if (args.url_tags)
             creative.url_tags = args.url_tags;

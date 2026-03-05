@@ -226,6 +226,12 @@ function isBudgetSharingRequired(err: any): boolean {
   return e?.error_subcode === 4834011;
 }
 
+/** Detect Meta "standard_enhancements deprecated" error (code 100, subcode 3858504). */
+function isStandardEnhancementsError(err: any): boolean {
+  const e = err?.response?.error;
+  return e?.code === 100 && e?.error_subcode === 3858504;
+}
+
 /** Check if a campaign uses Campaign Budget Optimization (has budget at campaign level). */
 async function isCBOCampaign(ctx: TenantContext, campaignId: string): Promise<boolean> {
   const campaign = await rateLimitedCall(() =>
@@ -306,6 +312,82 @@ async function tryAsyncBatchCopy(
   }
 
   throw new Error(`Async batch returned unexpected shape. Raw: ${JSON.stringify(data)}`);
+}
+
+/**
+ * Manual ad set copy that recreates creatives without deprecated fields.
+ * Used when server-side copies fail due to standard_enhancements deprecation.
+ */
+async function decomposeAdSetCopyClean(
+  ctx: TenantContext,
+  adsetId: string,
+  bodyParams: Record<string, string>,
+): Promise<string> {
+  // Shallow copy (structure only, no ads)
+  const shallowParams: Record<string, string> = { ...bodyParams, deep_copy: '0' };
+  const shallowResult = await rateLimitedCall(() =>
+    graphPost(ctx, `${adsetId}/copies`, shallowParams),
+  );
+  const newAdSetId: string = shallowResult.copied_adset_id ?? shallowResult.id;
+  if (!newAdSetId)
+    throw new Error(`Shallow ad set copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
+
+  // Fetch ads with full creative fields
+  const adsResp = await rateLimitedCall(() =>
+    graphGet(ctx, `${adsetId}/ads`, {
+      fields:
+        'id,name,status,creative{id,name,object_story_spec,asset_feed_spec,degrees_of_freedom_spec}',
+      limit: '50',
+    }),
+  );
+  const ads: any[] = adsResp.data ?? [];
+
+  for (const ad of ads) {
+    const creative = ad.creative;
+    if (!creative) continue;
+
+    const creativeParams: Record<string, any> = {
+      name: creative.name ? `${creative.name} Copy` : 'Creative Copy',
+    };
+
+    if (creative.object_story_spec) {
+      creativeParams.object_story_spec = JSON.parse(JSON.stringify(creative.object_story_spec));
+    }
+
+    const isDco = !!creative.asset_feed_spec;
+    if (isDco) {
+      creativeParams.asset_feed_spec = JSON.parse(JSON.stringify(creative.asset_feed_spec));
+    }
+
+    if (creative.degrees_of_freedom_spec) {
+      const dofSpec = JSON.parse(JSON.stringify(creative.degrees_of_freedom_spec));
+      delete dofSpec.creative_features_spec?.standard_enhancements;
+      // Only include if there's still meaningful content
+      if (
+        dofSpec.creative_features_spec &&
+        Object.keys(dofSpec.creative_features_spec).length > 0
+      ) {
+        creativeParams.degrees_of_freedom_spec = dofSpec;
+      }
+    }
+
+    // Create new creative
+    const newCreative = await rateLimitedCall(() =>
+      graphPost(ctx, `${ctx.adAccountId}/adcreatives`, creativeParams),
+    );
+
+    // Create new ad pointing to new creative
+    await rateLimitedCall(() =>
+      graphPost(ctx, `${ctx.adAccountId}/ads`, {
+        adset_id: newAdSetId,
+        name: ad.name ?? 'Ad Copy',
+        status: bodyParams.status_option ?? 'PAUSED',
+        creative: { creative_id: newCreative.id },
+      }),
+    );
+  }
+
+  return newAdSetId;
 }
 
 /** Tier 3: Shallow-copy ad set then copy each ad individually. */
@@ -452,6 +534,9 @@ async function copyAdSetWithFallbacks(
         retryParams,
         'copied_adset_id',
       );
+    }
+    if (isStandardEnhancementsError(err)) {
+      return decomposeAdSetCopyClean(ctx, adsetId, bodyParams);
     }
     throw err;
   }
@@ -626,9 +711,9 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
     }
 
     if (creative.degrees_of_freedom_spec) {
-      creativeParams.degrees_of_freedom_spec = JSON.parse(
-        JSON.stringify(creative.degrees_of_freedom_spec),
-      );
+      const dofSpec = JSON.parse(JSON.stringify(creative.degrees_of_freedom_spec));
+      delete dofSpec.creative_features_spec?.standard_enhancements;
+      creativeParams.degrees_of_freedom_spec = dofSpec;
     }
   } else {
     // Standard creative

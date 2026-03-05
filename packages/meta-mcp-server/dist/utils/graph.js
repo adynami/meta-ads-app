@@ -10,7 +10,7 @@ export async function graphGet(ctx, objectPath, params = {}) {
     }
     const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}?${qp.toString()}`;
     const response = await fetch(url);
-    const data = await response.json();
+    const data = (await response.json());
     if (!response.ok || data.error) {
         const e = data.error ?? {};
         const err = new Error(e.message ?? `HTTP ${response.status}`);
@@ -35,7 +35,7 @@ export async function graphPost(ctx, objectPath, params) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formBody.toString(),
     });
-    const data = await response.json();
+    const data = (await response.json());
     if (!response.ok || data.error) {
         if (debug) {
             console.error(`[META_MCP_DEBUG] ERROR ${objectPath}`, JSON.stringify(data));
@@ -60,7 +60,7 @@ export async function graphPostMultipart(ctx, objectPath, fields, fileField) {
     form.append(fileField.name, new Blob([fileField.data], { type: fileField.contentType }), fileField.filename);
     // Do NOT set Content-Type header — fetch auto-sets it with the boundary
     const response = await fetch(url, { method: 'POST', body: form });
-    const data = await response.json();
+    const data = (await response.json());
     if (!response.ok || data.error) {
         const e = data.error ?? {};
         const err = new Error(e.message ?? `HTTP ${response.status}`);
@@ -77,7 +77,7 @@ export async function graphDelete(ctx, objectPath) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formBody.toString(),
     });
-    const data = await response.json();
+    const data = (await response.json());
     if (!response.ok || data.error) {
         const e = data.error ?? {};
         throw new Error(e.message ?? `HTTP ${response.status}`);
