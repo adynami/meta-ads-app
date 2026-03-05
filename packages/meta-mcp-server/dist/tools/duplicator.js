@@ -176,6 +176,11 @@ function isTooManyObjectsError(err) {
     const e = err?.response?.error;
     return e?.code === 100 && e?.error_subcode === 1885194;
 }
+/** Detect Meta "targeting_automation required" error (subcode 1870227). */
+function isTargetingAutomationRequired(err) {
+    const e = err?.response?.error;
+    return e?.error_subcode === 1870227;
+}
 /** Fetch all ad IDs in an ad set (paginated). */
 async function fetchAdIdsForAdSet(ctx, adsetId) {
     const ids = [];
@@ -279,9 +284,8 @@ async function decomposeCampaignCopy(ctx, campaignId, newName) {
             status_option: 'PAUSED',
             rename_strategy: 'DEEP_RENAME',
             campaign_id: newCampaignId,
-            targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
         };
-        await copyWithTieredFallback(ctx, adSet.id, `${adSet.id}/copies`, adSetBodyParams, 'copied_adset_id');
+        await copyAdSetWithTargetingFallback(ctx, adSet.id, adSetBodyParams);
     }
     return newCampaignId;
 }
@@ -320,6 +324,26 @@ async function copyWithTieredFallback(ctx, objectId, relativeUrl, bodyParams, id
         return decomposeCampaignCopy(ctx, objectId, bodyParams.name ?? 'Campaign Copy');
     }
 }
+/**
+ * Copy an ad set with try-without-then-retry-with targeting override.
+ * First attempts without targeting override (preserving source targeting).
+ * If Meta returns subcode 1870227 ("targeting_automation required"), retries with the override.
+ */
+async function copyAdSetWithTargetingFallback(ctx, adsetId, bodyParams) {
+    try {
+        return await copyWithTieredFallback(ctx, adsetId, `${adsetId}/copies`, bodyParams, 'copied_adset_id');
+    }
+    catch (err) {
+        if (!isTargetingAutomationRequired(err))
+            throw err;
+    }
+    // Retry with targeting override
+    const retryParams = {
+        ...bodyParams,
+        targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
+    };
+    return copyWithTieredFallback(ctx, adsetId, `${adsetId}/copies`, retryParams, 'copied_adset_id');
+}
 // ── Implementation ──
 async function duplicateAdSet(ctx, args) {
     const { adset_id, target_campaign_id, new_name, deep_copy = true, status = 'PAUSED' } = args;
@@ -333,13 +357,12 @@ async function duplicateAdSet(ctx, args) {
         deep_copy: deep_copy ? '1' : '0',
         status_option: status === 'INHERITED_FROM_SOURCE' ? 'INHERITED_FROM_SOURCE' : status,
         rename_strategy: 'DEEP_RENAME',
-        targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
     };
     if (new_name)
         bodyParams.name = new_name;
     if (target_campaign_id)
         bodyParams.campaign_id = target_campaign_id;
-    const newAdSetId = await copyWithTieredFallback(ctx, adset_id, `${adset_id}/copies`, bodyParams, 'copied_adset_id');
+    const newAdSetId = await copyAdSetWithTargetingFallback(ctx, adset_id, bodyParams);
     return {
         success: true,
         new_adset_id: newAdSetId,
@@ -429,7 +452,9 @@ async function duplicateCreative(ctx, args) {
                 display_url: new URL(url_override).hostname,
             }));
             if (feedSpec.link_urls.length === 0) {
-                feedSpec.link_urls = [{ website_url: url_override, display_url: new URL(url_override).hostname }];
+                feedSpec.link_urls = [
+                    { website_url: url_override, display_url: new URL(url_override).hostname },
+                ];
             }
         }
         if (cta_type_override)

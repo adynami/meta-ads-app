@@ -214,6 +214,12 @@ function isTooManyObjectsError(err: any): boolean {
   return e?.code === 100 && e?.error_subcode === 1885194;
 }
 
+/** Detect Meta "targeting_automation required" error (subcode 1870227). */
+function isTargetingAutomationRequired(err: any): boolean {
+  const e = err?.response?.error;
+  return e?.error_subcode === 1870227;
+}
+
 /** Fetch all ad IDs in an ad set (paginated). */
 async function fetchAdIdsForAdSet(ctx: TenantContext, adsetId: string): Promise<string[]> {
   const ids: string[] = [];
@@ -345,15 +351,8 @@ async function decomposeCampaignCopy(
       status_option: 'PAUSED',
       rename_strategy: 'DEEP_RENAME',
       campaign_id: newCampaignId,
-      targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
     };
-    await copyWithTieredFallback(
-      ctx,
-      adSet.id,
-      `${adSet.id}/copies`,
-      adSetBodyParams,
-      'copied_adset_id',
-    );
+    await copyAdSetWithTargetingFallback(ctx, adSet.id, adSetBodyParams);
   }
 
   return newCampaignId;
@@ -397,6 +396,35 @@ async function copyWithTieredFallback(
   }
 }
 
+/**
+ * Copy an ad set with try-without-then-retry-with targeting override.
+ * First attempts without targeting override (preserving source targeting).
+ * If Meta returns subcode 1870227 ("targeting_automation required"), retries with the override.
+ */
+async function copyAdSetWithTargetingFallback(
+  ctx: TenantContext,
+  adsetId: string,
+  bodyParams: Record<string, string>,
+): Promise<string> {
+  try {
+    return await copyWithTieredFallback(
+      ctx,
+      adsetId,
+      `${adsetId}/copies`,
+      bodyParams,
+      'copied_adset_id',
+    );
+  } catch (err: any) {
+    if (!isTargetingAutomationRequired(err)) throw err;
+  }
+  // Retry with targeting override
+  const retryParams = {
+    ...bodyParams,
+    targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
+  };
+  return copyWithTieredFallback(ctx, adsetId, `${adsetId}/copies`, retryParams, 'copied_adset_id');
+}
+
 // ── Implementation ──
 
 async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
@@ -413,18 +441,11 @@ async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
     deep_copy: deep_copy ? '1' : '0',
     status_option: status === 'INHERITED_FROM_SOURCE' ? 'INHERITED_FROM_SOURCE' : status,
     rename_strategy: 'DEEP_RENAME',
-    targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
   };
   if (new_name) bodyParams.name = new_name;
   if (target_campaign_id) bodyParams.campaign_id = target_campaign_id;
 
-  const newAdSetId = await copyWithTieredFallback(
-    ctx,
-    adset_id,
-    `${adset_id}/copies`,
-    bodyParams,
-    'copied_adset_id',
-  );
+  const newAdSetId = await copyAdSetWithTargetingFallback(ctx, adset_id, bodyParams);
 
   return {
     success: true,
