@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef, useState, useMemo } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
 
 export interface DashboardRow {
   name: string;
@@ -259,14 +261,19 @@ export function DashboardTable({
   sortDir,
   onSort,
 }: DashboardTableProps) {
-  const visibleColumns = COLUMNS.filter((c) => c.levels.includes(level));
+  const visibleColumns = useMemo(() => COLUMNS.filter((c) => c.levels.includes(level)), [level]);
+  const { orderedColumns, moveColumn } = useColumnOrder(level, visibleColumns);
+
+  // Drag state
+  const dragColRef = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
       <table className="prose-chat-table min-w-[1000px] w-full">
         <thead>
           <tr>
-            {visibleColumns.map((col) => (
+            {orderedColumns.map((col) => (
               <th
                 key={colId(col)}
                 className={cn(
@@ -282,7 +289,7 @@ export function DashboardTable({
         <tbody>
           {Array.from({ length: 5 }).map((_, i) => (
             <tr key={i}>
-              {visibleColumns.map((col) => (
+              {orderedColumns.map((col) => (
                 <td key={colId(col)} className={cn(col.mobileHide && 'hidden sm:table-cell')}>
                   <div className="h-4 rounded animate-pulse bg-white/5" />
                 </td>
@@ -306,33 +313,64 @@ export function DashboardTable({
     <table className="prose-chat-table min-w-[1000px] w-full">
       <thead>
         <tr>
-          {visibleColumns.map((col) => (
-            <th
-              key={colId(col)}
-              className={cn(
-                'cursor-pointer select-none hover:bg-white/5 transition-colors',
-                col.align === 'right' && 'text-right',
-                col.mobileHide && 'hidden sm:table-cell',
-              )}
-              onClick={() => onSort(colId(col))}
-            >
-              <span className="inline-flex items-center gap-1">
-                {col.label}
-                {sortBy === colId(col) &&
-                  (sortDir === 'asc' ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  ))}
-              </span>
-            </th>
-          ))}
+          {orderedColumns.map((col) => {
+            const id = colId(col);
+            return (
+              <th
+                key={id}
+                draggable
+                onDragStart={(e) => {
+                  dragColRef.current = id;
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnter={() => {
+                  if (dragColRef.current && dragColRef.current !== id) {
+                    setDragOverId(id);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverId === id) setDragOverId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragColRef.current && dragColRef.current !== id) {
+                    moveColumn(dragColRef.current, id);
+                  }
+                  dragColRef.current = null;
+                  setDragOverId(null);
+                }}
+                onDragEnd={() => {
+                  dragColRef.current = null;
+                  setDragOverId(null);
+                }}
+                className={cn(
+                  'cursor-grab select-none hover:bg-white/5 transition-colors',
+                  col.align === 'right' && 'text-right',
+                  col.mobileHide && 'hidden sm:table-cell',
+                  dragOverId === id && 'border-l-2 border-blue-400',
+                )}
+                style={dragColRef.current === id ? { opacity: 0.5 } : undefined}
+                onClick={() => onSort(id)}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {col.label}
+                  {sortBy === id &&
+                    (sortDir === 'asc' ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    ))}
+                </span>
+              </th>
+            );
+          })}
         </tr>
       </thead>
       <tbody>
         {rows.map((row, i) => (
           <tr key={row.id ?? i}>
-            {visibleColumns.map((col) => (
+            {orderedColumns.map((col) => (
               <td
                 key={colId(col)}
                 className={cn(
