@@ -61,6 +61,11 @@ export default function SettingsPage() {
   const [newKeyLabel, setNewKeyLabel] = useState('');
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -91,6 +96,10 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setPlan(data.user.plan || '');
+        const [first, ...rest] = (data.user.name || '').split(' ');
+        setFirstName(first || '');
+        setLastName(rest.join(' ') || '');
+        setEmail(data.user.email || '');
       }
     } catch {}
   }
@@ -158,7 +167,7 @@ export default function SettingsPage() {
             <div className="flex items-start gap-6 mb-6">
               <div className="text-center">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl font-bold mb-2">
-                  U
+                  {getInitials(`${firstName} ${lastName}`.trim()) || 'U'}
                 </div>
                 <button className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 mx-auto">
                   <Upload className="w-3 h-3" />
@@ -172,6 +181,8 @@ export default function SettingsPage() {
                     <input
                       type="text"
                       placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
                       className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white input-focus transition-all"
                     />
                   </div>
@@ -180,6 +191,8 @@ export default function SettingsPage() {
                     <input
                       type="text"
                       placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                       className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white input-focus transition-all"
                     />
                   </div>
@@ -190,6 +203,7 @@ export default function SettingsPage() {
                     <input
                       type="email"
                       disabled
+                      value={email}
                       placeholder="email@example.com"
                       className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white opacity-60"
                     />
@@ -201,8 +215,35 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-            <button className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-              Save Changes
+            <button
+              onClick={async () => {
+                setProfileSaving(true);
+                try {
+                  const res = await fetch('/api/user', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: `${firstName} ${lastName}`.trim() }),
+                  });
+                  if (res.ok) {
+                    setProfileSaved(true);
+                    setTimeout(() => setProfileSaved(false), 2000);
+                  }
+                } finally {
+                  setProfileSaving(false);
+                }
+              }}
+              disabled={profileSaving}
+              className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+            >
+              {profileSaved ? (
+                <>
+                  <Check className="w-4 h-4" /> Saved
+                </>
+              ) : profileSaving ? (
+                'Saving...'
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </div>
         </div>

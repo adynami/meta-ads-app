@@ -32,6 +32,24 @@ export async function GET() {
   return Response.json({ user });
 }
 
+export async function PATCH(request: Request) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { name } = body;
+
+  if (typeof name !== 'string' || name.length > 100) {
+    return Response.json({ error: 'Invalid name' }, { status: 400 });
+  }
+
+  await db.update(users).set({ name: name.trim() }).where(eq(users.email, session.user.email));
+
+  return Response.json({ success: true });
+}
+
 export async function DELETE() {
   const session = await auth();
   if (!session?.user?.email) {
