@@ -12,11 +12,6 @@ import { META_API_VERSION, refreshAccountTokenIfNeeded } from '@/lib/meta-auth';
 import { runChat, validateMessages, injectAttachmentBlocks } from '@/lib/chat';
 import { runChatStreaming } from '@/lib/chat-streaming';
 
-// Increase body size limit for base64-encoded image/video attachments
-export const config = {
-  api: { bodyParser: { sizeLimit: '50mb' } },
-};
-
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();

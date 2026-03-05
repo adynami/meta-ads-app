@@ -19,6 +19,12 @@ export const PRICE_IDS = {
 
 export type PricePlan = keyof typeof PRICE_IDS;
 
+export const ANNUAL_PRICE_IDS: Record<PricePlan, string | undefined> = {
+  basic: process.env.STRIPE_BASIC_ANNUAL_PRICE_ID,
+  pro: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
+  agency: process.env.STRIPE_AGENCY_ANNUAL_PRICE_ID,
+};
+
 export const TOPUP_PRICE_IDS = {
   '25': process.env.STRIPE_TOPUP_25_PRICE_ID!,
   '100': process.env.STRIPE_TOPUP_100_PRICE_ID!,

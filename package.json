@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "cd packages/meta-mcp-server && npm run build",
+    "prebuild": "cd packages/meta-mcp-server && npm ci && npm run build",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",

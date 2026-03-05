@@ -53,9 +53,12 @@ export default function TrialExpired() {
         </Link>
 
         {/* Talk to us */}
-        <button className="mt-4 text-sm text-gray-400 hover:text-white transition-colors">
+        <a
+          href="mailto:support@adynami.ai"
+          className="mt-4 inline-block text-sm text-gray-400 hover:text-white transition-colors"
+        >
           Talk to us
-        </button>
+        </a>
 
         {/* Reassurance */}
         <p className="mt-6 text-xs text-gray-500">

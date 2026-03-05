@@ -35,7 +35,7 @@ export default function NoAccount() {
         {/* Setup Guide Link */}
         <div className="mt-4">
           <Link
-            href="/docs/setup"
+            href="/docs#quick-start"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             View setup guide

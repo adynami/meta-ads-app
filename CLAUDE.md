@@ -153,6 +153,9 @@ META_AD_ACCOUNT_ID=        # Dev/demo fallback
 META_API_VERSION=          # Override default (currently v25.0)
 DRY_RUN=true              # Skip actual Meta API writes
 NEXT_PUBLIC_APP_URL=       # Base URL for OAuth redirects
+STRIPE_BASIC_ANNUAL_PRICE_ID=   # Annual billing price IDs (optional)
+STRIPE_PRO_ANNUAL_PRICE_ID=
+STRIPE_AGENCY_ANNUAL_PRICE_ID=
 ```
 
 ## Plan Tiers
@@ -227,6 +230,8 @@ Priority targets for first test suite:
 
 > **IMPORTANT**: Before building any new feature or re-adding code, check this list first. These items were intentionally removed and should NOT be rebuilt unless explicitly discussed and approved.
 
-(None yet — add entries here as things are removed)
+- **Settings "Upload photo" button** — No photo upload infrastructure exists; avatar uses initials (2026-03-05)
+- **Settings Preferences section (Theme, Email Summaries, Default Time Range)** — Saved to localStorage but nothing reads the values; app is hardcoded dark, no email system, dashboard ignores stored time range (2026-03-05)
+- **Chat route `export const config` (Pages Router body size config)** — Silently ignored in App Router; not needed (2026-03-05)
 
 <!-- Format: - **What was removed** — Why it was removed (YYYY-MM-DD) -->

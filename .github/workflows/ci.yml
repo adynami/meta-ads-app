@@ -15,7 +15,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: cd packages/meta-mcp-server && npm run build
+      - run: cd packages/meta-mcp-server && npm ci && npm run build
       - run: npm run format:check
       - run: npm run lint
       - run: npx tsc --noEmit

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Plus,
   ChevronDown,
@@ -66,6 +67,8 @@ function isTrialExpiredCheck(user: UserStatus | null): boolean {
 }
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const initialPrompt = searchParams.get('prompt');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
@@ -376,6 +379,7 @@ export default function ChatPage() {
               }}
               loadRecent={loadRecent}
               onNewChat={handleNewChat}
+              initialPrompt={initialPrompt}
             />
           ) : (
             <DashboardPanel key={selectedAccountId ?? ''} accountId={selectedAccountId ?? ''} />

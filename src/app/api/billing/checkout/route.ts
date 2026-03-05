@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import {
   getStripe,
   PRICE_IDS,
+  ANNUAL_PRICE_IDS,
   TOPUP_PRICE_IDS,
   type PricePlan,
   type TopupPack,
@@ -78,15 +79,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Subscription checkout
-  const { plan } = body as { plan: PricePlan };
+  const { plan, period } = body as { plan: PricePlan; period?: 'monthly' | 'annual' };
   if (!plan || !(plan in PRICE_IDS)) {
     return Response.json({ error: 'Invalid plan' }, { status: 400 });
   }
 
+  const priceId =
+    period === 'annual' && ANNUAL_PRICE_IDS[plan] ? ANNUAL_PRICE_IDS[plan] : PRICE_IDS[plan];
+
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
-    line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${process.env.AUTH_URL}/chat?subscribed=true`,
     cancel_url: `${process.env.AUTH_URL}/billing`,
     subscription_data: {

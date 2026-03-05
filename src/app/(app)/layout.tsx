@@ -10,12 +10,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     fetch('/api/user')
       .then((res) => res.json())
       .then((data) => {
         if (data.user?.isAdmin) setIsAdmin(true);
+        if (data.user?.name) setUserName(data.user.name);
       })
       .catch(() => {});
   }, []);
@@ -86,10 +88,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-sm font-bold">
-              U
+              {userName ? userName.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">User</p>
+              <p className="text-sm font-medium truncate">{userName || 'User'}</p>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   ArrowLeft,
@@ -59,6 +60,8 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Fetch accounts from Meta when entering step 2
   useEffect(() => {
@@ -303,10 +306,13 @@ export default function OnboardingPage() {
                 })()
               )}
 
+              {saveError && <p className="text-sm text-red-400 mb-4">{saveError}</p>}
+
               <button
                 onClick={async () => {
                   if (!selectedAccount) return;
                   setSaving(true);
+                  setSaveError(null);
                   try {
                     const res = await fetch('/api/meta/ad-accounts', {
                       method: 'POST',
@@ -319,12 +325,13 @@ export default function OnboardingPage() {
                     }
                     if (!res.ok) {
                       const data = await res.json();
-                      alert(data.error || 'Failed to save account');
+                      setSaveError(data.error || 'Failed to save account');
                       return;
                     }
+                    setSaveError(null);
                     setStep(3);
                   } catch {
-                    alert('Something went wrong. Please try again.');
+                    setSaveError('Something went wrong. Please try again.');
                   } finally {
                     setSaving(false);
                   }
@@ -379,6 +386,9 @@ export default function OnboardingPage() {
                 {suggestionCards.map((card) => (
                   <div
                     key={card.title}
+                    onClick={() =>
+                      router.push(`/chat?prompt=${encodeURIComponent(card.description)}`)
+                    }
                     className="glass-card glass-card-hover rounded-xl p-4 cursor-pointer group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-3 group-hover:bg-purple-500/20 transition-colors">
@@ -399,7 +409,14 @@ export default function OnboardingPage() {
                   placeholder="Or type your own command..."
                   className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none px-4 py-3"
                 />
-                <button className="gradient-bg p-3 rounded-lg flex-shrink-0 hover:opacity-90 transition-opacity">
+                <button
+                  onClick={() => {
+                    if (customPrompt.trim()) {
+                      router.push(`/chat?prompt=${encodeURIComponent(customPrompt.trim())}`);
+                    }
+                  }}
+                  className="gradient-bg p-3 rounded-lg flex-shrink-0 hover:opacity-90 transition-opacity"
+                >
                   <Send className="w-4 h-4 text-white" />
                 </button>
               </div>

@@ -43,6 +43,7 @@ interface ChatWindowProps {
   onConversationId: (id: string) => void;
   loadRecent: boolean;
   onNewChat?: () => void;
+  initialPrompt?: string | null;
 }
 
 export function ChatWindow({
@@ -51,6 +52,7 @@ export function ChatWindow({
   onConversationId,
   loadRecent,
   onNewChat,
+  initialPrompt,
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -122,6 +124,15 @@ export function ChatWindow({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  // Auto-send initial prompt from onboarding (e.g., /chat?prompt=...)
+  const initialPromptSent = useRef(false);
+  useEffect(() => {
+    if (initialPrompt && !initialPromptSent.current && !isLoadingHistory) {
+      initialPromptSent.current = true;
+      sendMessage(initialPrompt);
+    }
+  }, [initialPrompt, isLoadingHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const processFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);

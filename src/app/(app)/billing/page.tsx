@@ -110,7 +110,7 @@ export default function BillingPage() {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, period: billingPeriod }),
       });
       const data = await res.json();
       if (data.url) {
@@ -200,12 +200,20 @@ export default function BillingPage() {
                 </button>
               )}
               {currentPlan !== 'trial' && (
-                <button
-                  onClick={manageSubscription}
-                  className="px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
-                >
-                  Manage Subscription
-                </button>
+                <>
+                  <button
+                    onClick={manageSubscription}
+                    className="px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
+                  >
+                    Manage Subscription
+                  </button>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors font-medium text-sm"
+                  >
+                    Cancel Subscription
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -417,7 +425,10 @@ export default function BillingPage() {
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowCancelModal(false)}
+                onClick={async () => {
+                  setShowCancelModal(false);
+                  await manageSubscription();
+                }}
                 className="flex-1 px-6 py-2.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium text-sm"
               >
                 Yes, Cancel

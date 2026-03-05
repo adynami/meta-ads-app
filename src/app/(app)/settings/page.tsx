@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Upload, Check, AlertTriangle, Lock, ChevronDown, Plus, X, Copy } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { Check, AlertTriangle, Lock, Plus, Copy } from 'lucide-react';
 
 interface ApiKey {
   id: string;
@@ -39,20 +40,6 @@ function getInitials(name: string): string {
 export default function SettingsPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('adynami_theme') || 'dark';
-    return 'dark';
-  });
-  const [emailNotifications, setEmailNotifications] = useState(() => {
-    if (typeof window !== 'undefined')
-      return localStorage.getItem('adynami_email_notif') !== 'false';
-    return true;
-  });
-  const [timeRange, setTimeRange] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('adynami_time_range') || '7';
-    return '7';
-  });
-  const [prefsSaved, setPrefsSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [disconnectingAccount, setDisconnectingAccount] = useState<string | null>(null);
@@ -66,6 +53,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -166,13 +154,9 @@ export default function SettingsPage() {
           <div className="glass-card rounded-xl p-6">
             <div className="flex items-start gap-6 mb-6">
               <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl font-bold mb-2">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl font-bold">
                   {getInitials(`${firstName} ${lastName}`.trim()) || 'U'}
                 </div>
-                <button className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 mx-auto">
-                  <Upload className="w-3 h-3" />
-                  Upload photo
-                </button>
               </div>
               <div className="flex-1 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -482,82 +466,6 @@ export default function SettingsPage() {
 
         <div className="h-px bg-white/10 mb-12"></div>
 
-        {/* Preferences */}
-        <div className="mb-12">
-          <h2 className="text-xl font-semibold mb-6">Preferences</h2>
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-3">Theme</label>
-              <div className="flex gap-2">
-                {['dark', 'light', 'system'].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      theme === t ? 'gradient-bg' : 'bg-white/5 hover:bg-white/10'
-                    }`}
-                  >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Email Summaries</p>
-                <p className="text-xs text-gray-400">
-                  Receive weekly performance summaries via email
-                </p>
-              </div>
-              <div
-                className={`toggle-switch ${emailNotifications ? 'active' : ''}`}
-                onClick={() => setEmailNotifications(!emailNotifications)}
-              >
-                <div className="toggle-knob"></div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-3">Default Time Range</label>
-              <div className="relative">
-                <select
-                  value={timeRange}
-                  onChange={(e) => setTimeRange(e.target.value)}
-                  className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white appearance-none cursor-pointer input-focus"
-                >
-                  <option value="1">Last 24 hours</option>
-                  <option value="7">Last 7 days</option>
-                  <option value="30">Last 30 days</option>
-                  <option value="90">Last 90 days</option>
-                </select>
-                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                localStorage.setItem('adynami_theme', theme);
-                localStorage.setItem('adynami_email_notif', String(emailNotifications));
-                localStorage.setItem('adynami_time_range', timeRange);
-                setPrefsSaved(true);
-                setTimeout(() => setPrefsSaved(false), 2000);
-              }}
-              className="gradient-bg px-6 py-2.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity flex items-center gap-2"
-            >
-              {prefsSaved ? (
-                <>
-                  <Check className="w-4 h-4" /> Saved
-                </>
-              ) : (
-                'Save Preferences'
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="h-px bg-white/10 mb-12"></div>
-
         {/* Danger Zone */}
         <div className="mb-12">
           <h2 className="text-xl font-semibold mb-6 text-red-400">Danger Zone</h2>
@@ -591,10 +499,21 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    disabled={deleteConfirmText !== 'DELETE'}
+                    disabled={deleteConfirmText !== 'DELETE' || deleting}
+                    onClick={async () => {
+                      setDeleting(true);
+                      try {
+                        const res = await fetch('/api/user', { method: 'DELETE' });
+                        if (res.ok) {
+                          await signOut({ callbackUrl: '/' });
+                        }
+                      } finally {
+                        setDeleting(false);
+                      }
+                    }}
                     className="px-6 py-2.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Confirm Delete
+                    {deleting ? 'Deleting...' : 'Confirm Delete'}
                   </button>
                   <button
                     onClick={() => {
