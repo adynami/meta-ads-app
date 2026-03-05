@@ -129,20 +129,34 @@ export async function executeTool(
     const result = await handler(ctx, toolName, args, attachmentStore);
     return JSON.stringify(result);
   } catch (error: unknown) {
-    let message: string;
-    let code: string | undefined;
-    if (error instanceof Error) {
-      message = error.message;
-      code = 'code' in error ? String((error as Record<string, unknown>).code) : undefined;
-    } else if (error && typeof error === 'object') {
-      try {
-        message = JSON.stringify(error);
-      } catch {
-        message = 'Unknown tool execution error';
-      }
-    } else {
-      message = 'Unknown tool execution error';
-    }
+    const message = extractErrorMessage(error);
+    const code =
+      error instanceof Error && 'code' in error
+        ? String((error as Record<string, unknown>).code)
+        : undefined;
     return JSON.stringify({ error: message, ...(code ? { code } : {}) });
   }
+}
+
+function extractErrorMessage(error: unknown): string {
+  const err = error as Record<string, any> | null;
+  // Meta API errors — extract human-readable message with details
+  if (err?.response?.error) {
+    const e = err.response.error;
+    const title = e.error_user_title ?? e.message ?? 'Unknown error';
+    const detail = e.error_user_msg ? ` ${e.error_user_msg}` : '';
+    const code = e.code ? ` (code ${e.code})` : '';
+    const subcode = e.error_subcode ? `, subcode ${e.error_subcode}` : '';
+    return `${title}${detail}${code}${subcode}`;
+  }
+  if (err?.error?.message) return err.error.message;
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown tool execution error';
+    }
+  }
+  return 'Unknown tool execution error';
 }

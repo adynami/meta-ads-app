@@ -6,14 +6,18 @@ export function validateMetaId(id: string): void {
   }
 }
 
-export async function graphGet(ctx: TenantContext, objectPath: string, params: Record<string, any> = {}): Promise<any> {
+export async function graphGet(
+  ctx: TenantContext,
+  objectPath: string,
+  params: Record<string, any> = {},
+): Promise<any> {
   const qp = new URLSearchParams({ access_token: ctx.accessToken });
   for (const [k, v] of Object.entries(params)) {
     qp.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   }
   const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}?${qp.toString()}`;
   const response = await fetch(url);
-  const data = await response.json() as any;
+  const data = (await response.json()) as any;
   if (!response.ok || data.error) {
     const e = data.error ?? {};
     const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
@@ -23,24 +27,38 @@ export async function graphGet(ctx: TenantContext, objectPath: string, params: R
   return data;
 }
 
-export async function graphPost(ctx: TenantContext, objectPath: string, params: Record<string, any>): Promise<any> {
+export async function graphPost(
+  ctx: TenantContext,
+  objectPath: string,
+  params: Record<string, any>,
+): Promise<any> {
+  const debug = process.env.META_MCP_DEBUG === '1';
   const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}`;
   const formBody = new URLSearchParams();
   formBody.append('access_token', ctx.accessToken);
   for (const [k, v] of Object.entries(params)) {
     formBody.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   }
+  if (debug) {
+    console.error(`[META_MCP_DEBUG] POST ${objectPath}`, JSON.stringify(params));
+  }
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formBody.toString(),
   });
-  const data = await response.json() as any;
+  const data = (await response.json()) as any;
   if (!response.ok || data.error) {
+    if (debug) {
+      console.error(`[META_MCP_DEBUG] ERROR ${objectPath}`, JSON.stringify(data));
+    }
     const e = data.error ?? {};
     const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
     err.response = { error: e };
     throw err;
+  }
+  if (debug) {
+    console.error(`[META_MCP_DEBUG] OK ${objectPath}`, JSON.stringify(data));
   }
   return data;
 }
@@ -57,11 +75,15 @@ export async function graphPostMultipart(
   for (const [k, v] of Object.entries(fields)) {
     form.append(k, v);
   }
-  form.append(fileField.name, new Blob([fileField.data as unknown as BlobPart], { type: fileField.contentType }), fileField.filename);
+  form.append(
+    fileField.name,
+    new Blob([fileField.data as unknown as BlobPart], { type: fileField.contentType }),
+    fileField.filename,
+  );
 
   // Do NOT set Content-Type header — fetch auto-sets it with the boundary
   const response = await fetch(url, { method: 'POST', body: form });
-  const data = await response.json() as any;
+  const data = (await response.json()) as any;
   if (!response.ok || data.error) {
     const e = data.error ?? {};
     const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
@@ -79,7 +101,7 @@ export async function graphDelete(ctx: TenantContext, objectPath: string): Promi
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formBody.toString(),
   });
-  const data = await response.json() as any;
+  const data = (await response.json()) as any;
   if (!response.ok || data.error) {
     const e = data.error ?? {};
     throw new Error(e.message ?? `HTTP ${response.status}`);

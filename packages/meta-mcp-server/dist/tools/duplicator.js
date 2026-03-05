@@ -269,7 +269,6 @@ async function decomposeAdSetCopy(ctx, adsetId, bodyParams) {
         await rateLimitedCall(() => graphPost(ctx, `${adId}/copies`, {
             adset_id: newAdSetId,
             status_option: bodyParams.status_option ?? 'PAUSED',
-            rename_strategy: 'DEEP_RENAME',
         }));
     }
     return newAdSetId;
@@ -293,7 +292,6 @@ async function decomposeCampaignCopy(ctx, campaignId, newName) {
         const adSetBodyParams = {
             deep_copy: '1',
             status_option: 'PAUSED',
-            rename_strategy: 'DEEP_RENAME',
             campaign_id: newCampaignId,
             is_adset_budget_sharing_enabled: cbo ? 'true' : 'false',
         };
@@ -373,7 +371,6 @@ async function duplicateAdSet(ctx, args) {
     const bodyParams = {
         deep_copy: deep_copy ? '1' : '0',
         status_option: status === 'INHERITED_FROM_SOURCE' ? 'INHERITED_FROM_SOURCE' : status,
-        rename_strategy: 'DEEP_RENAME',
     };
     if (new_name)
         bodyParams.name = new_name;

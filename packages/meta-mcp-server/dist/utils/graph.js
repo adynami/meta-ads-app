@@ -20,11 +20,15 @@ export async function graphGet(ctx, objectPath, params = {}) {
     return data;
 }
 export async function graphPost(ctx, objectPath, params) {
+    const debug = process.env.META_MCP_DEBUG === '1';
     const url = `https://graph.facebook.com/${ctx.apiVersion}/${objectPath}`;
     const formBody = new URLSearchParams();
     formBody.append('access_token', ctx.accessToken);
     for (const [k, v] of Object.entries(params)) {
         formBody.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    }
+    if (debug) {
+        console.error(`[META_MCP_DEBUG] POST ${objectPath}`, JSON.stringify(params));
     }
     const response = await fetch(url, {
         method: 'POST',
@@ -33,10 +37,16 @@ export async function graphPost(ctx, objectPath, params) {
     });
     const data = await response.json();
     if (!response.ok || data.error) {
+        if (debug) {
+            console.error(`[META_MCP_DEBUG] ERROR ${objectPath}`, JSON.stringify(data));
+        }
         const e = data.error ?? {};
         const err = new Error(e.message ?? `HTTP ${response.status}`);
         err.response = { error: e };
         throw err;
+    }
+    if (debug) {
+        console.error(`[META_MCP_DEBUG] OK ${objectPath}`, JSON.stringify(data));
     }
     return data;
 }
