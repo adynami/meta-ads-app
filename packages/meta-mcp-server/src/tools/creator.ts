@@ -669,6 +669,7 @@ async function handleDeploy(ctx: TenantContext, args: any): Promise<any> {
         budgetCents.toString();
       adsetParams.bid_strategy = bidStrategy;
       if (budgetType === 'lifetime' && args.end_time) adsetParams.end_time = args.end_time;
+      adsetParams.is_adset_budget_sharing_enabled = false;
     } else {
       // CBO: ad set opts in to campaign budget sharing
       adsetParams.is_adset_budget_sharing_enabled = true;

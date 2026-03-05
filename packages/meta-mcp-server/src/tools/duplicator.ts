@@ -220,6 +220,12 @@ function isTargetingAutomationRequired(err: any): boolean {
   return e?.error_subcode === 1870227;
 }
 
+/** Detect Meta "is_adset_budget_sharing_enabled required" error (subcode 4834011). */
+function isBudgetSharingRequired(err: any): boolean {
+  const e = err?.response?.error;
+  return e?.error_subcode === 4834011;
+}
+
 /** Fetch all ad IDs in an ad set (paginated). */
 async function fetchAdIdsForAdSet(ctx: TenantContext, adsetId: string): Promise<string[]> {
   const ids: string[] = [];
@@ -352,7 +358,7 @@ async function decomposeCampaignCopy(
       rename_strategy: 'DEEP_RENAME',
       campaign_id: newCampaignId,
     };
-    await copyAdSetWithTargetingFallback(ctx, adSet.id, adSetBodyParams);
+    await copyAdSetWithFallbacks(ctx, adSet.id, adSetBodyParams);
   }
 
   return newCampaignId;
@@ -397,11 +403,12 @@ async function copyWithTieredFallback(
 }
 
 /**
- * Copy an ad set with try-without-then-retry-with targeting override.
- * First attempts without targeting override (preserving source targeting).
- * If Meta returns subcode 1870227 ("targeting_automation required"), retries with the override.
+ * Copy an ad set with automatic retries for known Meta API errors.
+ * Falls back on:
+ *  - subcode 1870227: retry with targeting_automation override
+ *  - subcode 4834011: retry with is_adset_budget_sharing_enabled
  */
-async function copyAdSetWithTargetingFallback(
+async function copyAdSetWithFallbacks(
   ctx: TenantContext,
   adsetId: string,
   bodyParams: Record<string, string>,
@@ -415,14 +422,31 @@ async function copyAdSetWithTargetingFallback(
       'copied_adset_id',
     );
   } catch (err: any) {
-    if (!isTargetingAutomationRequired(err)) throw err;
+    if (isTargetingAutomationRequired(err)) {
+      const retryParams = {
+        ...bodyParams,
+        targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
+      };
+      return copyWithTieredFallback(
+        ctx,
+        adsetId,
+        `${adsetId}/copies`,
+        retryParams,
+        'copied_adset_id',
+      );
+    }
+    if (isBudgetSharingRequired(err)) {
+      const retryParams = { ...bodyParams, is_adset_budget_sharing_enabled: 'true' };
+      return copyWithTieredFallback(
+        ctx,
+        adsetId,
+        `${adsetId}/copies`,
+        retryParams,
+        'copied_adset_id',
+      );
+    }
+    throw err;
   }
-  // Retry with targeting override
-  const retryParams = {
-    ...bodyParams,
-    targeting: JSON.stringify({ targeting_automation: { advantage_audience: 0 } }),
-  };
-  return copyWithTieredFallback(ctx, adsetId, `${adsetId}/copies`, retryParams, 'copied_adset_id');
 }
 
 // ── Implementation ──
@@ -445,7 +469,7 @@ async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
   if (new_name) bodyParams.name = new_name;
   if (target_campaign_id) bodyParams.campaign_id = target_campaign_id;
 
-  const newAdSetId = await copyAdSetWithTargetingFallback(ctx, adset_id, bodyParams);
+  const newAdSetId = await copyAdSetWithFallbacks(ctx, adset_id, bodyParams);
 
   return {
     success: true,

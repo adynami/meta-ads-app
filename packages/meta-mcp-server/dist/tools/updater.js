@@ -8,11 +8,15 @@ export const updaterTools = [
             properties: {
                 campaign_id: { type: 'string', description: 'Campaign ID to update' },
                 name: { type: 'string', description: 'New campaign name' },
-                status: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'], description: 'New status' },
+                status: {
+                    type: 'string',
+                    enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'],
+                    description: 'New status',
+                },
                 daily_budget: {
                     type: 'number',
                     minimum: 1,
-                    description: 'New daily budget in major currency units (e.g. 50 for $50). Internally converted to cents. Cannot switch between daily and lifetime — must match the campaign\'s current budget type.',
+                    description: "New daily budget in major currency units (e.g. 50 for $50). Internally converted to cents. Cannot switch between daily and lifetime — must match the campaign's current budget type.",
                 },
                 lifetime_budget: {
                     type: 'number',
@@ -21,12 +25,20 @@ export const updaterTools = [
                 },
                 bid_strategy: {
                     type: 'string',
-                    enum: ['LOWEST_COST_WITHOUT_CAP', 'LOWEST_COST_WITH_BID_CAP', 'COST_CAP', 'LOWEST_COST_WITH_MIN_ROAS'],
+                    enum: [
+                        'LOWEST_COST_WITHOUT_CAP',
+                        'LOWEST_COST_WITH_BID_CAP',
+                        'COST_CAP',
+                        'LOWEST_COST_WITH_MIN_ROAS',
+                    ],
                     description: 'New bid strategy (CBO campaigns)',
                 },
                 special_ad_categories: {
                     type: 'array',
-                    items: { type: 'string', enum: ['CREDIT', 'EMPLOYMENT', 'HOUSING', 'ISSUES_ELECTIONS_POLITICS'] },
+                    items: {
+                        type: 'string',
+                        enum: ['CREDIT', 'EMPLOYMENT', 'HOUSING', 'ISSUES_ELECTIONS_POLITICS'],
+                    },
                     description: 'Declare special ad categories if the campaign now covers regulated content (credit, housing, employment, politics). Pass an empty array [] to clear.',
                 },
             },
@@ -41,12 +53,29 @@ export const updaterTools = [
             properties: {
                 adset_id: { type: 'string', description: 'Ad set ID to update' },
                 name: { type: 'string', description: 'New ad set name' },
-                status: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'], description: 'New status' },
-                daily_budget: { type: 'number', minimum: 1, description: 'New daily budget in major currency units' },
-                lifetime_budget: { type: 'number', minimum: 1, description: 'New lifetime budget in major currency units' },
+                status: {
+                    type: 'string',
+                    enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'],
+                    description: 'New status',
+                },
+                daily_budget: {
+                    type: 'number',
+                    minimum: 1,
+                    description: 'New daily budget in major currency units',
+                },
+                lifetime_budget: {
+                    type: 'number',
+                    minimum: 1,
+                    description: 'New lifetime budget in major currency units',
+                },
                 bid_strategy: {
                     type: 'string',
-                    enum: ['LOWEST_COST_WITHOUT_CAP', 'LOWEST_COST_WITH_BID_CAP', 'COST_CAP', 'LOWEST_COST_WITH_MIN_ROAS'],
+                    enum: [
+                        'LOWEST_COST_WITHOUT_CAP',
+                        'LOWEST_COST_WITH_BID_CAP',
+                        'COST_CAP',
+                        'LOWEST_COST_WITH_MIN_ROAS',
+                    ],
                     description: 'New bid strategy (ABO ad sets)',
                 },
                 bid_amount: {
@@ -54,18 +83,29 @@ export const updaterTools = [
                     minimum: 0.01,
                     description: 'New bid cap or cost cap in major currency units. Required when using LOWEST_COST_WITH_BID_CAP or COST_CAP.',
                 },
-                end_time: { type: 'string', description: 'New end time in ISO 8601 format (e.g. 2025-12-31T23:59:59Z). Required for lifetime budget ad sets.' },
+                end_time: {
+                    type: 'string',
+                    description: 'New end time in ISO 8601 format (e.g. 2025-12-31T23:59:59Z). Required for lifetime budget ad sets.',
+                },
                 targeting: {
                     type: 'object',
                     description: 'Replace the full targeting spec. Note: the Meta API replaces the entire targeting object — partial updates are not supported.',
                     properties: {
                         age_min: { type: 'number', minimum: 18, maximum: 65 },
                         age_max: { type: 'number', minimum: 18, maximum: 65 },
-                        genders: { type: 'array', items: { type: 'number', enum: [0, 1, 2] }, description: '0=All, 1=Male, 2=Female' },
+                        genders: {
+                            type: 'array',
+                            items: { type: 'number', enum: [0, 1, 2] },
+                            description: '0=All, 1=Male, 2=Female',
+                        },
                         geo_locations: {
                             type: 'object',
                             properties: {
-                                countries: { type: 'array', items: { type: 'string' }, description: '2-letter ISO country codes' },
+                                countries: {
+                                    type: 'array',
+                                    items: { type: 'string' },
+                                    description: '2-letter ISO country codes',
+                                },
                             },
                         },
                         custom_audiences: {
@@ -74,31 +114,77 @@ export const updaterTools = [
                                 type: 'object',
                                 properties: {
                                     id: { type: 'string', description: 'Audience ID' },
-                                    exclusion: { type: 'boolean', description: 'Set true to EXCLUDE this audience instead of include it' },
+                                    exclusion: {
+                                        type: 'boolean',
+                                        description: 'Set true to EXCLUDE this audience instead of include it',
+                                    },
                                 },
                             },
                             description: 'Custom audiences to include or exclude. Each entry: { id: "...", exclusion?: true }',
                         },
                         interests: {
                             type: 'array',
-                            items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                            },
                             description: 'Interest targeting — use meta_search_targeting to find IDs',
                         },
                         behaviors: {
                             type: 'array',
-                            items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+                            items: {
+                                type: 'object',
+                                properties: { id: { type: 'string' }, name: { type: 'string' } },
+                            },
                             description: 'Behavior targeting — use meta_search_targeting to find IDs',
                         },
                         placements: {
                             type: 'object',
                             description: 'Manual placement control. Omit to use Advantage+ Placements.',
                             properties: {
-                                publisher_platforms: { type: 'array', items: { type: 'string', enum: ['facebook', 'instagram', 'audience_network', 'messenger', 'threads'] } },
-                                facebook_positions: { type: 'array', items: { type: 'string', enum: ['feed', 'story', 'marketplace', 'video_feeds', 'right_hand_column', 'reels', 'instream_video', 'search'] } },
-                                instagram_positions: { type: 'array', items: { type: 'string', enum: ['stream', 'story', 'reels', 'explore', 'explore_home'] } },
-                                audience_network_positions: { type: 'array', items: { type: 'string', enum: ['classic', 'instream_video'] } },
-                                messenger_positions: { type: 'array', items: { type: 'string', enum: ['messenger_home', 'story'] } },
-                                threads_positions: { type: 'array', items: { type: 'string', enum: ['feed'] }, description: 'Threads placements (requires publisher_platforms to include "threads")' },
+                                publisher_platforms: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string',
+                                        enum: ['facebook', 'instagram', 'audience_network', 'messenger', 'threads'],
+                                    },
+                                },
+                                facebook_positions: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string',
+                                        enum: [
+                                            'feed',
+                                            'story',
+                                            'marketplace',
+                                            'video_feeds',
+                                            'right_hand_column',
+                                            'reels',
+                                            'instream_video',
+                                            'search',
+                                        ],
+                                    },
+                                },
+                                instagram_positions: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string',
+                                        enum: ['stream', 'story', 'reels', 'explore', 'explore_home'],
+                                    },
+                                },
+                                audience_network_positions: {
+                                    type: 'array',
+                                    items: { type: 'string', enum: ['classic', 'instream_video'] },
+                                },
+                                messenger_positions: {
+                                    type: 'array',
+                                    items: { type: 'string', enum: ['messenger_home', 'story'] },
+                                },
+                                threads_positions: {
+                                    type: 'array',
+                                    items: { type: 'string', enum: ['feed'] },
+                                    description: 'Threads placements (requires publisher_platforms to include "threads")',
+                                },
                             },
                         },
                     },
@@ -118,7 +204,15 @@ export const updaterTools = [
                 },
                 destination_type: {
                     type: 'string',
-                    enum: ['WEBSITE', 'MESSENGER', 'WHATSAPP', 'INSTAGRAM_DIRECT', 'PHONE_CALL', 'APP', 'ON_AD'],
+                    enum: [
+                        'WEBSITE',
+                        'MESSENGER',
+                        'WHATSAPP',
+                        'INSTAGRAM_DIRECT',
+                        'PHONE_CALL',
+                        'APP',
+                        'ON_AD',
+                    ],
                     description: 'Update where users land after clicking the ad',
                 },
                 attribution_spec: {
@@ -127,7 +221,10 @@ export const updaterTools = [
                     items: {
                         type: 'object',
                         properties: {
-                            event_type: { type: 'string', enum: ['CLICK_THROUGH', 'VIEW_THROUGH', 'ENGAGED_VIEW_THROUGH'] },
+                            event_type: {
+                                type: 'string',
+                                enum: ['CLICK_THROUGH', 'VIEW_THROUGH', 'ENGAGED_VIEW_THROUGH'],
+                            },
                             window_days: { type: 'number', enum: [1, 7, 28], description: '1, 7, or 28 days' },
                         },
                         required: ['event_type', 'window_days'],
@@ -149,7 +246,11 @@ export const updaterTools = [
             properties: {
                 ad_id: { type: 'string', description: 'Ad ID to update' },
                 name: { type: 'string', description: 'New ad name' },
-                status: { type: 'string', enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'], description: 'New status' },
+                status: {
+                    type: 'string',
+                    enum: ['ACTIVE', 'PAUSED', 'ARCHIVED'],
+                    description: 'New status',
+                },
             },
             required: ['ad_id'],
         },
@@ -157,10 +258,14 @@ export const updaterTools = [
 ];
 export async function handleUpdaterTool(ctx, name, args) {
     switch (name) {
-        case 'meta_update_campaign': return handleUpdateCampaign(ctx, args);
-        case 'meta_update_adset': return handleUpdateAdSet(ctx, args);
-        case 'meta_update_ad': return handleUpdateAd(ctx, args);
-        default: throw new Error(`Unknown tool: ${name}`);
+        case 'meta_update_campaign':
+            return handleUpdateCampaign(ctx, args);
+        case 'meta_update_adset':
+            return handleUpdateAdSet(ctx, args);
+        case 'meta_update_ad':
+            return handleUpdateAd(ctx, args);
+        default:
+            throw new Error(`Unknown tool: ${name}`);
     }
 }
 async function handleUpdateCampaign(ctx, args) {
@@ -181,7 +286,11 @@ async function handleUpdateCampaign(ctx, args) {
         return { success: false, error: 'No fields to update were provided.' };
     }
     if (ctx.dryRun) {
-        return { dry_run: true, message: `Simulated update campaign ${args.campaign_id}`, changes: params };
+        return {
+            dry_run: true,
+            message: `Simulated update campaign ${args.campaign_id}`,
+            changes: params,
+        };
     }
     await updateCampaign(ctx, args.campaign_id, params);
     return { success: true, campaign_id: args.campaign_id, updated: summarizeChanges(args, params) };
@@ -255,7 +364,9 @@ async function handleUpdateAdSet(ctx, args) {
     }
     else if (args.use_advantage_audience != null) {
         // Allow setting advantage_audience even without a full targeting replacement
-        params.targeting = { targeting_automation: { advantage_audience: args.use_advantage_audience ? 1 : 0 } };
+        params.targeting = {
+            targeting_automation: { advantage_audience: args.use_advantage_audience ? 1 : 0 },
+        };
     }
     if (args.ad_schedule?.length)
         params.adset_schedule = args.ad_schedule;
@@ -267,7 +378,11 @@ async function handleUpdateAdSet(ctx, args) {
         return { success: false, error: 'No fields to update were provided.' };
     }
     if (ctx.dryRun) {
-        return { dry_run: true, message: `Simulated update adset ${args.adset_id}`, changes: Object.keys(params) };
+        return {
+            dry_run: true,
+            message: `Simulated update adset ${args.adset_id}`,
+            changes: Object.keys(params),
+        };
     }
     await updateAdSet(ctx, args.adset_id, params);
     return { success: true, adset_id: args.adset_id, updated: summarizeChanges(args, params) };
@@ -279,7 +394,10 @@ async function handleUpdateAd(ctx, args) {
     if (args.status)
         params.status = args.status;
     if (Object.keys(params).length === 0) {
-        return { success: false, error: 'No fields to update were provided. Provide name and/or status.' };
+        return {
+            success: false,
+            error: 'No fields to update were provided. Provide name and/or status.',
+        };
     }
     if (ctx.dryRun) {
         return { dry_run: true, message: `Simulated update ad ${args.ad_id}`, changes: params };
