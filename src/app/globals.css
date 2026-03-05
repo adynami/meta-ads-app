@@ -188,6 +188,17 @@
   transform: translateY(-2px);
 }
 
+.glow-btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.2);
+}
+
+/* Generic active state for all buttons and clickable elements */
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 /* Aurora background effects */
 .aurora {
   position: absolute;
