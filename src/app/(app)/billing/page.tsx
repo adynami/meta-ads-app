@@ -338,7 +338,7 @@ export default function BillingPage() {
                 </div>
                 <p className="text-xs text-gray-500 mb-4">
                   {id === 'basic'
-                    ? '7-day free trial · Then billed monthly'
+                    ? '3-day free trial · Then billed monthly'
                     : 'Billed monthly · Cancel anytime'}
                 </p>
                 <ul className="space-y-2 mb-6 min-h-[200px]">

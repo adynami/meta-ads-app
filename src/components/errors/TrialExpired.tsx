@@ -21,7 +21,7 @@ export default function TrialExpired() {
 
         {/* Description */}
         <p className="text-gray-400 mb-8">
-          Your 7-day free trial has expired. Upgrade to a plan to continue managing your Meta ad
+          Your 3-day free trial has expired. Upgrade to a plan to continue managing your Meta ad
           accounts with Adynami.
         </p>
 

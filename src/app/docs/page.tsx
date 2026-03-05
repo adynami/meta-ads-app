@@ -249,7 +249,7 @@ export default function DocsPage() {
             <div className="glass-card rounded-xl p-6 mb-4">
               <p className="text-sm font-medium text-gray-300 mb-3">Step-by-step:</p>
               <ol className="list-decimal list-inside space-y-2 text-sm text-gray-400">
-                <li>Sign up and start your 7-day free trial.</li>
+                <li>Sign up and start your 3-day free trial.</li>
                 <li>
                   Click <span className="text-purple-400">Connect Meta Account</span> and authorize
                   via Facebook OAuth.
@@ -1573,19 +1573,35 @@ export default function DocsPage() {
           <section id="plans-overview" className="mb-12">
             <h3 className="text-xl font-semibold mb-3">Plans Overview</h3>
             <p className="text-gray-400 leading-relaxed mb-4">
-              Adynami offers three plans to match your scale. All plans include unlimited
-              conversations and commands -- no message caps.
+              Adynami offers three paid plans to match your scale. All plans start with a 3-day free
+              trial. Annual billing saves 20%.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { plan: 'Starter', price: '$49/mo', accounts: '1 account' },
-                { plan: 'Pro', price: '$149/mo', accounts: 'Up to 5 accounts' },
-                { plan: 'Agency', price: '$349/mo', accounts: 'Unlimited accounts' },
+                {
+                  plan: 'Starter',
+                  price: '$49/mo',
+                  annual: '$39/mo billed annually',
+                  details: '1 ad account \u00B7 100 conversations/mo',
+                },
+                {
+                  plan: 'Pro',
+                  price: '$149/mo',
+                  annual: '$119/mo billed annually',
+                  details: 'Up to 5 accounts \u00B7 400 conversations/mo',
+                },
+                {
+                  plan: 'Agency',
+                  price: '$349/mo',
+                  annual: '$279/mo billed annually',
+                  details: 'Unlimited accounts \u00B7 1,000 conversations/mo \u00B7 MCP access',
+                },
               ].map((p) => (
                 <div key={p.plan} className="glass-card rounded-xl p-4 text-center">
                   <p className="font-semibold mb-1">{p.plan}</p>
                   <p className="text-purple-400 text-lg font-bold mb-1">{p.price}</p>
-                  <p className="text-gray-500 text-xs">{p.accounts}</p>
+                  <p className="text-gray-500 text-xs mb-1">{p.annual}</p>
+                  <p className="text-gray-500 text-xs">{p.details}</p>
                 </div>
               ))}
             </div>
@@ -1599,7 +1615,7 @@ export default function DocsPage() {
                 Billing page
               </Link>
               . Upgrades take effect immediately. Downgrades apply at the end of your current
-              billing cycle. All plans start with a 7-day free trial.
+              billing cycle. All plans start with a 3-day free trial.
             </p>
           </section>
 

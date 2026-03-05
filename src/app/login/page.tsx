@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { signIn } from '@/lib/auth';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Sign In',
+  description: 'Sign in to manage your Meta ad accounts with AI.',
+  alternates: { canonical: '/login' },
+};
 
 export default function LoginPage() {
   return (
@@ -113,7 +120,7 @@ export default function LoginPage() {
 
               <div className="text-center">
                 <p className="text-sm text-gray-400 mb-2">
-                  7-day free trial. No credit card required.
+                  3-day free trial. No credit card required.
                 </p>
               </div>
             </div>

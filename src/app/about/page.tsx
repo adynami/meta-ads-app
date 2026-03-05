@@ -1,5 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, MousePointerClick, Clock, BarChart3 } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'About Adynami - AI-Powered Meta Ads Management',
+  description:
+    'Learn how Adynami replaces Ads Manager with conversational AI. Manage Meta campaigns, audiences, and analytics through natural language.',
+  alternates: { canonical: '/about' },
+};
 
 export default function About() {
   return (
@@ -223,7 +231,7 @@ export default function About() {
             Try It <span className="gradient-text">Free</span>
           </h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Connect your Meta account and start managing your ads with plain English. 7-day free
+            Connect your Meta account and start managing your ads with plain English. 3-day free
             trial on all plans.
           </p>
           <Link href="/login">

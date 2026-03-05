@@ -107,7 +107,7 @@ export default function TermsOfService() {
                 4. Subscription &amp; Billing
               </h2>
               <p>
-                The Service is offered on a subscription basis with a 7-day free trial. By
+                The Service is offered on a subscription basis with a 3-day free trial. By
                 subscribing, you agree to pay the fees associated with your selected plan. Payments
                 are processed through Stripe. You may cancel your subscription at any time through
                 the billing settings; access continues until the end of your current billing period.

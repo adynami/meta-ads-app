@@ -218,7 +218,7 @@ export default function Home() {
             </div>
 
             <p className="text-sm text-gray-500">
-              Connects to Meta Ads API · Reads and writes your live account · 7-day free trial
+              Connects to Meta Ads API · Reads and writes your live account · 3-day free trial
             </p>
           </div>
 
@@ -755,7 +755,7 @@ export default function Home() {
           </div>
 
           <p className="text-center text-gray-500 text-sm mt-8">
-            7-day free trial on all plans · Cancel anytime
+            3-day free trial on all plans · Cancel anytime
           </p>
         </div>
       </section>

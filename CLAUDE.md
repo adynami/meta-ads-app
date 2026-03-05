@@ -155,7 +155,7 @@ NEXT_PUBLIC_APP_URL=       # Base URL for OAuth redirects
 | pro | 5 | 400 | No |
 | agency | Unlimited | 1,000 | Yes |
 
-Trial expires 7 days after signup. Bonus calls can be added by admin.
+Trial expires 3 days after signup. Bonus calls can be added by admin.
 
 ## Improvement Backlog
 

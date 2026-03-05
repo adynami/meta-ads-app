@@ -123,7 +123,7 @@ export default function RegisterPage() {
                   <Check className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium mb-1">7-day free trial</p>
+                  <p className="font-medium mb-1">3-day free trial</p>
                   <p className="text-gray-400 text-sm">
                     No credit card required to start. Cancel anytime.
                   </p>
@@ -158,7 +158,7 @@ export default function RegisterPage() {
           <div className="w-full max-w-lg slide-enter">
             <h2 className="text-3xl font-bold mb-3">Choose your plan</h2>
             <p className="text-gray-400 mb-8">
-              All plans include a 7-day free trial. No credit card required.
+              All plans include a 3-day free trial. No credit card required.
             </p>
 
             <div className="space-y-4 mb-8">
@@ -243,7 +243,7 @@ export default function RegisterPage() {
             </Link>
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              7-day free trial. You&apos;ll connect your Meta account on the next step.
+              3-day free trial. You&apos;ll connect your Meta account on the next step.
             </p>
 
             <div className="flex items-center justify-center gap-4 text-xs text-gray-500 mt-6 flex-wrap">

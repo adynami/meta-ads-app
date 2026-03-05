@@ -43,7 +43,7 @@ export const authConfig: NextAuthConfig = {
 
         if (existing.length === 0) {
           const trialEndsAt = new Date();
-          trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+          trialEndsAt.setDate(trialEndsAt.getDate() + 3);
 
           await db.insert(users).values({
             email: user.email,
