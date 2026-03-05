@@ -382,6 +382,14 @@ async function duplicateAdSet(ctx, args) {
         const cbo = await isCBOCampaign(ctx, target_campaign_id);
         bodyParams.is_adset_budget_sharing_enabled = cbo ? 'true' : 'false';
     }
+    else {
+        // Same-campaign copy: fetch parent campaign from the ad set to detect CBO
+        const adset = await rateLimitedCall(() => graphGet(ctx, adset_id, { fields: 'campaign_id' }));
+        if (adset.campaign_id) {
+            const cbo = await isCBOCampaign(ctx, adset.campaign_id);
+            bodyParams.is_adset_budget_sharing_enabled = cbo ? 'true' : 'false';
+        }
+    }
     const newAdSetId = await copyAdSetWithFallbacks(ctx, adset_id, bodyParams);
     return {
         success: true,
