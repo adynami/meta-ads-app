@@ -24,6 +24,7 @@ export default auth((req) => {
     '/onboarding',
     '/about',
     '/docs',
+    '/early-access',
     '/privacy',
     '/terms',
     '/deletion-status',

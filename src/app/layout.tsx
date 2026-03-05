@@ -21,9 +21,30 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Adynami - Conversational AI for Meta Advertising',
+  title: {
+    default: 'Adynami - Conversational AI for Meta Advertising',
+    template: '%s | Adynami',
+  },
   description:
     'Control your Meta ads through conversation. Launch campaigns, diagnose performance, build audiences — no dashboards required.',
+  metadataBase: new URL('https://adynami.ai'),
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Adynami',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export default function RootLayout({
@@ -33,6 +54,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'Adynami',
+              applicationCategory: 'BusinessApplication',
+              operatingSystem: 'Web',
+              description:
+                'Conversational AI for Meta Advertising. Manage campaigns, audiences, and analytics through natural language.',
+              url: 'https://adynami.ai',
+              offers: {
+                '@type': 'AggregateOffer',
+                lowPrice: '39',
+                highPrice: '349',
+                priceCurrency: 'USD',
+              },
+            }),
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
       >

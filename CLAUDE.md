@@ -5,6 +5,14 @@ Conversational AI for Meta Ads management. Users chat with Claude to manage camp
 **Stack**: Next.js 16, React 19, TypeScript, Drizzle ORM + Neon Postgres, Anthropic SDK, Stripe, NextAuth v5 (beta)
 **Monorepo**: root app + `packages/meta-mcp-server` (local workspace dependency)
 
+## Deployment
+
+- **GitHub**: `https://github.com/adynami/meta-ads-app` (private, org: adynami)
+- **Git push workaround**: `GH_TOKEN=$(gh auth token) git push https://aaronyarm:$(gh auth token)@github.com/adynami/meta-ads-app.git main`
+- **Vercel team**: adynami
+- **Vercel project**: meta-ads-app
+- **Production domain**: adynami.ai
+
 ## Dev Commands
 
 ```bash
@@ -119,6 +127,7 @@ All child table FKs use `onDelete: 'cascade'` except `conversations.adAccountId`
 - **MCP tool registration**: Add tool file in `packages/meta-mcp-server/src/tools/`, export from `exports.ts`, register handler in `tool-executor.ts`
 - **Meta API version**: Single constant `META_API_VERSION` in `src/lib/meta-auth.ts` — update there only
 - **Commits**: Imperative present tense, descriptive
+- **Removals**: When intentionally removing a feature, route, component, or pattern, document it in the "Deliberately Removed" section below with a brief reason. Always check that section before building something that sounds like it may have existed before.
 
 ## Environment Variables
 
@@ -213,3 +222,11 @@ Priority targets for first test suite:
 - [x] ~~Conversation history sidebar~~ -> `ConversationList` component, `DELETE /api/conversations`, load-by-id in ChatWindow, sidebar integration in chat page
 - [x] ~~React error boundaries~~ -> `error.tsx` in root, chat, and (app) route groups with consistent dark styling
 - [ ] Attachment store uses in-memory Map -> won't work across serverless invocations in production
+
+## Deliberately Removed
+
+> **IMPORTANT**: Before building any new feature or re-adding code, check this list first. These items were intentionally removed and should NOT be rebuilt unless explicitly discussed and approved.
+
+(None yet — add entries here as things are removed)
+
+<!-- Format: - **What was removed** — Why it was removed (YYYY-MM-DD) -->

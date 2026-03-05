@@ -82,3 +82,10 @@ export const webhookEvents = pgTable('webhook_events', {
   id: text('id').primaryKey(), // Stripe event ID
   processedAt: timestamp('processed_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const waitlist = pgTable('waitlist', {
+  id: serial('id').primaryKey(),
+  email: text('email').unique().notNull(),
+  source: text('source').default('early-access'), // tracks which page they signed up from
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
