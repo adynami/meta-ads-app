@@ -57,7 +57,7 @@ const sections: SidebarSection[] = [
       { id: 'ecommerce-dpa', label: '7. E-commerce & DPA' },
       { id: 'signal-recovery', label: '8. Signal Recovery (iOS 14+)' },
       { id: 'compliance-health', label: '9. Compliance & Health' },
-      { id: 'competitive-intel', label: '10. Competitive Intelligence' },
+      { id: 'competitive-intel', label: '10. Competitive Intelligence (Coming Soon)' },
       { id: 'zero-conversion', label: '11. Zero-Conversion Diagnostics' },
       { id: 'value-rules', label: '12. Value Rules' },
       { id: 'budget-schedules', label: '13. Scheduled Budget Boosts' },
@@ -966,6 +966,9 @@ export default function DocsPage() {
             <h3 className="text-2xl font-semibold mb-4 flex items-center">
               <SectionIcon icon={Eye} />
               10. Competitive Intelligence
+              <span className="ml-2 bg-purple-500/20 text-purple-400 text-[10px] font-semibold rounded-full px-2 py-0.5 uppercase tracking-wider">
+                Coming Soon
+              </span>
             </h3>
             <p className="text-gray-400 leading-relaxed mb-6">
               Research competitor ad creative, messaging, and offers using Meta&apos;s public Ads

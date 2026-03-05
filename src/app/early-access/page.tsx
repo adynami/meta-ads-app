@@ -2,7 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, Clock, Send, Plus, BarChart3 } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  Send,
+  Plus,
+  BarChart3,
+  MessageSquare,
+  LayoutDashboard,
+  Paperclip,
+  Settings,
+  LogOut,
+  ChevronRight,
+} from 'lucide-react';
 
 export default function EarlyAccess() {
   const [email, setEmail] = useState('');
@@ -280,73 +293,144 @@ export default function EarlyAccess() {
           <div className="chat-mockup rounded-2xl overflow-hidden gradient-border bg-[#0d0d14] border border-white/10">
             <div className="flex">
               {/* Sidebar */}
-              <div className="hidden md:block w-56 bg-[#0a0a10] border-r border-white/5 p-4">
-                <div className="flex items-center gap-2 mb-8">
-                  <span className="text-lg font-bold">
-                    <span className="text-white">Ady</span>
-                    <span className="gradient-text">nami</span>
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full gradient-bg pulse-dot"></span>
-                </div>
+              <div className="hidden md:flex md:flex-col w-56 bg-[#0a0a10] border-r border-white/5">
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-lg font-bold">
+                      <span className="text-white">Ady</span>
+                      <span className="gradient-text">nami</span>
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full gradient-bg pulse-dot"></span>
+                  </div>
 
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-3">
-                  Ad Accounts
-                </p>
+                  <button className="w-full flex items-center justify-center gap-2 text-sm font-medium gradient-border rounded-lg px-3 py-2 mb-6 hover:bg-white/5 transition-colors">
+                    <Plus className="w-4 h-4" /> New Chat
+                  </button>
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border-l-2 border-purple-500">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xs font-bold">
-                      LS
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-3">
+                    Ad Accounts
+                  </p>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border-l-2 border-purple-500">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-xs font-bold">
+                        LS
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">Luxe Skincare Co.</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          <span className="text-[10px] text-gray-500">Active</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">Luxe Skincare Co.</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        <span className="text-[10px] text-gray-500">Active</span>
+
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-xs font-bold">
+                        TB
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate text-gray-400">
+                          TrailBlaze Apparel
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-bold">
+                        NT
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate text-gray-400">
+                          NovaTech Solutions
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-xs font-bold">
-                      TB
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate text-gray-400">
-                        TrailBlaze Apparel
-                      </p>
-                    </div>
-                  </div>
+                  <button className="mt-4 flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                    <Plus className="w-4 h-4" /> Connect Account
+                  </button>
 
-                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-bold">
-                      NT
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate text-gray-400">
-                        NovaTech Solutions
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-600 mt-6 mb-3">
+                    Recent Chats
+                  </p>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-white/5 cursor-pointer">
+                      <MessageSquare className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                      <p className="text-xs text-white truncate flex-1">
+                        Ad set performance review
                       </p>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                      <MessageSquare className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+                      <p className="text-xs text-gray-400 truncate flex-1">
+                        Campaign budget optimization
+                      </p>
+                      <span className="text-[10px] text-gray-600 flex-shrink-0">2h</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+                      <MessageSquare className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+                      <p className="text-xs text-gray-400 truncate flex-1">
+                        Audience targeting analysis
+                      </p>
+                      <span className="text-[10px] text-gray-600 flex-shrink-0">1d</span>
                     </div>
                   </div>
                 </div>
 
-                <button className="mt-6 flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors">
-                  <Plus className="w-4 h-4" /> Connect Account
-                </button>
+                {/* User profile pinned at bottom */}
+                <div className="border-t border-white/5 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      S
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">Sarah M.</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button className="p-1 text-gray-500 hover:text-gray-300 transition-colors">
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
+                      <button className="p-1 text-gray-500 hover:text-gray-300 transition-colors">
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Chat Area */}
               <div className="flex-1 flex flex-col min-h-[500px] md:min-h-[550px]">
-                {/* Tab Indicator */}
-                <div className="flex border-b border-white/5">
-                  <div className="flex items-center gap-1.5 px-5 py-3 border-b-2 border-purple-500 text-sm font-medium text-white">
-                    <Send className="w-3.5 h-3.5" />
-                    Chat
+                {/* Header Bar */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
+                  {/* Left: account badge */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-[10px] font-bold">
+                      LS
+                    </div>
+                    <span className="text-xs text-gray-300 font-medium hidden sm:inline">
+                      Luxe Skincare Co.
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-5 py-3 text-sm text-gray-500">
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    Dashboard
+
+                  {/* Center: pill toggle */}
+                  <div className="bg-white/5 rounded-lg p-1 flex">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 text-white text-xs font-medium">
+                      <MessageSquare className="w-3 h-3" />
+                      Chat
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-gray-400 text-xs">
+                      <LayoutDashboard className="w-3 h-3" />
+                      Dashboard
+                    </div>
                   </div>
+
+                  {/* Right: settings */}
+                  <button className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
                 </div>
 
                 <div className="flex-1 p-6 space-y-6 overflow-y-auto">
@@ -354,6 +438,16 @@ export default function EarlyAccess() {
                   <div className="flex justify-end">
                     <div className="gradient-bg rounded-2xl rounded-br-sm px-5 py-3 max-w-md">
                       <p className="text-sm">How are my 4 new ad sets performing this week?</p>
+                    </div>
+                  </div>
+
+                  {/* Tool call card */}
+                  <div className="flex justify-start">
+                    <div className="tool-card rounded-lg px-4 py-2.5 text-xs flex items-center gap-2">
+                      <span>&#x1f4ca;</span>
+                      <span className="text-cyan-300 font-medium">get ad set insights</span>
+                      <span className="text-green-400">&#x2713;</span>
+                      <span className="text-gray-500">&mdash; 4 results</span>
                     </div>
                   </div>
 
@@ -407,6 +501,28 @@ export default function EarlyAccess() {
                     </div>
                   </div>
 
+                  {/* Tool call cards */}
+                  <div className="flex justify-start">
+                    <div className="space-y-2">
+                      <div className="tool-card rounded-lg px-4 py-2.5 text-xs flex items-center gap-2">
+                        <span>&#x1f3af;</span>
+                        <span className="text-cyan-300 font-medium">update ad set</span>
+                        <span className="text-green-400">&#x2713;</span>
+                        <span className="text-gray-500">
+                          &mdash; Paused: Lookalike: Email List 1%
+                        </span>
+                      </div>
+                      <div className="tool-card rounded-lg px-4 py-2.5 text-xs flex items-center gap-2">
+                        <span>&#x1f3af;</span>
+                        <span className="text-cyan-300 font-medium">update ad set</span>
+                        <span className="text-green-400">&#x2713;</span>
+                        <span className="text-gray-500">
+                          &mdash; Budget updated: $45/day &rarr; $67/day
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Adynami Response 2 — Confirmation */}
                   <div className="flex justify-start">
                     <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-5 py-4 max-w-lg shadow-lg shadow-purple-500/5">
@@ -446,6 +562,7 @@ export default function EarlyAccess() {
                 {/* Input Bar */}
                 <div className="p-4 border-t border-white/5">
                   <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/10">
+                    <Paperclip className="w-4 h-4 text-gray-500 flex-shrink-0" />
                     <input
                       type="text"
                       placeholder="Ask anything about your Meta ads..."
@@ -525,9 +642,14 @@ export default function EarlyAccess() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {commandGroups.map((group, gi) => (
-              <div key={gi}>
+              <div key={gi} className={group.name === 'Intelligence' ? 'opacity-60' : ''}>
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-purple-400 mb-4">
                   {group.name}
+                  {group.name === 'Intelligence' && (
+                    <span className="ml-2 bg-purple-500/20 text-purple-400 text-[10px] font-semibold rounded-full px-2 py-0.5 normal-case tracking-wider">
+                      Coming Soon
+                    </span>
+                  )}
                 </h3>
                 <div className="space-y-4">
                   {group.commands.map((cmd, ci) => (
