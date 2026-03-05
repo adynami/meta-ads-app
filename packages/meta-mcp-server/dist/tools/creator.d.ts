@@ -10,6 +10,10 @@ export declare const creatorTools: (
             type: string;
             description: string;
           };
+          target_campaign_id: {
+            type: string;
+            description: string;
+          };
           objective: {
             type: string;
             enum: string[];
@@ -476,6 +480,7 @@ export declare const creatorTools: (
             type: string;
             description: string;
           };
+          target_campaign_id?: undefined;
           budget_level?: undefined;
           budget_type?: undefined;
           end_time?: undefined;

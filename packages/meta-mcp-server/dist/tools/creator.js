@@ -8,6 +8,10 @@ export const creatorTools = [
             type: 'object',
             properties: {
                 campaign_name: { type: 'string', description: 'Display name for the campaign' },
+                target_campaign_id: {
+                    type: 'string',
+                    description: 'If provided, skip campaign creation and inject the ad set + ad directly into this existing campaign. The campaign must already exist. When used with CBO, daily_budget is ignored (budget lives on the existing campaign).',
+                },
                 objective: {
                     type: 'string',
                     enum: [
@@ -363,7 +367,7 @@ export const creatorTools = [
                     description: 'true = ACTIVE, false = PAUSED (default: true)',
                 },
             },
-            required: ['campaign_name', 'objective', 'daily_budget', 'targeting', 'page_id', 'ad_copy'],
+            required: ['objective', 'daily_budget', 'targeting', 'page_id', 'ad_copy'],
         },
     },
     {
@@ -482,6 +486,12 @@ export async function handleCreatorTool(ctx, name, args) {
     }
 }
 async function handleDeploy(ctx, args) {
+    if (!args.campaign_name && !args.target_campaign_id) {
+        return {
+            success: false,
+            error: 'Provide either campaign_name (to create a new campaign) or target_campaign_id (to add to an existing one).',
+        };
+    }
     const account = await getAccountContext(ctx);
     const budgetCents = Math.round(args.daily_budget * 100);
     const status = args.start_immediately === false ? 'PAUSED' : 'ACTIVE';
@@ -566,32 +576,39 @@ async function handleDeploy(ctx, args) {
         };
     }
     try {
-        // --- Campaign params ---
-        const campaignParams = {
-            name: args.campaign_name,
-            objective: args.objective,
-            status,
-            special_ad_categories: args.special_ad_categories ?? [],
-        };
-        if (budgetLevel === 'CBO') {
-            // CBO: budget lives on the campaign, Meta distributes across ad sets
-            campaignParams[budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget'] =
-                budgetCents.toString();
-            campaignParams.bid_strategy = bidStrategy;
+        if (args.target_campaign_id) {
+            // Use existing campaign — skip creation
+            campaignId = args.target_campaign_id;
+            steps.push(`Campaign ${campaignId} (existing)`);
         }
-        if (args.start_time)
-            campaignParams.start_time = args.start_time;
-        if (budgetType === 'lifetime' && args.end_time)
-            campaignParams.stop_time = args.end_time;
-        const campaignResult = await createCampaign(ctx, campaignParams);
-        campaignId = campaignResult.id;
-        steps.push(`Campaign ${campaignId}`);
+        else {
+            // --- Campaign params ---
+            const campaignParams = {
+                name: args.campaign_name,
+                objective: args.objective,
+                status,
+                special_ad_categories: args.special_ad_categories ?? [],
+            };
+            if (budgetLevel === 'CBO') {
+                // CBO: budget lives on the campaign, Meta distributes across ad sets
+                campaignParams[budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget'] =
+                    budgetCents.toString();
+                campaignParams.bid_strategy = bidStrategy;
+            }
+            if (args.start_time)
+                campaignParams.start_time = args.start_time;
+            if (budgetType === 'lifetime' && args.end_time)
+                campaignParams.stop_time = args.end_time;
+            const campaignResult = await createCampaign(ctx, campaignParams);
+            campaignId = campaignResult.id;
+            steps.push(`Campaign ${campaignId}`);
+        }
         const useAdvantageAudience = args.use_advantage_audience === true;
         const targeting = buildTargetingSpec(args.targeting, useAdvantageAudience);
         // --- Ad set params ---
         const adsetParams = {
             campaign_id: campaignId,
-            name: `${args.campaign_name} - Ad Set`,
+            name: `${args.campaign_name ?? 'Injected'} - Ad Set`,
             billing_event: 'IMPRESSIONS',
             optimization_goal: objectiveToOptimization(args.objective),
             targeting,
@@ -648,12 +665,13 @@ async function handleDeploy(ctx, args) {
             creative.url_tags = args.url_tags;
         const adResult = await createAd(ctx, {
             adset_id: adsetId,
-            name: `${args.campaign_name} - Ad`,
+            name: `${args.campaign_name ?? 'Injected'} - Ad`,
             status,
             creative,
         });
         return {
             success: true,
+            ...(args.target_campaign_id && { injected: true }),
             campaign_id: campaignId,
             adset_id: adsetId,
             ad_id: adResult.id,
@@ -676,7 +694,7 @@ async function handleDeploy(ctx, args) {
                 rollbackErrors.push(e.message);
             }
         }
-        if (campaignId) {
+        if (campaignId && !args.target_campaign_id) {
             try {
                 await deleteCampaign(ctx, campaignId);
             }
