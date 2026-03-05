@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -67,6 +67,14 @@ function isTrialExpiredCheck(user: UserStatus | null): boolean {
 }
 
 export default function ChatPage() {
+  return (
+    <Suspense>
+      <ChatPageContent />
+    </Suspense>
+  );
+}
+
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get('prompt');
   const [sidebarOpen, setSidebarOpen] = useState(false);
