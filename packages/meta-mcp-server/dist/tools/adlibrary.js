@@ -53,6 +53,7 @@ const AD_LIBRARY_FIELDS = [
     'estimated_audience_size',
     'impressions',
     'spend',
+    'ad_snapshot_url',
 ].join(',');
 // ── Handler ──────────────────────────────────────────────────────────────────
 export async function handleAdLibraryTool(ctx, name, args) {
@@ -141,6 +142,7 @@ function normaliseAd(ad) {
         estimated_audience_size: ad.estimated_audience_size ?? null,
         spend_estimate: spend,
         impression_estimate: impressions,
+        ad_snapshot_url: ad.ad_snapshot_url ?? null,
         performance_signal: run_days !== null
             ? run_days >= 30 ? 'long_runner_likely_profitable'
                 : run_days >= 14 ? 'medium_run_testing'

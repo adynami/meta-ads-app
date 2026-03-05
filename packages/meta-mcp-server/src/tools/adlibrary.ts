@@ -6,13 +6,15 @@ import { rateLimitedCall } from '../utils/rate-limiter.js';
 export const adLibraryTools = [
   {
     name: 'meta_search_ad_library',
-    description: 'Search Meta Ad Library for competitor ads. Returns copy, headlines, formats, run duration.',
+    description:
+      'Search Meta Ad Library for competitor ads. Returns copy, headlines, formats, run duration.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         search_terms: {
           type: 'string',
-          description: 'Brand name, product name, or keyword to search. Use a brand name for competitor analysis (e.g. "Athletic Greens", "Notion", "Shopify").',
+          description:
+            'Brand name, product name, or keyword to search. Use a brand name for competitor analysis (e.g. "Athletic Greens", "Notion", "Shopify").',
         },
         countries: {
           type: 'array',
@@ -23,16 +25,19 @@ export const adLibraryTools = [
           type: 'number',
           minimum: 1,
           maximum: 50,
-          description: 'Max ads to return (default: 20). Use 5–10 for a quick read; 30–50 for a thorough competitive audit.',
+          description:
+            'Max ads to return (default: 20). Use 5–10 for a quick read; 30–50 for a thorough competitive audit.',
         },
         active_only: {
           type: 'boolean',
-          description: 'If true, return only currently active ads (default: false — returns both active and recently stopped).',
+          description:
+            'If true, return only currently active ads (default: false — returns both active and recently stopped).',
         },
         search_page_ids: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Filter by specific Facebook Page IDs. Use when you know the exact page (more precise than search_terms for known brands).',
+          description:
+            'Filter by specific Facebook Page IDs. Use when you know the exact page (more precise than search_terms for known brands).',
         },
       },
       required: ['search_terms'],
@@ -58,14 +63,21 @@ const AD_LIBRARY_FIELDS = [
   'estimated_audience_size',
   'impressions',
   'spend',
+  'ad_snapshot_url',
 ].join(',');
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
-export async function handleAdLibraryTool(ctx: TenantContext, name: string, args: any): Promise<any> {
+export async function handleAdLibraryTool(
+  ctx: TenantContext,
+  name: string,
+  args: any,
+): Promise<any> {
   switch (name) {
-    case 'meta_search_ad_library': return searchAdLibrary(ctx, args);
-    default: throw new Error(`Unknown ad library tool: ${name}`);
+    case 'meta_search_ad_library':
+      return searchAdLibrary(ctx, args);
+    default:
+      throw new Error(`Unknown ad library tool: ${name}`);
   }
 }
 
@@ -93,13 +105,15 @@ async function searchAdLibrary(ctx: TenantContext, args: any): Promise<any> {
 
     const url = `https://graph.facebook.com/${ctx.apiVersion}/ads_archive?${qp.toString()}`;
     const response = await fetch(url);
-    const data = await response.json() as any;
+    const data = (await response.json()) as any;
 
     if (!response.ok || data.error) {
       const e = data.error ?? {};
       // Surface a helpful message for the most common Ad Library auth issue
       if (e.code === 10 || e.code === 200) {
-        throw new Error(`Ad Library access denied. Ensure your access token has the "ads_read" permission and that your app has been granted Ad Library API access. Error: ${e.message}`);
+        throw new Error(
+          `Ad Library access denied. Ensure your access token has the "ads_read" permission and that your app has been granted Ad Library API access. Error: ${e.message}`,
+        );
       }
       throw new Error(e.message ?? `HTTP ${response.status}`);
     }
@@ -111,8 +125,10 @@ async function searchAdLibrary(ctx: TenantContext, args: any): Promise<any> {
       countries,
       total_returned: ads.length,
       ads,
-      next_step: 'Pass this output to meta_generate_creative_brief with signal_type: "from_competitor" to extract the differentiation opportunity.',
-      audit_tip: 'Ads running 30+ days are almost always profitable — study their hook, format, and copy angle carefully.',
+      next_step:
+        'Pass this output to meta_generate_creative_brief with signal_type: "from_competitor" to extract the differentiation opportunity.',
+      audit_tip:
+        'Ads running 30+ days are almost always profitable — study their hook, format, and copy angle carefully.',
     };
   });
 }
@@ -140,8 +156,12 @@ function normaliseAd(ad: any): Record<string, any> {
   const caption = (ad.ad_creative_link_captions ?? [])[0] ?? null;
 
   // Spend/impression ranges
-  const spend = ad.spend ? { lower: ad.spend.lower_bound, upper: ad.spend.upper_bound, currency: ad.spend.currency } : null;
-  const impressions = ad.impressions ? { lower: ad.impressions.lower_bound, upper: ad.impressions.upper_bound } : null;
+  const spend = ad.spend
+    ? { lower: ad.spend.lower_bound, upper: ad.spend.upper_bound, currency: ad.spend.currency }
+    : null;
+  const impressions = ad.impressions
+    ? { lower: ad.impressions.lower_bound, upper: ad.impressions.upper_bound }
+    : null;
 
   return {
     id: ad.id,
@@ -162,10 +182,14 @@ function normaliseAd(ad: any): Record<string, any> {
     estimated_audience_size: ad.estimated_audience_size ?? null,
     spend_estimate: spend,
     impression_estimate: impressions,
-    performance_signal: run_days !== null
-      ? run_days >= 30 ? 'long_runner_likely_profitable'
-        : run_days >= 14 ? 'medium_run_testing'
-        : 'short_run_or_new'
-      : null,
+    ad_snapshot_url: ad.ad_snapshot_url ?? null,
+    performance_signal:
+      run_days !== null
+        ? run_days >= 30
+          ? 'long_runner_likely_profitable'
+          : run_days >= 14
+            ? 'medium_run_testing'
+            : 'short_run_or_new'
+        : null,
   };
 }

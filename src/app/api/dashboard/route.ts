@@ -144,8 +144,14 @@ export async function POST(req: NextRequest) {
       executeTool(ctx, 'meta_get_insights', insightsArgs),
     ]);
 
-    const entities = JSON.parse(entitiesRaw);
-    const insights = JSON.parse(insightsRaw);
+    let entities: any;
+    let insights: any;
+    try {
+      entities = JSON.parse(entitiesRaw);
+      insights = JSON.parse(insightsRaw);
+    } catch {
+      return Response.json({ error: 'Failed to parse ad account data' }, { status: 502 });
+    }
 
     if (entities.error) {
       return Response.json({ error: entities.error }, { status: 502 });

@@ -30,37 +30,51 @@ export function clearAccountCache(adAccountId) {
 }
 // ── Generic Fetchers ──
 const INSIGHT_FIELDS = [
-    'impressions', 'clicks', 'spend', 'cpm', 'frequency', 'reach',
-    'actions', 'action_values',
-    'unique_clicks', 'unique_ctr',
+    'impressions',
+    'clicks',
+    'spend',
+    'cpm',
+    'frequency',
+    'reach',
+    'actions',
+    'action_values',
+    'unique_clicks',
+    'unique_ctr',
     'outbound_clicks',
-    'video_p25_watched_actions', 'video_p50_watched_actions',
-    'video_p75_watched_actions', 'video_p100_watched_actions',
+    'video_p25_watched_actions',
+    'video_p50_watched_actions',
+    'video_p75_watched_actions',
+    'video_p100_watched_actions',
     'video_avg_time_watched_actions',
-    'quality_ranking', 'engagement_rate_ranking', 'conversion_rate_ranking',
+    'quality_ranking',
+    'engagement_rate_ranking',
+    'conversion_rate_ranking',
 ];
 export async function fetchCampaigns(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/campaigns`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/campaigns`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
 }
 export async function fetchAdSets(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/adsets`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/adsets`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
 }
 export async function fetchAds(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
 }
 export async function fetchAdSetAds(ctx, adSetId, fields, params) {
     validateMetaId(adSetId);
-    return rateLimitedCall(() => graphGet(ctx, `${adSetId}/ads`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${adSetId}/ads`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
 }
 export async function fetchAccountInsights(ctx, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, {
+        fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','),
+        ...params,
+    })).then((r) => r.data ?? []);
 }
 export async function fetchCampaignInsights(ctx, campaignId, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${campaignId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${campaignId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params })).then((r) => r.data ?? []);
 }
 export async function fetchInsightsBreakdown(ctx, params) {
     const fields = [...INSIGHT_FIELDS, 'campaign_id', 'campaign_name'];
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: fields.join(','), ...params })).then(r => r.data ?? []);
+    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
 }
 // ── Mutators ──
 export async function createCampaign(ctx, params) {
@@ -82,7 +96,7 @@ export async function deleteCampaign(ctx, id) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             throw new Error(e.message ?? `HTTP ${response.status}`);
@@ -99,7 +113,7 @@ export async function deleteAdSet(ctx, id) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             throw new Error(e.message ?? `HTTP ${response.status}`);
@@ -116,7 +130,7 @@ export async function deleteAd(ctx, id) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             throw new Error(e.message ?? `HTTP ${response.status}`);
@@ -173,7 +187,7 @@ export async function fetchAudiences(ctx, params) {
 }
 export async function deleteAudience(ctx, id) {
     validateMetaId(id);
-    await rateLimitedCall(async () => {
+    (await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${id}`;
         const formBody = new URLSearchParams({ access_token: ctx.accessToken });
         const response = await fetch(url, {
@@ -181,12 +195,12 @@ export async function deleteAudience(ctx, id) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
             throw new Error(e.message ?? `HTTP ${response.status}`);
         }
-    });
+    }));
 }
 // ── Pixels ──
 export async function listPixels(ctx, limit) {
@@ -279,10 +293,18 @@ export async function searchTargeting(ctx, type, query) {
 export async function startAsyncInsights(ctx, params) {
     return rateLimitedCall(async () => {
         const { campaign_id, breakdowns, time_range, time_increment, limit, level } = params;
-        const edge = campaign_id
-            ? `${campaign_id}/insights`
-            : `${ctx.adAccountId}/insights`;
-        const fields = [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id', 'date_start', 'date_stop'];
+        const edge = campaign_id ? `${campaign_id}/insights` : `${ctx.adAccountId}/insights`;
+        const fields = [
+            ...INSIGHT_FIELDS,
+            'campaign_name',
+            'adset_name',
+            'ad_name',
+            'campaign_id',
+            'adset_id',
+            'ad_id',
+            'date_start',
+            'date_stop',
+        ];
         const postParams = {
             fields: fields.join(','),
             limit: limit ?? 200,
@@ -310,7 +332,7 @@ export async function pollInsightsReport(ctx, reportRunId, maxAttempts = 40) {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         if (attempt > 0) {
             const delay = Math.min(BASE_MS * Math.pow(1.5, attempt - 1), MAX_MS);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
         const result = await rateLimitedCall(() => graphGet(ctx, reportRunId, { fields: 'id,async_status,async_percent_completion' }));
         const status = (result.async_status ?? '').toLowerCase().replace(/ /g, '_');
@@ -380,7 +402,7 @@ export async function getAdSetDetails(ctx, adSetId) {
 export async function batchUpdateStatus(ctx, ids, status) {
     ids.forEach(validateMetaId);
     return rateLimitedCall(async () => {
-        const batch = ids.map(id => ({
+        const batch = ids.map((id) => ({
             method: 'POST',
             relative_url: `${ctx.apiVersion}/${id}`,
             body: `status=${encodeURIComponent(status)}&access_token=${encodeURIComponent(ctx.accessToken)}`,
@@ -394,7 +416,7 @@ export async function batchUpdateStatus(ctx, ids, status) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!response.ok)
             throw new Error(`HTTP ${response.status}`);
         return Array.isArray(data) ? data : [];
@@ -404,10 +426,18 @@ export async function batchUpdateStatus(ctx, ids, status) {
 export async function fetchBreakdownInsights(ctx, params) {
     return rateLimitedCall(async () => {
         const { campaign_id, breakdowns, time_range, time_increment, limit, after, level } = params;
-        const edge = campaign_id
-            ? `${campaign_id}/insights`
-            : `${ctx.adAccountId}/insights`;
-        const fields = [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id', 'date_start', 'date_stop'];
+        const edge = campaign_id ? `${campaign_id}/insights` : `${ctx.adAccountId}/insights`;
+        const fields = [
+            ...INSIGHT_FIELDS,
+            'campaign_name',
+            'adset_name',
+            'ad_name',
+            'campaign_id',
+            'adset_id',
+            'ad_id',
+            'date_start',
+            'date_stop',
+        ];
         const qp = {
             fields: fields.join(','),
             limit: limit ?? 50,
@@ -429,15 +459,15 @@ export async function fetchBreakdownInsights(ctx, params) {
 }
 // ── MIME Detection ──
 function detectMime(buf) {
-    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47)
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47)
         return 'image/png';
-    if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF)
+    if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff)
         return 'image/jpeg';
     if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46)
         return 'image/gif';
     if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46)
         return 'image/webp';
-    if (buf[0] === 0x42 && buf[1] === 0x4D)
+    if (buf[0] === 0x42 && buf[1] === 0x4d)
         return 'image/bmp';
     return 'image/png';
 }

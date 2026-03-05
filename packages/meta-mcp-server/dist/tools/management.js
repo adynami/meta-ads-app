@@ -687,6 +687,8 @@ async function getCampaignDetails(ctx, args) {
         'created_time',
         'start_time',
         'stop_time',
+        'special_ad_categories',
+        'budget_remaining',
     ];
     const c = await readCampaign(ctx, args.campaign_id, fields);
     return {
@@ -696,6 +698,8 @@ async function getCampaignDetails(ctx, args) {
         objective: c.objective,
         daily_budget: c.daily_budget ? `${(parseInt(c.daily_budget) / 100).toFixed(2)}` : null,
         lifetime_budget: c.lifetime_budget ? `${(parseInt(c.lifetime_budget) / 100).toFixed(2)}` : null,
+        budget_remaining: c.budget_remaining ? `${(parseInt(c.budget_remaining) / 100).toFixed(2)}` : null,
+        special_ad_categories: c.special_ad_categories ?? [],
         buying_type: c.buying_type,
         bid_strategy: c.bid_strategy,
         created: c.created_time,

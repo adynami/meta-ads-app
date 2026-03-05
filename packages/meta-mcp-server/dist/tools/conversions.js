@@ -118,6 +118,9 @@ function buildUserData(raw) {
     return out;
 }
 async function sendConversionsEvent(ctx, args) {
+    if (args.event_name === 'Other' && !args.custom_event_name) {
+        throw new Error('custom_event_name is required when event_name is "Other". Provide a descriptive name (e.g. "BookingCompleted").');
+    }
     const eventName = args.event_name === 'Other' && args.custom_event_name
         ? args.custom_event_name
         : args.event_name;

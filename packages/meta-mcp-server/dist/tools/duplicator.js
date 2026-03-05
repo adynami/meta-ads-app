@@ -138,6 +138,155 @@ async function pollAsyncSession(ctx, sessionId, maxAttempts = 50) {
     }
     throw new Error(`Async copy session ${sessionId} did not complete within ~20 minutes. The campaign may still be copying on Meta's side — check Ads Manager.`);
 }
+// ── Copy helpers (three-tier fallback) ──
+/** Detect Meta "too many objects to copy at once" error (code 100, subcode 1885194). */
+function isTooManyObjectsError(err) {
+    const e = err?.response?.error;
+    return e?.code === 100 && e?.error_subcode === 1885194;
+}
+/** Fetch all ad IDs in an ad set (paginated). */
+async function fetchAdIdsForAdSet(ctx, adsetId) {
+    const ids = [];
+    let cursor = null;
+    do {
+        const params = { fields: 'id', limit: 50 };
+        if (cursor)
+            params.after = cursor;
+        const resp = await rateLimitedCall(() => graphGet(ctx, `${adsetId}/ads`, params));
+        for (const ad of resp.data ?? [])
+            ids.push(ad.id);
+        cursor = resp.paging?.cursors?.after && resp.paging?.next ? resp.paging.cursors.after : null;
+    } while (cursor);
+    return ids;
+}
+/**
+ * Try async batch copy. Returns the copied object ID on success.
+ * Handles three response shapes: async_session_id, sync success array, sync error array.
+ */
+async function tryAsyncBatchCopy(ctx, relativeUrl, bodyParams, idField) {
+    const batchItem = {
+        method: 'POST',
+        relative_url: relativeUrl,
+        body: new URLSearchParams(bodyParams).toString(),
+    };
+    const data = await rateLimitedCall(async () => {
+        const formBody = new URLSearchParams();
+        formBody.append('access_token', ctx.accessToken);
+        formBody.append('async', 'true');
+        formBody.append('batch', JSON.stringify([batchItem]));
+        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formBody.toString(),
+        });
+        const result = await response.json();
+        if (!response.ok || result.error) {
+            const e = result.error ?? {};
+            const err = new Error(e.message ?? `HTTP ${response.status}`);
+            err.response = { error: e };
+            throw err;
+        }
+        return result;
+    });
+    // Shape 1: Got an async session — poll it
+    if (data.async_session_id) {
+        const pollFn = idField === 'copied_adset_id' ? pollAsyncSessionForAdSet : pollAsyncSession;
+        return pollFn(ctx, data.async_session_id);
+    }
+    // Shape 2/3: Synchronous batch response (array)
+    if (Array.isArray(data) && data.length > 0) {
+        const entry = data[0];
+        const body = typeof entry.body === 'string' ? JSON.parse(entry.body) : (entry.body ?? {});
+        if (body.error) {
+            const err = new Error(body.error.message ?? 'Batch item error');
+            err.response = { error: body.error };
+            throw err;
+        }
+        const copiedId = body[idField] ?? body.id;
+        if (copiedId)
+            return copiedId;
+    }
+    throw new Error(`Async batch returned unexpected shape. Raw: ${JSON.stringify(data)}`);
+}
+/** Tier 3: Shallow-copy ad set then copy each ad individually. */
+async function decomposeAdSetCopy(ctx, adsetId, bodyParams) {
+    // Shallow copy (structure only, no ads)
+    const shallowParams = { ...bodyParams, deep_copy: '0' };
+    const shallowResult = await rateLimitedCall(() => graphPost(ctx, `${adsetId}/copies`, shallowParams));
+    const newAdSetId = shallowResult.copied_adset_id ?? shallowResult.id;
+    if (!newAdSetId)
+        throw new Error(`Shallow ad set copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
+    // Copy each ad individually into the new ad set
+    const adIds = await fetchAdIdsForAdSet(ctx, adsetId);
+    for (const adId of adIds) {
+        await rateLimitedCall(() => graphPost(ctx, `${adId}/copies`, {
+            adset_id: newAdSetId,
+            status_option: bodyParams.status_option ?? 'PAUSED',
+            rename_strategy: 'DEEP_RENAME',
+        }));
+    }
+    return newAdSetId;
+}
+/** Tier 3: Shallow-copy campaign then copy each ad set individually (using tiered fallback). */
+async function decomposeCampaignCopy(ctx, campaignId, newName) {
+    // Shallow copy campaign (structure only)
+    const shallowResult = await rateLimitedCall(() => graphPost(ctx, `${campaignId}/copies`, {
+        deep_copy: '0',
+        status_option: 'PAUSED',
+        rename_strategy: 'DEEP_RENAME',
+        name: newName,
+    }));
+    const newCampaignId = shallowResult.copied_campaign_id ?? shallowResult.id;
+    if (!newCampaignId)
+        throw new Error(`Shallow campaign copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
+    // Copy each ad set from original into new campaign (using tiered fallback)
+    const adSets = await fetchAllAdSets(ctx, campaignId);
+    for (const adSet of adSets) {
+        const adSetBodyParams = {
+            deep_copy: '1',
+            status_option: 'PAUSED',
+            rename_strategy: 'DEEP_RENAME',
+            campaign_id: newCampaignId,
+        };
+        await copyWithTieredFallback(ctx, adSet.id, `${adSet.id}/copies`, adSetBodyParams, 'copied_adset_id');
+    }
+    return newCampaignId;
+}
+/**
+ * Three-tier copy fallback:
+ *  1. Direct POST (fast, works for small copies)
+ *  2. Async batch (handles medium copies)
+ *  3. Manual decomposition (handles 3+ child objects)
+ */
+async function copyWithTieredFallback(ctx, objectId, relativeUrl, bodyParams, idField) {
+    // Tier 1: Direct POST
+    try {
+        const result = await rateLimitedCall(() => graphPost(ctx, relativeUrl, bodyParams));
+        const copiedId = result[idField] ?? result.id;
+        if (copiedId)
+            return copiedId;
+        throw new Error(`Direct copy returned no ID. Raw: ${JSON.stringify(result)}`);
+    }
+    catch (err) {
+        if (!isTooManyObjectsError(err))
+            throw err;
+    }
+    // Tier 2: Async batch
+    try {
+        return await tryAsyncBatchCopy(ctx, relativeUrl, bodyParams, idField);
+    }
+    catch (err) {
+        if (!isTooManyObjectsError(err))
+            throw err;
+    }
+    // Tier 3: Manual decomposition
+    if (idField === 'copied_adset_id') {
+        return decomposeAdSetCopy(ctx, objectId, bodyParams);
+    }
+    else {
+        return decomposeCampaignCopy(ctx, objectId, bodyParams.name ?? 'Campaign Copy');
+    }
+}
 // ── Implementation ──
 async function duplicateAdSet(ctx, args) {
     const { adset_id, target_campaign_id, new_name, deep_copy = true, status = 'PAUSED' } = args;
@@ -156,35 +305,7 @@ async function duplicateAdSet(ctx, args) {
         bodyParams.name = new_name;
     if (target_campaign_id)
         bodyParams.campaign_id = target_campaign_id;
-    const batchItem = {
-        method: 'POST',
-        relative_url: `${adset_id}/copies`,
-        body: new URLSearchParams(bodyParams).toString(),
-    };
-    const sessionId = await rateLimitedCall(async () => {
-        const formBody = new URLSearchParams();
-        formBody.append('access_token', ctx.accessToken);
-        formBody.append('async', '1');
-        formBody.append('batch', JSON.stringify([batchItem]));
-        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formBody.toString(),
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) {
-            const e = data.error ?? {};
-            const err = new Error(e.message ?? `HTTP ${response.status}`);
-            err.response = { error: e };
-            throw err;
-        }
-        const sid = data.async_session_id;
-        if (!sid)
-            throw new Error(`Async batch missing async_session_id. Raw: ${JSON.stringify(data)}`);
-        return sid;
-    });
-    // Poll for completion — the session result contains the new adset id in results[0].body
-    const newAdSetId = await pollAsyncSessionForAdSet(ctx, sessionId);
+    const newAdSetId = await copyWithTieredFallback(ctx, adset_id, `${adset_id}/copies`, bodyParams, 'copied_adset_id');
     return {
         success: true,
         new_adset_id: newAdSetId,
@@ -312,40 +433,14 @@ async function duplicateCampaign(ctx, args) {
             daily_budget_per_adset: daily_budget_per_adset ?? '(keep originals)',
         };
     }
-    // Step 1: Async deep copy via Graph API batch
-    const sessionId = await rateLimitedCall(async () => {
-        const batchItem = {
-            method: 'POST',
-            relative_url: `${campaign_id}/copies`,
-            body: new URLSearchParams({
-                deep_copy: '1',
-                status_option: 'PAUSED',
-                rename_strategy: 'DEEP_RENAME',
-                name: new_campaign_name,
-            }).toString(),
-        };
-        const formBody = new URLSearchParams();
-        formBody.append('access_token', ctx.accessToken);
-        formBody.append('async', '1');
-        formBody.append('batch', JSON.stringify([batchItem]));
-        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formBody.toString(),
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) {
-            const e = data.error ?? {};
-            const err = new Error(e.message ?? `HTTP ${response.status}`);
-            err.response = { error: e };
-            throw err;
-        }
-        const sid = data.async_session_id;
-        if (!sid)
-            throw new Error(`Async batch missing async_session_id. Raw: ${JSON.stringify(data)}`);
-        return sid;
-    });
-    const newCampaignId = await pollAsyncSession(ctx, sessionId);
+    // Step 1: Deep copy via three-tier fallback
+    const campaignBodyParams = {
+        deep_copy: '1',
+        status_option: 'PAUSED',
+        rename_strategy: 'DEEP_RENAME',
+        name: new_campaign_name,
+    };
+    const newCampaignId = await copyWithTieredFallback(ctx, campaign_id, `${campaign_id}/copies`, campaignBodyParams, 'copied_campaign_id');
     // Step 2: Fetch all ad sets in the new campaign (auto-paginated)
     const adSets = await fetchAllAdSets(ctx, newCampaignId);
     if (adSets.length === 0) {

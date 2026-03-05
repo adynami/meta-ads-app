@@ -12,9 +12,18 @@ export const duplicatorTools = [
       type: 'object' as const,
       properties: {
         adset_id: { type: 'string', description: 'ID of the ad set to duplicate' },
-        target_campaign_id: { type: 'string', description: 'Campaign to copy the ad set into (default: same campaign)' },
-        new_name: { type: 'string', description: 'Name for the new ad set (default: original name + " Copy")' },
-        deep_copy: { type: 'boolean', description: 'Copy ads inside the ad set as well (default: true)' },
+        target_campaign_id: {
+          type: 'string',
+          description: 'Campaign to copy the ad set into (default: same campaign)',
+        },
+        new_name: {
+          type: 'string',
+          description: 'Name for the new ad set (default: original name + " Copy")',
+        },
+        deep_copy: {
+          type: 'boolean',
+          description: 'Copy ads inside the ad set as well (default: true)',
+        },
         status: {
           type: 'string',
           enum: ['PAUSED', 'ACTIVE', 'INHERITED_FROM_SOURCE'],
@@ -36,10 +45,24 @@ export const duplicatorTools = [
         headline_override: { type: 'string', description: 'Replace the headline' },
         cta_type_override: {
           type: 'string',
-          enum: ['LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'BOOK_TRAVEL', 'CONTACT_US', 'DOWNLOAD', 'GET_OFFER', 'GET_QUOTE', 'SUBSCRIBE', 'APPLY_NOW'],
+          enum: [
+            'LEARN_MORE',
+            'SHOP_NOW',
+            'SIGN_UP',
+            'BOOK_TRAVEL',
+            'CONTACT_US',
+            'DOWNLOAD',
+            'GET_OFFER',
+            'GET_QUOTE',
+            'SUBSCRIBE',
+            'APPLY_NOW',
+          ],
           description: 'Replace the CTA button type',
         },
-        url_override: { type: 'string', description: 'Replace destination URL in all link placements' },
+        url_override: {
+          type: 'string',
+          description: 'Replace destination URL in all link placements',
+        },
       },
       required: ['creative_id'],
     },
@@ -61,12 +84,14 @@ export const duplicatorTools = [
         funnel_urls: {
           type: 'array',
           items: { type: 'string' },
-          description: 'New destination URLs to assign to ad sets by index. Optional — omit to keep original URLs. If fewer URLs than ad sets, the last URL is reused for remaining ad sets. Provide one per ad set for full control.',
+          description:
+            'New destination URLs to assign to ad sets by index. Optional — omit to keep original URLs. If fewer URLs than ad sets, the last URL is reused for remaining ad sets. Provide one per ad set for full control.',
         },
         daily_budget_per_adset: {
           type: 'number',
           minimum: 1,
-          description: 'New daily budget per ad set in major currency units (e.g. 33 for $33/day). Optional — omit to keep original ad set budgets.',
+          description:
+            'New daily budget per ad set in major currency units (e.g. 33 for $33/day). Optional — omit to keep original ad set budgets.',
         },
       },
       required: ['campaign_id', 'new_campaign_name'],
@@ -76,12 +101,20 @@ export const duplicatorTools = [
 
 // ── Handler ──
 
-export async function handleDuplicatorTool(ctx: TenantContext, name: string, args: any): Promise<any> {
+export async function handleDuplicatorTool(
+  ctx: TenantContext,
+  name: string,
+  args: any,
+): Promise<any> {
   switch (name) {
-    case 'meta_duplicate_campaign': return duplicateCampaign(ctx, args);
-    case 'meta_duplicate_adset': return duplicateAdSet(ctx, args);
-    case 'meta_duplicate_creative': return duplicateCreative(ctx, args);
-    default: throw new Error(`Unknown tool: ${name}`);
+    case 'meta_duplicate_campaign':
+      return duplicateCampaign(ctx, args);
+    case 'meta_duplicate_adset':
+      return duplicateAdSet(ctx, args);
+    case 'meta_duplicate_creative':
+      return duplicateCreative(ctx, args);
+    default:
+      throw new Error(`Unknown tool: ${name}`);
   }
 }
 
@@ -105,19 +138,24 @@ async function fetchAllAdSets(ctx: TenantContext, campaignId: string): Promise<a
 }
 
 /** Poll an async Graph API session until completed or failed (~20 min max with exponential backoff). */
-async function pollAsyncSession(ctx: TenantContext, sessionId: string, maxAttempts = 50): Promise<string> {
+async function pollAsyncSession(
+  ctx: TenantContext,
+  sessionId: string,
+  maxAttempts = 50,
+): Promise<string> {
   const BASE_MS = 5_000;
   const MAX_MS = 30_000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
       const delay = Math.min(BASE_MS * Math.pow(2, attempt - 1), MAX_MS);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
     const session = await rateLimitedCall(() =>
       graphGet(ctx, sessionId, {
-        fields: 'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
+        fields:
+          'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
       }),
     );
     const status = (session.status ?? '').toLowerCase();
@@ -129,15 +167,19 @@ async function pollAsyncSession(ctx: TenantContext, sessionId: string, maxAttemp
         session.data?.copied_campaign_id;
       if (directId) return directId;
 
-      const batchResults: any[] = session.results ?? (Array.isArray(session.result) ? session.result : []);
+      const batchResults: any[] =
+        session.results ?? (Array.isArray(session.result) ? session.result : []);
       if (batchResults.length > 0) {
         try {
-          const body = typeof batchResults[0].body === 'string'
-            ? JSON.parse(batchResults[0].body)
-            : (batchResults[0].body ?? {});
+          const body =
+            typeof batchResults[0].body === 'string'
+              ? JSON.parse(batchResults[0].body)
+              : (batchResults[0].body ?? {});
           const campaignId: string = body.copied_campaign_id;
           if (campaignId) return campaignId;
-        } catch { /* fall through */ }
+        } catch {
+          /* fall through */
+        }
       }
 
       throw new Error(
@@ -147,7 +189,11 @@ async function pollAsyncSession(ctx: TenantContext, sessionId: string, maxAttemp
 
     if (status === 'failed' || status === 'error') {
       // Surface v25 error fields for actionable diagnostics
-      const userMsg = session.error_user_msg ?? session.error_user_title ?? session.error_message ?? JSON.stringify(session);
+      const userMsg =
+        session.error_user_msg ??
+        session.error_user_title ??
+        session.error_message ??
+        JSON.stringify(session);
       const code = session.error_code ? ` (code ${session.error_code})` : '';
       const subcode = session.error_subcode ? ` (subcode ${session.error_subcode})` : '';
       throw new Error(`Async copy session ${sessionId} failed: ${userMsg}${code}${subcode}`);
@@ -155,7 +201,199 @@ async function pollAsyncSession(ctx: TenantContext, sessionId: string, maxAttemp
     // in_progress / pending — keep polling
   }
 
-  throw new Error(`Async copy session ${sessionId} did not complete within ~20 minutes. The campaign may still be copying on Meta's side — check Ads Manager.`);
+  throw new Error(
+    `Async copy session ${sessionId} did not complete within ~20 minutes. The campaign may still be copying on Meta's side — check Ads Manager.`,
+  );
+}
+
+// ── Copy helpers (three-tier fallback) ──
+
+/** Detect Meta "too many objects to copy at once" error (code 100, subcode 1885194). */
+function isTooManyObjectsError(err: any): boolean {
+  const e = err?.response?.error;
+  return e?.code === 100 && e?.error_subcode === 1885194;
+}
+
+/** Fetch all ad IDs in an ad set (paginated). */
+async function fetchAdIdsForAdSet(ctx: TenantContext, adsetId: string): Promise<string[]> {
+  const ids: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const params: Record<string, any> = { fields: 'id', limit: 50 };
+    if (cursor) params.after = cursor;
+    const resp = await rateLimitedCall(() => graphGet(ctx, `${adsetId}/ads`, params));
+    for (const ad of resp.data ?? []) ids.push(ad.id);
+    cursor = resp.paging?.cursors?.after && resp.paging?.next ? resp.paging.cursors.after : null;
+  } while (cursor);
+  return ids;
+}
+
+/**
+ * Try async batch copy. Returns the copied object ID on success.
+ * Handles three response shapes: async_session_id, sync success array, sync error array.
+ */
+async function tryAsyncBatchCopy(
+  ctx: TenantContext,
+  relativeUrl: string,
+  bodyParams: Record<string, string>,
+  idField: 'copied_adset_id' | 'copied_campaign_id',
+): Promise<string> {
+  const batchItem = {
+    method: 'POST',
+    relative_url: relativeUrl,
+    body: new URLSearchParams(bodyParams).toString(),
+  };
+
+  const data = await rateLimitedCall(async () => {
+    const formBody = new URLSearchParams();
+    formBody.append('access_token', ctx.accessToken);
+    formBody.append('async', 'true');
+    formBody.append('batch', JSON.stringify([batchItem]));
+
+    const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody.toString(),
+    });
+
+    const result = (await response.json()) as any;
+    if (!response.ok || result.error) {
+      const e = result.error ?? {};
+      const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
+      err.response = { error: e };
+      throw err;
+    }
+    return result;
+  });
+
+  // Shape 1: Got an async session — poll it
+  if (data.async_session_id) {
+    const pollFn = idField === 'copied_adset_id' ? pollAsyncSessionForAdSet : pollAsyncSession;
+    return pollFn(ctx, data.async_session_id);
+  }
+
+  // Shape 2/3: Synchronous batch response (array)
+  if (Array.isArray(data) && data.length > 0) {
+    const entry = data[0];
+    const body = typeof entry.body === 'string' ? JSON.parse(entry.body) : (entry.body ?? {});
+    if (body.error) {
+      const err = new Error(body.error.message ?? 'Batch item error') as any;
+      err.response = { error: body.error };
+      throw err;
+    }
+    const copiedId: string = body[idField] ?? body.id;
+    if (copiedId) return copiedId;
+  }
+
+  throw new Error(`Async batch returned unexpected shape. Raw: ${JSON.stringify(data)}`);
+}
+
+/** Tier 3: Shallow-copy ad set then copy each ad individually. */
+async function decomposeAdSetCopy(
+  ctx: TenantContext,
+  adsetId: string,
+  bodyParams: Record<string, string>,
+): Promise<string> {
+  // Shallow copy (structure only, no ads)
+  const shallowParams = { ...bodyParams, deep_copy: '0' };
+  const shallowResult = await rateLimitedCall(() =>
+    graphPost(ctx, `${adsetId}/copies`, shallowParams),
+  );
+  const newAdSetId: string = shallowResult.copied_adset_id ?? shallowResult.id;
+  if (!newAdSetId)
+    throw new Error(`Shallow ad set copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
+
+  // Copy each ad individually into the new ad set
+  const adIds = await fetchAdIdsForAdSet(ctx, adsetId);
+  for (const adId of adIds) {
+    await rateLimitedCall(() =>
+      graphPost(ctx, `${adId}/copies`, {
+        adset_id: newAdSetId,
+        status_option: bodyParams.status_option ?? 'PAUSED',
+        rename_strategy: 'DEEP_RENAME',
+      }),
+    );
+  }
+
+  return newAdSetId;
+}
+
+/** Tier 3: Shallow-copy campaign then copy each ad set individually (using tiered fallback). */
+async function decomposeCampaignCopy(
+  ctx: TenantContext,
+  campaignId: string,
+  newName: string,
+): Promise<string> {
+  // Shallow copy campaign (structure only)
+  const shallowResult = await rateLimitedCall(() =>
+    graphPost(ctx, `${campaignId}/copies`, {
+      deep_copy: '0',
+      status_option: 'PAUSED',
+      rename_strategy: 'DEEP_RENAME',
+      name: newName,
+    }),
+  );
+  const newCampaignId: string = shallowResult.copied_campaign_id ?? shallowResult.id;
+  if (!newCampaignId)
+    throw new Error(`Shallow campaign copy returned no ID. Raw: ${JSON.stringify(shallowResult)}`);
+
+  // Copy each ad set from original into new campaign (using tiered fallback)
+  const adSets = await fetchAllAdSets(ctx, campaignId);
+  for (const adSet of adSets) {
+    const adSetBodyParams: Record<string, string> = {
+      deep_copy: '1',
+      status_option: 'PAUSED',
+      rename_strategy: 'DEEP_RENAME',
+      campaign_id: newCampaignId,
+    };
+    await copyWithTieredFallback(
+      ctx,
+      adSet.id,
+      `${adSet.id}/copies`,
+      adSetBodyParams,
+      'copied_adset_id',
+    );
+  }
+
+  return newCampaignId;
+}
+
+/**
+ * Three-tier copy fallback:
+ *  1. Direct POST (fast, works for small copies)
+ *  2. Async batch (handles medium copies)
+ *  3. Manual decomposition (handles 3+ child objects)
+ */
+async function copyWithTieredFallback(
+  ctx: TenantContext,
+  objectId: string,
+  relativeUrl: string,
+  bodyParams: Record<string, string>,
+  idField: 'copied_adset_id' | 'copied_campaign_id',
+): Promise<string> {
+  // Tier 1: Direct POST
+  try {
+    const result = await rateLimitedCall(() => graphPost(ctx, relativeUrl, bodyParams));
+    const copiedId: string = result[idField] ?? result.id;
+    if (copiedId) return copiedId;
+    throw new Error(`Direct copy returned no ID. Raw: ${JSON.stringify(result)}`);
+  } catch (err: any) {
+    if (!isTooManyObjectsError(err)) throw err;
+  }
+
+  // Tier 2: Async batch
+  try {
+    return await tryAsyncBatchCopy(ctx, relativeUrl, bodyParams, idField);
+  } catch (err: any) {
+    if (!isTooManyObjectsError(err)) throw err;
+  }
+
+  // Tier 3: Manual decomposition
+  if (idField === 'copied_adset_id') {
+    return decomposeAdSetCopy(ctx, objectId, bodyParams);
+  } else {
+    return decomposeCampaignCopy(ctx, objectId, bodyParams.name ?? 'Campaign Copy');
+  }
 }
 
 // ── Implementation ──
@@ -178,39 +416,13 @@ async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
   if (new_name) bodyParams.name = new_name;
   if (target_campaign_id) bodyParams.campaign_id = target_campaign_id;
 
-  const batchItem = {
-    method: 'POST',
-    relative_url: `${adset_id}/copies`,
-    body: new URLSearchParams(bodyParams).toString(),
-  };
-
-  const sessionId = await rateLimitedCall(async () => {
-    const formBody = new URLSearchParams();
-    formBody.append('access_token', ctx.accessToken);
-    formBody.append('async', '1');
-    formBody.append('batch', JSON.stringify([batchItem]));
-
-    const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody.toString(),
-    });
-
-    const data = await response.json() as any;
-    if (!response.ok || data.error) {
-      const e = data.error ?? {};
-      const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
-      err.response = { error: e };
-      throw err;
-    }
-
-    const sid: string = data.async_session_id;
-    if (!sid) throw new Error(`Async batch missing async_session_id. Raw: ${JSON.stringify(data)}`);
-    return sid;
-  });
-
-  // Poll for completion — the session result contains the new adset id in results[0].body
-  const newAdSetId = await pollAsyncSessionForAdSet(ctx, sessionId);
+  const newAdSetId = await copyWithTieredFallback(
+    ctx,
+    adset_id,
+    `${adset_id}/copies`,
+    bodyParams,
+    'copied_adset_id',
+  );
 
   return {
     success: true,
@@ -221,47 +433,60 @@ async function duplicateAdSet(ctx: TenantContext, args: any): Promise<any> {
 }
 
 /** Like pollAsyncSession but extracts copied_adset_id from the result. */
-async function pollAsyncSessionForAdSet(ctx: TenantContext, sessionId: string, maxAttempts = 50): Promise<string> {
+async function pollAsyncSessionForAdSet(
+  ctx: TenantContext,
+  sessionId: string,
+  maxAttempts = 50,
+): Promise<string> {
   const BASE_MS = 5_000;
   const MAX_MS = 30_000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
       const delay = Math.min(BASE_MS * Math.pow(2, attempt - 1), MAX_MS);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
     const session = await rateLimitedCall(() =>
       graphGet(ctx, sessionId, {
-        fields: 'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
+        fields:
+          'id,status,result,results,error_message,error_code,error_subcode,error_user_title,error_user_msg',
       }),
     );
     const status = (session.status ?? '').toLowerCase();
 
     if (status === 'completed') {
       // Try direct fields first
-      const directId: string =
-        session.copied_adset_id ??
-        session.result?.copied_adset_id;
+      const directId: string = session.copied_adset_id ?? session.result?.copied_adset_id;
       if (directId) return directId;
 
       // Try batch results array
-      const batchResults: any[] = session.results ?? (Array.isArray(session.result) ? session.result : []);
+      const batchResults: any[] =
+        session.results ?? (Array.isArray(session.result) ? session.result : []);
       if (batchResults.length > 0) {
         try {
-          const body = typeof batchResults[0].body === 'string'
-            ? JSON.parse(batchResults[0].body)
-            : (batchResults[0].body ?? {});
+          const body =
+            typeof batchResults[0].body === 'string'
+              ? JSON.parse(batchResults[0].body)
+              : (batchResults[0].body ?? {});
           const adsetId: string = body.copied_adset_id ?? body.id;
           if (adsetId) return adsetId;
-        } catch { /* fall through */ }
+        } catch {
+          /* fall through */
+        }
       }
 
-      throw new Error(`Async session ${sessionId} completed but no copied_adset_id found. Raw: ${JSON.stringify(session)}`);
+      throw new Error(
+        `Async session ${sessionId} completed but no copied_adset_id found. Raw: ${JSON.stringify(session)}`,
+      );
     }
 
     if (status === 'failed' || status === 'error') {
-      const userMsg = session.error_user_msg ?? session.error_user_title ?? session.error_message ?? JSON.stringify(session);
+      const userMsg =
+        session.error_user_msg ??
+        session.error_user_title ??
+        session.error_message ??
+        JSON.stringify(session);
       const code = session.error_code ? ` (code ${session.error_code})` : '';
       const subcode = session.error_subcode ? ` (subcode ${session.error_subcode})` : '';
       throw new Error(`Async copy session ${sessionId} failed: ${userMsg}${code}${subcode}`);
@@ -272,7 +497,14 @@ async function pollAsyncSessionForAdSet(ctx: TenantContext, sessionId: string, m
 }
 
 async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
-  const { creative_id, new_name, body_override, headline_override, cta_type_override, url_override } = args;
+  const {
+    creative_id,
+    new_name,
+    body_override,
+    headline_override,
+    cta_type_override,
+    url_override,
+  } = args;
 
   if (ctx.dryRun) {
     return {
@@ -286,15 +518,19 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
     access_token: ctx.accessToken,
     fields: 'id,name,object_story_spec,asset_feed_spec',
   });
-  const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`);
-  const creative = await response.json() as any;
+  const response = await fetch(
+    `https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`,
+  );
+  const creative = (await response.json()) as any;
   if (!response.ok || creative.error) {
     const e = creative.error ?? {};
     throw new Error(e.message ?? `HTTP ${response.status}`);
   }
 
   if (!creative.object_story_spec) {
-    throw new Error('Creative does not have an object_story_spec — cannot clone this type of creative.');
+    throw new Error(
+      'Creative does not have an object_story_spec — cannot clone this type of creative.',
+    );
   }
 
   // Step 2: Deep-clone and apply overrides
@@ -356,44 +592,21 @@ async function duplicateCampaign(ctx: TenantContext, args: any): Promise<any> {
     };
   }
 
-  // Step 1: Async deep copy via Graph API batch
-  const sessionId = await rateLimitedCall(async () => {
-    const batchItem = {
-      method: 'POST',
-      relative_url: `${campaign_id}/copies`,
-      body: new URLSearchParams({
-        deep_copy: '1',
-        status_option: 'PAUSED',
-        rename_strategy: 'DEEP_RENAME',
-        name: new_campaign_name,
-      }).toString(),
-    };
+  // Step 1: Deep copy via three-tier fallback
+  const campaignBodyParams: Record<string, string> = {
+    deep_copy: '1',
+    status_option: 'PAUSED',
+    rename_strategy: 'DEEP_RENAME',
+    name: new_campaign_name,
+  };
 
-    const formBody = new URLSearchParams();
-    formBody.append('access_token', ctx.accessToken);
-    formBody.append('async', '1');
-    formBody.append('batch', JSON.stringify([batchItem]));
-
-    const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody.toString(),
-    });
-
-    const data = await response.json() as any;
-    if (!response.ok || data.error) {
-      const e = data.error ?? {};
-      const err = new Error(e.message ?? `HTTP ${response.status}`) as any;
-      err.response = { error: e };
-      throw err;
-    }
-
-    const sid: string = data.async_session_id;
-    if (!sid) throw new Error(`Async batch missing async_session_id. Raw: ${JSON.stringify(data)}`);
-    return sid;
-  });
-
-  const newCampaignId = await pollAsyncSession(ctx, sessionId);
+  const newCampaignId = await copyWithTieredFallback(
+    ctx,
+    campaign_id,
+    `${campaign_id}/copies`,
+    campaignBodyParams,
+    'copied_campaign_id',
+  );
 
   // Step 2: Fetch all ad sets in the new campaign (auto-paginated)
   const adSets = await fetchAllAdSets(ctx, newCampaignId);
@@ -436,7 +649,10 @@ async function duplicateCampaign(ctx: TenantContext, args: any): Promise<any> {
     // Swap funnel URLs if provided
     if (funnelUrl) {
       const adsResponse = await rateLimitedCall(() =>
-        graphGet(ctx, `${adSet.id}/ads`, { fields: 'id,name,creative{id,object_story_spec}', limit: 50 }),
+        graphGet(ctx, `${adSet.id}/ads`, {
+          fields: 'id,name,creative{id,object_story_spec}',
+          limit: 50,
+        }),
       );
       const ads: any[] = adsResponse.data ?? [];
 
