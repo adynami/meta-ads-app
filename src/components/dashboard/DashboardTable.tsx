@@ -26,12 +26,14 @@ export interface DashboardRow {
 type Level = 'campaign' | 'adset' | 'ad';
 type SortDir = 'asc' | 'desc';
 
-interface Column {
+export interface Column {
   key: keyof DashboardRow;
   label: string;
   align: 'left' | 'right';
   levels: Level[];
   format: (v: any) => string;
+  mobileHide?: boolean;
+  subKey?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -84,8 +86,16 @@ const COLUMNS: Column[] = [
     align: 'left',
     levels: ['adset', 'ad'],
     format: (v) => v ?? '—',
+    mobileHide: true,
   },
-  { key: 'adset_name', label: 'Ad Set', align: 'left', levels: ['ad'], format: (v) => v ?? '—' },
+  {
+    key: 'adset_name',
+    label: 'Ad Set',
+    align: 'left',
+    levels: ['ad'],
+    format: (v) => v ?? '—',
+    mobileHide: true,
+  },
   {
     key: 'status',
     label: 'Status',
@@ -99,6 +109,7 @@ const COLUMNS: Column[] = [
     align: 'left',
     levels: ['campaign'],
     format: (v) => v ?? '—',
+    mobileHide: true,
   },
   {
     key: 'daily_budget',
@@ -106,6 +117,7 @@ const COLUMNS: Column[] = [
     align: 'right',
     levels: ['campaign', 'adset'],
     format: formatBudget,
+    mobileHide: true,
   },
   {
     key: 'spend',
@@ -120,6 +132,7 @@ const COLUMNS: Column[] = [
     align: 'right',
     levels: ['campaign', 'adset', 'ad'],
     format: formatInt,
+    mobileHide: true,
   },
   {
     key: 'clicks',
@@ -134,6 +147,7 @@ const COLUMNS: Column[] = [
     align: 'right',
     levels: ['campaign', 'adset', 'ad'],
     format: formatPct,
+    mobileHide: true,
   },
   {
     key: 'cpc',
@@ -141,6 +155,7 @@ const COLUMNS: Column[] = [
     align: 'right',
     levels: ['campaign', 'adset', 'ad'],
     format: formatCurrency,
+    mobileHide: true,
   },
   {
     key: 'conversions',
@@ -149,12 +164,68 @@ const COLUMNS: Column[] = [
     levels: ['campaign', 'adset', 'ad'],
     format: formatInt,
   },
+  // Conversion breakdown columns
+  {
+    key: 'conversions',
+    label: 'Purch.',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'purchase',
+  },
+  {
+    key: 'conversions',
+    label: 'Leads',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'lead',
+  },
+  {
+    key: 'conversions',
+    label: 'Checkouts',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'initiate_checkout',
+  },
+  {
+    key: 'conversions',
+    label: 'ATC',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'add_to_cart',
+  },
+  {
+    key: 'conversions',
+    label: 'Pay Info',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'add_payment_info',
+  },
+  {
+    key: 'conversions',
+    label: 'Reg.',
+    align: 'right',
+    levels: ['campaign', 'adset', 'ad'],
+    format: formatInt,
+    mobileHide: true,
+    subKey: 'complete_registration',
+  },
   {
     key: 'cpa',
     label: 'CPA',
     align: 'right',
     levels: ['campaign', 'adset', 'ad'],
     format: formatCurrency,
+    mobileHide: true,
   },
   {
     key: 'roas',
@@ -162,16 +233,22 @@ const COLUMNS: Column[] = [
     align: 'right',
     levels: ['campaign', 'adset', 'ad'],
     format: formatRatio,
+    mobileHide: true,
   },
 ];
 
-interface DashboardTableProps {
+/** Unique key for a column (handles multiple subKey columns sharing the same `key`). */
+function colId(col: Column): string {
+  return col.subKey ? `${col.key}_${col.subKey}` : col.key;
+}
+
+export interface DashboardTableProps {
   rows: DashboardRow[];
   level: Level;
   isLoading: boolean;
-  sortBy: keyof DashboardRow | null;
+  sortBy: string | null;
   sortDir: SortDir;
-  onSort: (key: keyof DashboardRow) => void;
+  onSort: (key: string) => void;
 }
 
 export function DashboardTable({
@@ -186,11 +263,17 @@ export function DashboardTable({
 
   if (isLoading) {
     return (
-      <table className="prose-chat-table w-full">
+      <table className="prose-chat-table min-w-[1000px] w-full">
         <thead>
           <tr>
             {visibleColumns.map((col) => (
-              <th key={col.key} className={cn(col.align === 'right' && 'text-right')}>
+              <th
+                key={colId(col)}
+                className={cn(
+                  col.align === 'right' && 'text-right',
+                  col.mobileHide && 'hidden sm:table-cell',
+                )}
+              >
                 {col.label}
               </th>
             ))}
@@ -200,7 +283,7 @@ export function DashboardTable({
           {Array.from({ length: 5 }).map((_, i) => (
             <tr key={i}>
               {visibleColumns.map((col) => (
-                <td key={col.key}>
+                <td key={colId(col)} className={cn(col.mobileHide && 'hidden sm:table-cell')}>
                   <div className="h-4 rounded animate-pulse bg-white/5" />
                 </td>
               ))}
@@ -220,21 +303,22 @@ export function DashboardTable({
   }
 
   return (
-    <table className="prose-chat-table w-full">
+    <table className="prose-chat-table min-w-[1000px] w-full">
       <thead>
         <tr>
           {visibleColumns.map((col) => (
             <th
-              key={col.key}
+              key={colId(col)}
               className={cn(
                 'cursor-pointer select-none hover:bg-white/5 transition-colors',
                 col.align === 'right' && 'text-right',
+                col.mobileHide && 'hidden sm:table-cell',
               )}
-              onClick={() => onSort(col.key)}
+              onClick={() => onSort(colId(col))}
             >
               <span className="inline-flex items-center gap-1">
                 {col.label}
-                {sortBy === col.key &&
+                {sortBy === colId(col) &&
                   (sortDir === 'asc' ? (
                     <ChevronUp className="w-3 h-3" />
                   ) : (
@@ -249,7 +333,13 @@ export function DashboardTable({
         {rows.map((row, i) => (
           <tr key={row.id ?? i}>
             {visibleColumns.map((col) => (
-              <td key={col.key} className={cn(col.align === 'right' && 'text-right')}>
+              <td
+                key={colId(col)}
+                className={cn(
+                  col.align === 'right' && 'text-right',
+                  col.mobileHide && 'hidden sm:table-cell',
+                )}
+              >
                 {col.key === 'status' && row.status ? (
                   <span
                     className={cn(
@@ -259,14 +349,8 @@ export function DashboardTable({
                   >
                     {row.status}
                   </span>
-                ) : col.key === 'conversions' &&
-                  row.conversion_breakdown &&
-                  Object.keys(row.conversion_breakdown).length > 0 ? (
-                  <span>
-                    {Object.entries(row.conversion_breakdown)
-                      .map(([type, count]) => `${count} ${type}`)
-                      .join(', ')}
-                  </span>
+                ) : col.subKey ? (
+                  formatInt(row.conversion_breakdown?.[col.subKey] ?? 0)
                 ) : col.key === 'name' ? (
                   <span className="font-medium">{row.name}</span>
                 ) : (
@@ -280,3 +364,5 @@ export function DashboardTable({
     </table>
   );
 }
+
+export { COLUMNS, colId };

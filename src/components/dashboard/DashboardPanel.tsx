@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardToolbar } from './DashboardToolbar';
-import { DashboardTable, type DashboardRow } from './DashboardTable';
+import { DashboardTable, type DashboardRow, COLUMNS, colId } from './DashboardTable';
 import type { Level, TimeRange, SortDir } from '@/types/dashboard';
 
 interface DashboardPanelProps {
@@ -17,7 +17,7 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
   const [rows, setRows] = useState<DashboardRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<keyof DashboardRow | null>('spend');
+  const [sortBy, setSortBy] = useState<string | null>('spend');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const fetchData = useCallback(async () => {
@@ -55,7 +55,7 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
     fetchData();
   }, [fetchData]);
 
-  const handleSort = (key: keyof DashboardRow) => {
+  const handleSort = (key: string) => {
     if (sortBy === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -81,8 +81,23 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
   // Client-side sort
   const sortedRows = [...rows].sort((a, b) => {
     if (!sortBy) return 0;
-    const aVal = a[sortBy];
-    const bVal = b[sortBy];
+
+    // Find the column definition for this sortBy key
+    const col = COLUMNS.find((c) => colId(c) === sortBy);
+
+    let aVal: any;
+    let bVal: any;
+
+    if (col?.subKey) {
+      // Sort by conversion breakdown subKey
+      aVal = a.conversion_breakdown?.[col.subKey] ?? 0;
+      bVal = b.conversion_breakdown?.[col.subKey] ?? 0;
+    } else {
+      const rowKey = sortBy as keyof DashboardRow;
+      aVal = a[rowKey];
+      bVal = b[rowKey];
+    }
+
     if (aVal == null && bVal == null) return 0;
     if (aVal == null) return 1;
     if (bVal == null) return -1;
@@ -107,19 +122,23 @@ export function DashboardPanel({ accountId }: DashboardPanelProps) {
         onRefresh={fetchData}
         isLoading={isLoading}
       />
-      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin px-6 py-4">
-        {error ? (
-          <div className="flex items-center justify-center h-64 text-red-400 text-sm">{error}</div>
-        ) : (
-          <DashboardTable
-            rows={sortedRows}
-            level={level}
-            isLoading={isLoading}
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onSort={handleSort}
-          />
-        )}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-4">
+        <div className="overflow-x-auto px-3 sm:px-6">
+          {error ? (
+            <div className="flex items-center justify-center h-64 text-red-400 text-sm">
+              {error}
+            </div>
+          ) : (
+            <DashboardTable
+              rows={sortedRows}
+              level={level}
+              isLoading={isLoading}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -92,7 +92,13 @@ export function MessageBubble({ message }: { message: Message }) {
           </div>
         )}
         {message.content && (
-          <div className={isUser ? 'message-user px-5 py-3' : 'message-assistant px-5 py-4'}>
+          <div
+            className={
+              isUser
+                ? 'message-user px-3 py-2 sm:px-5 sm:py-3'
+                : 'message-assistant px-3 py-3 sm:px-5 sm:py-4'
+            }
+          >
             {isUser ? (
               <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
             ) : (

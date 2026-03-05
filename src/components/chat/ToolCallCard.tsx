@@ -46,7 +46,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
 
   return (
     <div
-      className={`tool-card ${isError ? 'border-red-500/30 bg-red-500/5' : ''} ${isLoading ? 'tool-card-loading' : ''} px-4 py-3`}
+      className={`tool-card ${isError ? 'border-red-500/30 bg-red-500/5' : ''} ${isLoading ? 'tool-card-loading' : ''} px-3 py-2 sm:px-4 sm:py-3`}
     >
       <button
         onClick={() => !isLoading && setExpanded(!expanded)}
@@ -81,7 +81,7 @@ export function ToolCallCard({ toolCall }: { toolCall: ToolCall }) {
       </button>
 
       {!isLoading && !expanded && (
-        <p className="text-xs text-gray-400 mt-1 ml-6">{summarize(parsedResult)}</p>
+        <p className="text-xs text-gray-400 mt-1 ml-6 break-words">{summarize(parsedResult)}</p>
       )}
 
       {!isLoading && expanded && (

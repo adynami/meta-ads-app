@@ -73,8 +73,8 @@ export function DashboardToolbar({
       : TIME_RANGE_LABELS[timeRange];
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-6 py-2 sm:py-3 border-b border-white/5">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Level selector */}
         <div className="flex items-center bg-white/5 rounded-lg p-1">
           {levels.map((l) => (
@@ -82,7 +82,7 @@ export function DashboardToolbar({
               key={l.key}
               onClick={() => onLevelChange(l.key)}
               className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                'px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors',
                 level === l.key ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200',
               )}
             >
@@ -95,7 +95,7 @@ export function DashboardToolbar({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setTimeOpen(!timeOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-sm text-gray-300 hover:text-white transition-colors"
+            className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 text-xs sm:text-sm text-gray-300 hover:text-white transition-colors"
           >
             {buttonLabel}
             <ChevronDown className="w-4 h-4" />
@@ -168,16 +168,15 @@ export function DashboardToolbar({
             </div>
           )}
         </div>
+        {/* Refresh */}
+        <button
+          onClick={onRefresh}
+          disabled={isLoading}
+          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
+        </button>
       </div>
-
-      {/* Refresh */}
-      <button
-        onClick={onRefresh}
-        disabled={isLoading}
-        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
-      >
-        <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-      </button>
     </div>
   );
 }

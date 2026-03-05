@@ -431,7 +431,7 @@ export function ChatWindow({
         ) : messages.length === 0 ? (
           <div className="max-w-4xl mx-auto flex flex-col items-center justify-center h-full text-center pt-8 sm:pt-16 px-2">
             <div className="mb-8">
-              <span className="text-4xl font-bold">
+              <span className="text-3xl sm:text-4xl font-bold">
                 <span className="text-white">Ady</span>
                 <span className="gradient-text">nami</span>
               </span>
@@ -445,7 +445,7 @@ export function ChatWindow({
                 <button
                   key={i}
                   onClick={() => sendMessage(suggestion.text)}
-                  className="glass-card glass-card-hover rounded-xl p-4 flex items-center gap-3 text-left"
+                  className="glass-card glass-card-hover rounded-xl p-3 sm:p-4 flex items-center gap-3 text-left"
                 >
                   <suggestion.icon className="w-5 h-5 text-purple-400 flex-shrink-0" />
                   <span className="text-sm text-gray-300">{suggestion.text}</span>
@@ -478,10 +478,10 @@ export function ChatWindow({
       </div>
 
       {/* Input Bar */}
-      <div className="border-t border-white/5 bg-[#0d0d1a] p-4 shrink-0">
+      <div className="border-t border-white/5 bg-[#0d0d1a] p-2 sm:p-4 shrink-0">
         <div className="max-w-4xl mx-auto">
           <div
-            className={`flex flex-col gap-2 bg-white/5 border rounded-xl p-3 transition-colors ${
+            className={`flex flex-col gap-2 bg-white/5 border rounded-xl p-2 sm:p-3 transition-colors ${
               isDragOver ? 'border-purple-500 bg-purple-500/10' : 'border-white/10'
             }`}
             onDragOver={handleDragOver}

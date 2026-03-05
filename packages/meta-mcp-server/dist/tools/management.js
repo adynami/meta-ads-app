@@ -583,7 +583,7 @@ async function getInsights(ctx, args) {
     }
     const mapRow = (row) => {
         const m = computeMetrics(row);
-        const name = row.campaign_name ?? row.adset_name ?? row.ad_name ?? 'Account';
+        const name = row.ad_name ?? row.adset_name ?? row.campaign_name ?? 'Account';
         if (concise) {
             return { name, spend: m.spend, conversions: m.conversions, roas: m.roas, cpa: m.cpa };
         }
