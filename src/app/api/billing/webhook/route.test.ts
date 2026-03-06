@@ -103,7 +103,7 @@ describe('POST /api/billing/webhook', () => {
     expect(mockDb.insert).not.toHaveBeenCalled();
   });
 
-  it('handles checkout.session.completed top-up with valid credits', async () => {
+  it('handles checkout.session.completed credit pack with valid credits', async () => {
     mockConstructEvent.mockReturnValue({
       id: 'evt_1',
       type: 'checkout.session.completed',
@@ -111,7 +111,7 @@ describe('POST /api/billing/webhook', () => {
     });
     mockDb.select.mockReturnValue(mockDbChain([])); // no existing event
     mockPaymentIntentsRetrieve.mockResolvedValue({
-      metadata: { type: 'topup', userId: 'u1', credits: '25' },
+      metadata: { type: 'credit_pack', userId: 'u1', credits: '12' },
     });
 
     const res = await POST(makeReq('{}', { 'stripe-signature': 'sig' }));
@@ -120,7 +120,7 @@ describe('POST /api/billing/webhook', () => {
     expect(mockDb.insert).toHaveBeenCalled();
   });
 
-  it('skips top-up with invalid credits value', async () => {
+  it('skips credit pack with invalid credits value', async () => {
     mockConstructEvent.mockReturnValue({
       id: 'evt_2',
       type: 'checkout.session.completed',
@@ -128,7 +128,7 @@ describe('POST /api/billing/webhook', () => {
     });
     mockDb.select.mockReturnValue(mockDbChain([]));
     mockPaymentIntentsRetrieve.mockResolvedValue({
-      metadata: { type: 'topup', userId: 'u1', credits: 'abc' },
+      metadata: { type: 'credit_pack', userId: 'u1', credits: 'abc' },
     });
 
     const res = await POST(makeReq('{}', { 'stripe-signature': 'sig' }));

@@ -1585,19 +1585,19 @@ export default function DocsPage() {
                   plan: 'Starter',
                   price: '$49/mo',
                   annual: '$39/mo billed annually',
-                  details: '1 ad account \u00B7 100 conversations/mo',
+                  details: '1 ad account \u00B7 75 credits/mo',
                 },
                 {
                   plan: 'Pro',
                   price: '$149/mo',
                   annual: '$119/mo billed annually',
-                  details: 'Up to 5 accounts \u00B7 400 conversations/mo',
+                  details: 'Up to 5 accounts \u00B7 250 credits/mo',
                 },
                 {
                   plan: 'Agency',
                   price: '$349/mo',
                   annual: '$279/mo billed annually',
-                  details: 'Unlimited accounts \u00B7 1,000 conversations/mo \u00B7 MCP access',
+                  details: 'Unlimited accounts \u00B7 650 credits/mo \u00B7 MCP access',
                 },
               ].map((p) => (
                 <div key={p.plan} className="glass-card rounded-xl p-4 text-center">

@@ -34,10 +34,10 @@ vi.mock('@/lib/crypto', () => ({
 vi.mock('@/lib/plans', () => ({
   isTrialExpired: vi.fn(() => false),
   PLAN_LIMITS: {
-    trial: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 25 },
-    basic: { adAccounts: 1, hasMcp: false, monthlyApiCalls: 100 },
-    pro: { adAccounts: 5, hasMcp: false, monthlyApiCalls: 400 },
-    agency: { adAccounts: Infinity, hasMcp: true, monthlyApiCalls: 1000 },
+    trial: { adAccounts: 1, hasMcp: false, monthlyCredits: 25 },
+    basic: { adAccounts: 1, hasMcp: false, monthlyCredits: 75 },
+    pro: { adAccounts: 5, hasMcp: false, monthlyCredits: 250 },
+    agency: { adAccounts: Infinity, hasMcp: true, monthlyCredits: 650 },
   },
 }));
 
@@ -116,7 +116,7 @@ describe('POST /api/chat', () => {
     mockDb.select.mockImplementation(() => {
       callCount++;
       if (callCount === 1) return mockDbChain([mockUser]);
-      return mockDbChain([{ apiCalls: 100 }]); // at limit for basic plan
+      return mockDbChain([{ apiCalls: 75 }]); // at limit for basic plan
     });
 
     const res = await POST(makeReq());

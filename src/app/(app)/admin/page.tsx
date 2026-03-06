@@ -163,7 +163,7 @@ export default function AdminPage() {
                 <p className="text-2xl font-bold">{summary.totalUsers}</p>
               </div>
               <div className="glass-card rounded-xl p-5">
-                <p className="text-sm text-gray-400 mb-1">API Calls</p>
+                <p className="text-sm text-gray-400 mb-1">Credits Used</p>
                 <p className="text-2xl font-bold">{summary.totalApiCalls.toLocaleString()}</p>
               </div>
               <div className="glass-card rounded-xl p-5">
@@ -185,9 +185,11 @@ export default function AdminPage() {
                   <tr className="border-b border-white/10">
                     <th className="text-left px-4 py-3 text-gray-400 font-medium">User</th>
                     <th className="text-left px-4 py-3 text-gray-400 font-medium">Plan</th>
-                    <th className="text-right px-4 py-3 text-gray-400 font-medium">API Calls</th>
+                    <th className="text-right px-4 py-3 text-gray-400 font-medium">Credits</th>
                     <th className="text-right px-4 py-3 text-gray-400 font-medium">Cost</th>
-                    <th className="text-right px-4 py-3 text-gray-400 font-medium">Bonus Calls</th>
+                    <th className="text-right px-4 py-3 text-gray-400 font-medium">
+                      Bonus Credits
+                    </th>
                     <th className="text-center px-4 py-3 text-gray-400 font-medium">Admin</th>
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -224,7 +226,7 @@ export default function AdminPage() {
                         <span className="tabular-nums">{user.bonusCalls}</span>
                         <button
                           onClick={() => {
-                            const amount = window.prompt('Add bonus calls:', '10');
+                            const amount = window.prompt('Add bonus credits:', '10');
                             if (amount && !isNaN(Number(amount))) {
                               patchUser(user.id, { bonusCalls: user.bonusCalls + Number(amount) });
                             }

@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
         if (paymentIntentId) {
           const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
           const metadata = paymentIntent.metadata;
-          if (metadata?.type === 'topup' && metadata.userId && metadata.credits) {
+          if (
+            (metadata?.type === 'topup' || metadata?.type === 'credit_pack') &&
+            metadata.userId &&
+            metadata.credits
+          ) {
             const credits = parseInt(metadata.credits, 10);
             if (isNaN(credits) || credits <= 0) {
               console.error(
@@ -73,7 +77,9 @@ export async function POST(req: NextRequest) {
               .update(users)
               .set({ bonusCalls: sql`bonus_calls + ${credits}` })
               .where(eq(users.id, metadata.userId));
-            console.log(`[webhook] Top-up: +${credits} bonus calls for user ${metadata.userId}`);
+            console.log(
+              `[webhook] Credit pack: +${credits} bonus credits for user ${metadata.userId}`,
+            );
           }
         }
         break;

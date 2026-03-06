@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Check, Lock, Plus } from 'lucide-react';
-import { PLAN_LIMITS } from '@/lib/plans';
+import { PLAN_LIMITS, OVERAGE_RATES, type Plan } from '@/lib/plans';
 
 const plans = {
   basic: {
     name: 'Starter',
     monthly: 49,
     annual: 39,
+    overageRate: OVERAGE_RATES.basic,
     features: [
       '1 Meta ad account',
-      '100 AI conversations/month',
+      '75 credits/month',
       'Campaign management',
       'Performance reporting',
       'Audience builder',
@@ -22,9 +23,10 @@ const plans = {
     name: 'Pro',
     monthly: 149,
     annual: 119,
+    overageRate: OVERAGE_RATES.pro,
     features: [
       '5 Meta ad accounts',
-      '400 AI conversations/month',
+      '250 credits/month',
       'Everything in Starter',
       'Zero-conversion diagnostics',
       'Creative performance analysis',
@@ -35,9 +37,10 @@ const plans = {
     name: 'Agency',
     monthly: 349,
     annual: 279,
+    overageRate: OVERAGE_RATES.agency,
     features: [
       'Unlimited ad accounts',
-      '1,000 AI conversations/month',
+      '650 credits/month',
       'Everything in Pro',
       'Team seats (5 users)',
       'Claude MCP Integration',
@@ -48,10 +51,10 @@ const plans = {
 
 type PlanId = keyof typeof plans;
 
-const topupPacks = [
-  { pack: '25' as const, calls: 25, price: 19 },
-  { pack: '100' as const, calls: 100, price: 59 },
-  { pack: '250' as const, calls: 250, price: 119 },
+const creditPacks = [
+  { pack: '12' as const, credits: 12, price: 9 },
+  { pack: '45' as const, credits: 45, price: 29 },
+  { pack: '120' as const, credits: 120, price: 69 },
 ];
 
 interface UserData {
@@ -121,13 +124,13 @@ export default function BillingPage() {
     }
   }
 
-  async function buyTopup(pack: string) {
-    setLoading(`topup-${pack}`);
+  async function buyCreditPack(pack: string) {
+    setLoading(`pack-${pack}`);
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'topup', pack }),
+        body: JSON.stringify({ type: 'credit_pack', pack }),
       });
       const data = await res.json();
       if (data.url) {
@@ -146,10 +149,12 @@ export default function BillingPage() {
     }
   }
 
-  const apiCalls = usageData?.apiCalls ?? 0;
-  const callLimit = planLimits.monthlyApiCalls;
-  const bonusCalls = userData?.bonusCalls ?? 0;
-  const usagePercent = Math.min(100, Math.round((apiCalls / callLimit) * 100));
+  const creditsUsed = usageData?.apiCalls ?? 0;
+  const creditLimit = planLimits.monthlyCredits;
+  const bonusCredits = userData?.bonusCalls ?? 0;
+  const usagePercent = Math.min(100, Math.round((creditsUsed / creditLimit) * 100));
+  const overageCredits = Math.max(0, creditsUsed - creditLimit);
+  const overageRate = OVERAGE_RATES[(currentPlan as Plan) ?? 'trial'];
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -180,8 +185,13 @@ export default function BillingPage() {
                   <p className="text-2xl font-bold">Free Trial</p>
                 )}
                 <p className="text-sm text-gray-400 mt-2">
-                  {callLimit} AI conversations/month
-                  {bonusCalls > 0 && ` + ${bonusCalls} bonus calls`}
+                  {creditLimit} credits/month
+                  {bonusCredits > 0 && ` + ${bonusCredits} bonus credits`}
+                  {currentPlanConfig && (
+                    <span className="ml-2 text-gray-500">
+                      · Overage: ${currentPlanConfig.overageRate.toFixed(2)}/credit
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -228,14 +238,14 @@ export default function BillingPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="glass-card rounded-xl p-6">
-              <h3 className="text-sm font-medium text-gray-400 mb-3">AI Conversations</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Credits Used</h3>
               {dataLoading ? (
                 <p className="text-3xl font-bold mb-1">—</p>
               ) : (
                 <>
                   <p className="text-3xl font-bold mb-1">
-                    {apiCalls}{' '}
-                    <span className="text-base text-gray-400 font-normal">/ {callLimit}</span>
+                    {creditsUsed}{' '}
+                    <span className="text-base text-gray-400 font-normal">/ {creditLimit}</span>
                   </p>
                   <div className="w-full bg-white/10 rounded-full h-2 mt-3 mb-2">
                     <div
@@ -243,20 +253,28 @@ export default function BillingPage() {
                       style={{ width: `${usagePercent}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">{usagePercent}% used this month</p>
+                  <p className="text-xs text-gray-500">
+                    {usagePercent}% used this month
+                    {overageCredits > 0 && (
+                      <span className="text-yellow-400 ml-2">
+                        · {overageCredits} overage credit{overageCredits !== 1 ? 's' : ''} at $
+                        {overageRate.toFixed(2)}/ea
+                      </span>
+                    )}
+                  </p>
                 </>
               )}
             </div>
 
             <div className="glass-card rounded-xl p-6">
-              <h3 className="text-sm font-medium text-gray-400 mb-3">Bonus Calls</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Bonus Credits</h3>
               {dataLoading ? (
                 <p className="text-3xl font-bold mb-1">—</p>
               ) : (
                 <>
-                  <p className="text-3xl font-bold mb-1">{bonusCalls}</p>
+                  <p className="text-3xl font-bold mb-1">{bonusCredits}</p>
                   <p className="text-xs text-gray-500">
-                    {bonusCalls > 0
+                    {bonusCredits > 0
                       ? 'Available credits (never expire)'
                       : 'Purchase credit packs below'}
                   </p>
@@ -268,31 +286,32 @@ export default function BillingPage() {
 
         <div className="h-px bg-white/10 mb-12"></div>
 
-        {/* Top Up */}
+        {/* Credit Packs */}
         <div className="mb-12">
-          <h2 className="text-xl font-semibold mb-2">Top Up</h2>
+          <h2 className="text-xl font-semibold mb-2">Credit Packs</h2>
           <p className="text-sm text-gray-400 mb-6">
-            Need more conversations? Buy credit packs — they never expire and are used after your
-            monthly allowance runs out.
+            Need more credits? Buy a pack — they never expire and are used after your monthly
+            allowance runs out.
           </p>
           <div className="grid sm:grid-cols-3 gap-4">
-            {topupPacks.map(({ pack, calls, price }) => (
+            {creditPacks.map(({ pack, credits, price }) => (
               <div
                 key={pack}
                 className="glass-card rounded-xl p-5 flex flex-col items-center text-center"
               >
                 <div className="flex items-center gap-1 mb-2">
                   <Plus className="w-4 h-4 text-purple-400" />
-                  <span className="text-2xl font-bold">{calls}</span>
+                  <span className="text-2xl font-bold">{credits}</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-3">conversations</p>
+                <p className="text-sm text-gray-400 mb-1">credits</p>
+                <p className="text-xs text-gray-500 mb-3">${(price / credits).toFixed(2)}/credit</p>
                 <p className="text-lg font-semibold mb-4">${price}</p>
                 <button
-                  onClick={() => buyTopup(pack)}
+                  onClick={() => buyCreditPack(pack)}
                   disabled={loading !== null}
                   className="w-full py-2 rounded-lg border border-white/20 hover:bg-white/5 transition-colors font-medium text-sm"
                 >
-                  {loading === `topup-${pack}` ? 'Redirecting...' : 'Buy'}
+                  {loading === `pack-${pack}` ? 'Redirecting...' : 'Buy'}
                 </button>
               </div>
             ))}
@@ -344,10 +363,13 @@ export default function BillingPage() {
                   <span className="text-3xl font-bold">${getPrice(plan)}</span>
                   <span className="text-gray-400 text-sm"> /mo</span>
                 </div>
-                <p className="text-xs text-gray-500 mb-4">
+                <p className="text-xs text-gray-500 mb-1">
                   {id === 'basic'
                     ? '3-day free trial · Then billed monthly'
                     : 'Billed monthly · Cancel anytime'}
+                </p>
+                <p className="text-xs text-gray-500 mb-4">
+                  Overage: ${plan.overageRate.toFixed(2)}/credit beyond included
                 </p>
                 <ul className="space-y-2 mb-6 min-h-[200px]">
                   {plan.features.map((feature, i) => (

@@ -25,16 +25,16 @@ export const ANNUAL_PRICE_IDS: Record<PricePlan, string | undefined> = {
   agency: process.env.STRIPE_AGENCY_ANNUAL_PRICE_ID,
 };
 
-export const TOPUP_PRICE_IDS = {
-  '25': process.env.STRIPE_TOPUP_25_PRICE_ID!,
-  '100': process.env.STRIPE_TOPUP_100_PRICE_ID!,
-  '250': process.env.STRIPE_TOPUP_250_PRICE_ID!,
+export const CREDIT_PACK_PRICE_IDS = {
+  '12': process.env.STRIPE_CREDIT_PACK_12_PRICE_ID!,
+  '45': process.env.STRIPE_CREDIT_PACK_45_PRICE_ID!,
+  '120': process.env.STRIPE_CREDIT_PACK_120_PRICE_ID!,
 } as const;
 
-export type TopupPack = keyof typeof TOPUP_PRICE_IDS;
+export type CreditPack = keyof typeof CREDIT_PACK_PRICE_IDS;
 
-export const TOPUP_AMOUNTS: Record<string, number> = {
-  [process.env.STRIPE_TOPUP_25_PRICE_ID!]: 25,
-  [process.env.STRIPE_TOPUP_100_PRICE_ID!]: 100,
-  [process.env.STRIPE_TOPUP_250_PRICE_ID!]: 250,
+export const CREDIT_PACK_AMOUNTS: Record<string, number> = {
+  [process.env.STRIPE_CREDIT_PACK_12_PRICE_ID!]: 12,
+  [process.env.STRIPE_CREDIT_PACK_45_PRICE_ID!]: 45,
+  [process.env.STRIPE_CREDIT_PACK_120_PRICE_ID!]: 120,
 };

@@ -13,7 +13,7 @@ const plans = [
     description: 'Best for solo founders and small teams managing a single ad account.',
     accounts: '1 ad account',
     features: [
-      '100 conversations/month',
+      '75 credits/month',
       'Campaign creation & management',
       'Performance reporting & breakdowns',
       'Audience builder',
@@ -29,7 +29,7 @@ const plans = [
     description: 'Best for growth teams and media buyers running multiple accounts.',
     accounts: '5 ad accounts',
     features: [
-      '400 conversations/month',
+      '250 credits/month',
       'Everything in Starter',
       'Bulk operations across accounts',
       'Zero-conversion diagnostics',
@@ -46,7 +46,7 @@ const plans = [
     description: 'Best for agencies and teams managing client portfolios at scale.',
     accounts: 'Unlimited accounts',
     features: [
-      '1,000 conversations/month',
+      '650 credits/month',
       'Everything in Pro',
       'Team seats (up to 5 users)',
       'White-label reporting exports',

@@ -7,16 +7,16 @@ import {
   getStripe,
   PRICE_IDS,
   ANNUAL_PRICE_IDS,
-  TOPUP_PRICE_IDS,
+  CREDIT_PACK_PRICE_IDS,
   type PricePlan,
-  type TopupPack,
+  type CreditPack,
 } from '@/lib/stripe';
 import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/billing/checkout
  * Body: { plan: 'basic' | 'pro' | 'agency' }
- *   OR  { type: 'topup', pack: '25' | '100' | '250' }
+ *   OR  { type: 'credit_pack', pack: '12' | '45' | '120' }
  * Returns: { url: string } — Stripe Checkout session URL
  */
 export async function POST(req: NextRequest) {
@@ -56,22 +56,22 @@ export async function POST(req: NextRequest) {
     await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
   }
 
-  // Top-up credit pack (one-time payment)
-  if (body.type === 'topup') {
-    const pack = body.pack as TopupPack;
-    if (!pack || !(pack in TOPUP_PRICE_IDS)) {
-      return Response.json({ error: 'Invalid top-up pack' }, { status: 400 });
+  // Credit pack (one-time payment)
+  if (body.type === 'credit_pack') {
+    const pack = body.pack as CreditPack;
+    if (!pack || !(pack in CREDIT_PACK_PRICE_IDS)) {
+      return Response.json({ error: 'Invalid credit pack' }, { status: 400 });
     }
 
     const credits = parseInt(pack, 10);
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'payment',
-      line_items: [{ price: TOPUP_PRICE_IDS[pack], quantity: 1 }],
-      success_url: `${process.env.AUTH_URL}/billing?topup=success`,
+      line_items: [{ price: CREDIT_PACK_PRICE_IDS[pack], quantity: 1 }],
+      success_url: `${process.env.AUTH_URL}/billing?credits=success`,
       cancel_url: `${process.env.AUTH_URL}/billing`,
       payment_intent_data: {
-        metadata: { userId: user.id, type: 'topup', credits: String(credits) },
+        metadata: { userId: user.id, type: 'credit_pack', credits: String(credits) },
       },
     });
 

@@ -116,8 +116,8 @@ export default function PrivacyPolicy() {
 
               <h3 className="text-lg font-semibold text-white mt-6 mb-3">2.4 Usage Data</h3>
               <p>
-                We track API call counts and token usage per month for billing and plan enforcement
-                purposes.
+                We track credit usage and token consumption per month for billing and plan
+                enforcement purposes.
               </p>
             </section>
 

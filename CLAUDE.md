@@ -144,6 +144,9 @@ STRIPE_WEBHOOK_SECRET=     # Stripe webhook signing secret
 NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID=
 NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=
 NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID=
+STRIPE_CREDIT_PACK_12_PRICE_ID=
+STRIPE_CREDIT_PACK_45_PRICE_ID=
+STRIPE_CREDIT_PACK_120_PRICE_ID=
 ```
 
 ### Optional
@@ -158,16 +161,22 @@ STRIPE_PRO_ANNUAL_PRICE_ID=
 STRIPE_AGENCY_ANNUAL_PRICE_ID=
 ```
 
-## Plan Tiers
+## Plan Tiers (Credit-Based Model)
 
-| Plan | Ad Accounts | Monthly API Calls | MCP Access |
-|---|---|---|---|
-| trial | 1 | 25 | No |
-| basic | 1 | 100 | No |
-| pro | 5 | 400 | No |
-| agency | Unlimited | 1,000 | Yes |
+| Plan | Ad Accounts | Monthly Credits | Overage Rate | MCP Access |
+|---|---|---|---|---|
+| trial | 1 | 25 | $0.90/credit | No |
+| basic | 1 | 75 | $0.90/credit | No |
+| pro | 5 | 250 | $0.75/credit | No |
+| agency | Unlimited | 650 | $0.60/credit | Yes |
 
-Trial expires 3 days after signup. Bonus calls can be added by admin.
+1 credit = 1 conversation turn (one message sent, one response received). Overage kicks in after monthly credits are exhausted — users are never hard-blocked. Bonus credits (from credit packs) never expire and are consumed after monthly credits run out.
+
+**Credit packs**: 12 credits ($9), 45 credits ($29), 120 credits ($69)
+
+**Annual pricing**: 20% discount — Starter $39/mo, Pro $119/mo, Agency $279/mo
+
+Trial expires 3 days after signup. Bonus credits can be added by admin.
 
 ## Improvement Backlog
 

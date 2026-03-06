@@ -53,14 +53,14 @@ export async function POST(req: NextRequest) {
         .where(and(eq(usage.userId, user.id), eq(usage.month, month)))
         .limit(1);
 
-      const planCallsLeft = planLimits.monthlyApiCalls - (monthUsage?.apiCalls ?? 0);
-      if (planCallsLeft <= 0 && (user.bonusCalls ?? 0) <= 0) {
+      const creditsLeft = planLimits.monthlyCredits - (monthUsage?.apiCalls ?? 0);
+      if (creditsLeft <= 0 && (user.bonusCalls ?? 0) <= 0) {
         return Response.json(
           {
-            error: `You've reached your monthly limit of ${planLimits.monthlyApiCalls} API calls on the ${user.plan} plan. Upgrade or buy more calls.`,
+            error: `You've used all ${planLimits.monthlyCredits} credits on the ${user.plan} plan. Buy a credit pack or upgrade for more.`,
             code: 'RATE_LIMITED',
             canTopUp: true,
-            usage: { current: monthUsage?.apiCalls ?? 0, limit: planLimits.monthlyApiCalls },
+            usage: { current: monthUsage?.apiCalls ?? 0, limit: planLimits.monthlyCredits },
           },
           { status: 429 },
         );
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           adAccountId: null,
           conversationId: body.conversationId,
-          useBonusCall: planCallsLeft <= 0,
+          useBonusCall: creditsLeft <= 0,
           existingContext,
         };
 
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         adAccountId: account.id,
         conversationId: body.conversationId,
-        useBonusCall: planCallsLeft <= 0,
+        useBonusCall: creditsLeft <= 0,
         existingContext,
       };
 

@@ -245,7 +245,7 @@ export function ChatWindow({
         if (err.code === 'RATE_LIMITED' && err.canTopUp) {
           const errorMessage: Message = {
             role: 'assistant',
-            content: `You've reached your monthly conversation limit. [Buy more calls](/billing) to continue chatting, or upgrade your plan.`,
+            content: `You've used all your credits this month. [Buy a credit pack](/billing) to keep going, or upgrade your plan.`,
           };
           setMessages((prev) => [...prev, errorMessage]);
           return;

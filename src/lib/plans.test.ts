@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTrialExpired, canAddAccount } from './plans';
+import { isTrialExpired, canAddAccount, PLAN_LIMITS, OVERAGE_RATES } from './plans';
 
 describe('isTrialExpired', () => {
   it('returns false for non-trial plan', () => {
@@ -40,5 +40,22 @@ describe('canAddAccount', () => {
 
   it('agency: allows any count', () => {
     expect(canAddAccount('agency', 100)).toBe(true);
+  });
+});
+
+describe('PLAN_LIMITS', () => {
+  it('has correct credit allotments', () => {
+    expect(PLAN_LIMITS.trial.monthlyCredits).toBe(25);
+    expect(PLAN_LIMITS.basic.monthlyCredits).toBe(75);
+    expect(PLAN_LIMITS.pro.monthlyCredits).toBe(250);
+    expect(PLAN_LIMITS.agency.monthlyCredits).toBe(650);
+  });
+});
+
+describe('OVERAGE_RATES', () => {
+  it('has tiered overage rates', () => {
+    expect(OVERAGE_RATES.basic).toBe(0.9);
+    expect(OVERAGE_RATES.pro).toBe(0.75);
+    expect(OVERAGE_RATES.agency).toBe(0.6);
   });
 });

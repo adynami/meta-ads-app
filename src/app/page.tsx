@@ -772,7 +772,7 @@ export default function Home() {
               <ul className="space-y-3 mb-8 text-sm">
                 {[
                   '1 Meta ad account',
-                  '100 AI conversations/month',
+                  '75 credits/month',
                   'Campaign creation & management',
                   'Performance reporting & breakdowns',
                   'Visual campaign dashboard',
@@ -812,7 +812,7 @@ export default function Home() {
               <ul className="space-y-3 mb-8 text-sm">
                 {[
                   'Up to 5 Meta ad accounts',
-                  '400 AI conversations/month',
+                  '250 credits/month',
                   'Everything in Starter',
                   'Bulk operations across accounts',
                   'Zero-conversion diagnostic workflows',
@@ -852,7 +852,7 @@ export default function Home() {
               <ul className="space-y-3 mb-8 text-sm">
                 {[
                   'Unlimited Meta ad accounts',
-                  '1,000 AI conversations/month',
+                  '650 credits/month',
                   'Everything in Pro',
                   'Team seats (up to 5 users)',
                   'White-label reporting exports',
