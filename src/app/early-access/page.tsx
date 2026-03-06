@@ -34,9 +34,8 @@ function EmailForm({ id, email, setEmail, status, handleSubmit, errorMsg }: Emai
           <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center mx-auto mb-3">
             <Check className="w-6 h-6" />
           </div>
-          <p className="text-lg font-semibold mb-1">You&apos;re on the list.</p>
-          <p className="text-gray-400 text-sm">
-            We&apos;ll email you when your spot opens up. Check your inbox for a confirmation.
+          <p className="text-lg font-semibold">
+            You&apos;re on the list. We&apos;ll email you when your spot opens up.
           </p>
         </div>
       ) : (
