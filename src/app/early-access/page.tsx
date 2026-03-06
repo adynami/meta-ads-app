@@ -17,6 +17,58 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+interface EmailFormProps {
+  id?: string;
+  email: string;
+  setEmail: (email: string) => void;
+  status: 'idle' | 'loading' | 'success' | 'error';
+  handleSubmit: (e: React.FormEvent) => void;
+  errorMsg: string;
+}
+
+function EmailForm({ id, email, setEmail, status, handleSubmit, errorMsg }: EmailFormProps) {
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-4" id={id}>
+      {status === 'success' ? (
+        <div className="glass-card rounded-2xl p-6 text-center">
+          <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center mx-auto mb-3">
+            <Check className="w-6 h-6" />
+          </div>
+          <p className="text-lg font-semibold mb-1">You&apos;re on the list.</p>
+          <p className="text-gray-400 text-sm">
+            We&apos;ll email you when your spot opens up. Check your inbox for a confirmation.
+          </p>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            required
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-gray-500 outline-none focus:border-purple-500/50 transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            className="gradient-bg px-6 py-3.5 rounded-xl font-semibold text-sm glow-btn inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+          >
+            {status === 'loading' ? (
+              'Joining...'
+            ) : (
+              <>
+                Get Early Access <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+      )}
+      {status === 'error' && <p className="text-red-400 text-xs mt-2">{errorMsg}</p>}
+    </form>
+  );
+}
+
 export default function EarlyAccess() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -63,47 +115,6 @@ export default function EarlyAccess() {
       setErrorMsg(err.message);
     }
   };
-
-  const EmailForm = ({ id }: { id?: string }) => (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-4" id={id}>
-      {status === 'success' ? (
-        <div className="glass-card rounded-2xl p-6 text-center">
-          <div className="w-12 h-12 rounded-full gradient-bg flex items-center justify-center mx-auto mb-3">
-            <Check className="w-6 h-6" />
-          </div>
-          <p className="text-lg font-semibold mb-1">You&apos;re on the list.</p>
-          <p className="text-gray-400 text-sm">
-            We&apos;ll email you when your spot opens up. Check your inbox for a confirmation.
-          </p>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            required
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-gray-500 outline-none focus:border-purple-500/50 transition-colors"
-          />
-          <button
-            type="submit"
-            disabled={status === 'loading'}
-            className="gradient-bg px-6 py-3.5 rounded-xl font-semibold text-sm glow-btn inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
-          >
-            {status === 'loading' ? (
-              'Joining...'
-            ) : (
-              <>
-                Get Early Access <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </div>
-      )}
-      {status === 'error' && <p className="text-red-400 text-xs mt-2">{errorMsg}</p>}
-    </form>
-  );
 
   const timeCards = [
     { time: '2.5 hrs', task: 'Pulling reports and exporting CSVs' },
@@ -281,7 +292,14 @@ export default function EarlyAccess() {
             Early access members get priority onboarding + a 3-day free trial.
           </p>
 
-          <EmailForm id="hero-form" />
+          <EmailForm
+            id="hero-form"
+            email={email}
+            setEmail={setEmail}
+            status={status}
+            handleSubmit={handleSubmit}
+            errorMsg={errorMsg}
+          />
 
           <p className="text-xs text-gray-600">No credit card required. Takes 5 seconds.</p>
         </div>
@@ -771,7 +789,14 @@ export default function EarlyAccess() {
             Early access is limited. We onboard in batches to ensure quality.
           </p>
 
-          <EmailForm id="benefits-form" />
+          <EmailForm
+            id="benefits-form"
+            email={email}
+            setEmail={setEmail}
+            status={status}
+            handleSubmit={handleSubmit}
+            errorMsg={errorMsg}
+          />
         </div>
       </section>
 
@@ -791,7 +816,14 @@ export default function EarlyAccess() {
             through them.
           </p>
 
-          <EmailForm id="final-form" />
+          <EmailForm
+            id="final-form"
+            email={email}
+            setEmail={setEmail}
+            status={status}
+            handleSubmit={handleSubmit}
+            errorMsg={errorMsg}
+          />
           <p className="text-xs text-gray-600">
             Priority onboarding + 3-day trial. No credit card.
           </p>
