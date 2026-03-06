@@ -15,35 +15,67 @@ function withSecurityHeaders(response: NextResponse): NextResponse {
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+  const BYPASS_SECRET = process.env.LAUNCH_BYPASS_SECRET;
 
-  // Public routes — no auth required
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/onboarding',
-    '/about',
-    '/docs',
-    '/early-access',
-    '/privacy',
-    '/terms',
-    '/deletion-status',
-    '/api/auth',
-    '/api/billing/webhook',
-    '/api/meta/deletion',
-  ];
-  if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'))) {
+  // Set bypass cookie via query param
+  if (BYPASS_SECRET && pathname === '/early-access') {
+    const bypassParam = req.nextUrl.searchParams.get('bypass');
+    if (bypassParam === BYPASS_SECRET) {
+      const response = NextResponse.redirect(new URL('/', req.url));
+      response.cookies.set('launch_bypass', BYPASS_SECRET, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+      return withSecurityHeaders(response);
+    }
+  }
+
+  // If bypass cookie is valid, use normal site behavior
+  if (BYPASS_SECRET && req.cookies.get('launch_bypass')?.value === BYPASS_SECRET) {
+    const publicRoutes = [
+      '/',
+      '/login',
+      '/register',
+      '/onboarding',
+      '/about',
+      '/docs',
+      '/early-access',
+      '/privacy',
+      '/terms',
+      '/deletion-status',
+      '/api/auth',
+      '/api/billing/webhook',
+      '/api/meta/deletion',
+    ];
+    if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'))) {
+      return withSecurityHeaders(NextResponse.next());
+    }
+    if (!req.auth) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return withSecurityHeaders(NextResponse.redirect(loginUrl));
+    }
     return withSecurityHeaders(NextResponse.next());
   }
 
-  // Protected routes — redirect to login if not authenticated
-  if (!req.auth) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return withSecurityHeaders(NextResponse.redirect(loginUrl));
+  // Launch mode — only early-access and essential routes are public
+  const allowedRoutes = [
+    '/early-access',
+    '/api/waitlist',
+    '/api/auth',
+    '/api/billing/webhook',
+    '/api/meta/deletion',
+    '/privacy',
+    '/terms',
+  ];
+  if (allowedRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'))) {
+    return withSecurityHeaders(NextResponse.next());
   }
 
-  return withSecurityHeaders(NextResponse.next());
+  // Everything else redirects to early-access
+  return withSecurityHeaders(NextResponse.redirect(new URL('/early-access', req.url)));
 });
 
 export const config = {
