@@ -1,5 +1,5 @@
 import { rateLimitedCall } from '../utils/rate-limiter.js';
-import { graphGet, graphPost } from '../utils/graph.js';
+import { graphGet, graphPost, metaFetch } from '../utils/graph.js';
 // ── Tool definitions ──
 export const duplicatorTools = [
     {
@@ -226,7 +226,7 @@ async function tryAsyncBatchCopy(ctx, relativeUrl, bodyParams, idField) {
         formBody.append('access_token', ctx.accessToken);
         formBody.append('async', 'true');
         formBody.append('batch', JSON.stringify([batchItem]));
-        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
+        const response = await metaFetch(ctx, `https://graph.facebook.com/${ctx.apiVersion}/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -295,7 +295,8 @@ async function decomposeAdSetCopyClean(ctx, adsetId, bodyParams) {
             const dofSpec = JSON.parse(JSON.stringify(creative.degrees_of_freedom_spec));
             delete dofSpec.creative_features_spec?.standard_enhancements;
             // Only include if there's still meaningful content
-            if (dofSpec.creative_features_spec && Object.keys(dofSpec.creative_features_spec).length > 0) {
+            if (dofSpec.creative_features_spec &&
+                Object.keys(dofSpec.creative_features_spec).length > 0) {
                 creativeParams.degrees_of_freedom_spec = dofSpec;
             }
         }
@@ -514,7 +515,7 @@ async function duplicateCreative(ctx, args) {
         access_token: ctx.accessToken,
         fields: 'id,name,object_story_spec,asset_feed_spec,degrees_of_freedom_spec',
     });
-    const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`);
+    const response = await metaFetch(ctx, `https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`);
     const creative = (await response.json());
     if (!response.ok || creative.error) {
         const e = creative.error ?? {};

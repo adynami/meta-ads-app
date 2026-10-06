@@ -11,7 +11,7 @@ import { rateLimit } from '@/lib/rate-limit';
  */
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const { allowed } = rateLimit(`webhook:${ip}`, { windowMs: 60_000, maxRequests: 30 });
+  const { allowed } = await rateLimit(`webhook:${ip}`, { windowMs: 60_000, maxRequests: 30 });
   if (!allowed) {
     return Response.json({ error: 'Too many requests' }, { status: 429 });
   }

@@ -1,4 +1,5 @@
 import type { TenantContext } from '../tenant-context.js';
+import { metaFetch } from '../utils/graph.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
 
 // ── Tool definition ──────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ async function searchAdLibrary(ctx: TenantContext, args: any): Promise<any> {
     }
 
     const url = `https://graph.facebook.com/${ctx.apiVersion}/ads_archive?${qp.toString()}`;
-    const response = await fetch(url);
+    const response = await metaFetch(ctx, url);
     const data = (await response.json()) as any;
 
     if (!response.ok || data.error) {

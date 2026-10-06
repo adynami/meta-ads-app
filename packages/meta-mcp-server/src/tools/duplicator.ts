@@ -1,6 +1,6 @@
 import type { TenantContext } from '../tenant-context.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
-import { graphGet, graphPost } from '../utils/graph.js';
+import { graphGet, graphPost, metaFetch } from '../utils/graph.js';
 
 // ── Tool definitions ──
 
@@ -276,7 +276,7 @@ async function tryAsyncBatchCopy(
     formBody.append('async', 'true');
     formBody.append('batch', JSON.stringify([batchItem]));
 
-    const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
+    const response = await metaFetch(ctx, `https://graph.facebook.com/${ctx.apiVersion}/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formBody.toString(),
@@ -668,7 +668,7 @@ async function duplicateCreative(ctx: TenantContext, args: any): Promise<any> {
     access_token: ctx.accessToken,
     fields: 'id,name,object_story_spec,asset_feed_spec,degrees_of_freedom_spec',
   });
-  const response = await fetch(
+  const response = await metaFetch(ctx, 
     `https://graph.facebook.com/${ctx.apiVersion}/${creative_id}?${qp.toString()}`,
   );
   const creative = (await response.json()) as any;

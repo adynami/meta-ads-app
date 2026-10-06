@@ -1,424 +1,288 @@
+/**
+ * Chat request orchestration: auth → credit reservation → tenants →
+ * conversation + attachments → agent turn → persistence → response.
+ *
+ * The client sends ONLY the new user message (+ conversationId). History is
+ * loaded server-side from the stored transcript, so it can't be forged and
+ * tool results survive across turns.
+ */
 import type Anthropic from '@anthropic-ai/sdk';
-import { getAnthropicClient, SYSTEM_PROMPT } from '@/lib/anthropic';
-import { ALL_TOOLS, executeTool } from '@/lib/tool-executor';
-import { mcpToAnthropicCached } from '@/lib/tools-schema';
-import { db } from '@/lib/db';
-import { users, conversations, usage } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import type { TenantContext } from 'meta-mcp-server/tenant-context';
-import type { AttachmentStore } from '@/lib/attachments';
-import { isImageType } from '@/lib/attachments';
-import { estimateCostCents } from '@/lib/pricing';
+import { isTrialExpired } from '@/lib/plans';
+import { reserveCredit, refundCredit, recordTokenUsage, type Reservation } from '@/lib/credits';
+import { devEnvTenant, loadTenants, type Tenant, type UserRow } from '@/lib/tenants';
+import {
+  attachmentBlocks,
+  loadAttachmentStore,
+  saveAttachments,
+  validateAttachmentRef,
+} from '@/lib/attachment-store';
+import type { AttachmentRef } from '@/lib/attachments';
+import { MAX_USER_MESSAGE_CHARS } from '@/lib/agent/config';
+import { runAgentTurn, type TurnOutput } from '@/lib/agent/engine';
+import {
+  appendTurn,
+  createConversation,
+  getConversation,
+  type ConversationRow,
+} from '@/lib/agent/conversation';
+import type { StreamEvent } from '@/types/chat';
 
-// ── Constants ──────────────────────────────────────────────────────────
-
-const CONTEXT_REGEX = /<context>\s*([\s\S]*?)\s*<\/context>/i;
-export const MAX_TOOL_ROUNDS = 10;
-const MAX_MESSAGES = 100;
-const VALID_ROLES = new Set(['user', 'assistant']);
-const MAX_STORED_MESSAGES = 200;
-
-let _anthropicTools: Anthropic.Tool[] | null = null;
-export function getAnthropicTools() {
-  if (!_anthropicTools) _anthropicTools = mcpToAnthropicCached(ALL_TOOLS);
-  return _anthropicTools;
+export interface ChatRequestBody {
+  message?: unknown;
+  conversationId?: unknown;
+  accountId?: unknown;
+  attachments?: unknown;
+  stream?: unknown;
 }
 
-// ── Types ──────────────────────────────────────────────────────────────
-
-export interface PersistenceContext {
-  userId: string;
-  adAccountId: string | null;
-  conversationId?: string;
-  useBonusCall?: boolean;
-  existingContext?: string | null;
-}
-
-export interface AccountLabel {
-  id: string;
-  name: string;
-}
-
-// ── Exported functions ─────────────────────────────────────────────────
-
-export function validateMessages(messages: unknown): string | null {
-  if (!Array.isArray(messages)) return 'messages must be an array';
-  if (messages.length === 0) return 'messages is required';
-  if (messages.length > MAX_MESSAGES) return `messages exceeds maximum of ${MAX_MESSAGES}`;
-  for (const msg of messages) {
-    if (!msg || typeof msg !== 'object') return 'each message must be an object';
-    if (!VALID_ROLES.has(msg.role)) return `invalid message role: ${msg.role}`;
-    if (msg.content == null) return 'each message must have content';
+export class ChatError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+    public extra?: Record<string, unknown>,
+  ) {
+    super(message);
   }
-  return null;
+}
+
+export interface ParsedChatRequest {
+  message: string;
+  conversationId: string | null;
+  accountId: string | null;
+  attachments: AttachmentRef[];
+  stream: boolean;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_ATTACHMENTS = 10;
+
+export function parseChatRequest(body: ChatRequestBody): ParsedChatRequest {
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+  const attachments = Array.isArray(body.attachments) ? (body.attachments as AttachmentRef[]) : [];
+  if (!message && attachments.length === 0) throw new ChatError('message is required', 400);
+  if (message.length > MAX_USER_MESSAGE_CHARS) {
+    throw new ChatError(`message exceeds ${MAX_USER_MESSAGE_CHARS} characters`, 400);
+  }
+  if (attachments.length > MAX_ATTACHMENTS) {
+    throw new ChatError(`at most ${MAX_ATTACHMENTS} attachments per message`, 400);
+  }
+  const conversationId = typeof body.conversationId === 'string' ? body.conversationId : null;
+  if (conversationId && !UUID.test(conversationId))
+    throw new ChatError('invalid conversationId', 400);
+  const accountId = typeof body.accountId === 'string' ? body.accountId : null;
+  if (accountId && accountId !== 'all' && !UUID.test(accountId)) {
+    throw new ChatError('invalid accountId', 400);
+  }
+  return { message, conversationId, accountId, attachments, stream: body.stream !== false };
+}
+
+/** Everything needed to run a turn, resolved before any credit is spent. */
+interface PreparedTurn {
+  user: UserRow | null;
+  tenants: Tenant[];
+  multiAccount: boolean;
+  conversation: ConversationRow | null;
+}
+
+export async function prepareTurn(
+  user: UserRow | null,
+  req: ParsedChatRequest,
+): Promise<PreparedTurn> {
+  if (!user) {
+    const dev = devEnvTenant();
+    if (!dev) throw new ChatError('Unauthorized', 401);
+    return { user: null, tenants: [dev], multiAccount: false, conversation: null };
+  }
+
+  if (isTrialExpired(user.plan, user.trialEndsAt)) {
+    throw new ChatError(
+      'Your trial has expired. Please subscribe to continue.',
+      403,
+      'TRIAL_EXPIRED',
+    );
+  }
+
+  for (const ref of req.attachments) {
+    const err = validateAttachmentRef(ref, user.id);
+    if (err) throw new ChatError(err, 400);
+  }
+
+  const conversation = req.conversationId
+    ? await getConversation(user.id, req.conversationId)
+    : null;
+  if (req.conversationId && !conversation) throw new ChatError('Conversation not found', 404);
+
+  // A conversation is bound to the account scope it started with.
+  const accountId = conversation
+    ? (conversation.adAccountId ?? (req.accountId === 'all' ? 'all' : req.accountId))
+    : req.accountId;
+
+  const { tenants, failed } = await loadTenants(user.id, accountId);
+  if (tenants.length === 0) {
+    if (failed.length) {
+      throw new ChatError(
+        'Failed to decrypt the ad account token. Please reconnect in Settings.',
+        400,
+        'TOKEN_DECRYPT_FAILED',
+      );
+    }
+    throw new ChatError(
+      'No connected ad account found. Go to Settings to connect your Meta ad account.',
+      400,
+      'NO_ACCOUNT',
+    );
+  }
+
+  return { user, tenants, multiAccount: accountId === 'all', conversation };
 }
 
 /**
- * Transform the last user message to include vision blocks for image attachments
- * and a text note listing all attachment IDs for tool use.
+ * Atomically take one credit for this turn. Call before streaming starts so
+ * an empty balance is a real 429, not an in-stream error.
  */
-export function injectAttachmentBlocks(
-  messages: Anthropic.MessageParam[],
-  store: AttachmentStore,
-): Anthropic.MessageParam[] {
-  if (store.size === 0) return messages;
-
-  const result = [...messages];
-  const lastIdx = result.length - 1;
-  const lastMsg = result[lastIdx];
-  if (!lastMsg || lastMsg.role !== 'user') return result;
-
-  const originalText =
-    typeof lastMsg.content === 'string'
-      ? lastMsg.content
-      : Array.isArray(lastMsg.content)
-        ? lastMsg.content
-            .filter((b: any) => b.type === 'text')
-            .map((b: any) => b.text)
-            .join(' ')
-        : '';
-
-  const contentBlocks: Anthropic.ContentBlockParam[] = [];
-
-  // Add image blocks for vision (skip videos — Claude can't process them)
-  for (const [, att] of store) {
-    if (isImageType(att.media_type)) {
-      contentBlocks.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: att.media_type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-          data: att.base64,
-        },
-      });
-    }
+export async function reserveTurnCredit(prepared: PreparedTurn): Promise<Reservation | null> {
+  const { user } = prepared;
+  if (!user) return null;
+  const reservation = await reserveCredit(user.id, user.plan);
+  if (!reservation.ok) {
+    throw new ChatError(
+      `You've used all ${reservation.limit} credits on the ${user.plan} plan. Buy a credit pack or upgrade for more.`,
+      429,
+      'RATE_LIMITED',
+      { canTopUp: true, usage: { current: reservation.used, limit: reservation.limit } },
+    );
   }
-
-  // Add text block with original message
-  if (originalText) {
-    contentBlocks.push({ type: 'text', text: originalText });
-  }
-
-  // Add note listing attachment IDs so Claude can reference them in tool calls
-  const attachmentNotes = Array.from(store.values()).map((a) => {
-    const kind = isImageType(a.media_type) ? 'image' : 'video';
-    return `- ${a.name} (${kind}, id: ${a.id})`;
-  });
-  contentBlocks.push({
-    type: 'text',
-    text: `[Attached files available for upload tools:\n${attachmentNotes.join('\n')}]`,
-  });
-
-  result[lastIdx] = { role: 'user', content: contentBlocks };
-  return result;
+  return reservation;
 }
 
-export function buildSystemBlocks(
-  isMultiAccount: boolean,
-  accountNames?: AccountLabel[],
-  existingContext?: string | null,
-): Anthropic.TextBlockParam[] {
-  return [
-    { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    ...(isMultiAccount && accountNames
-      ? [
-          {
-            type: 'text' as const,
-            text: `\n\nYou are in MULTI-ACCOUNT mode. The user has ${accountNames.length} connected ad accounts:\n${accountNames.map((a) => `- ${a.name} (${a.id})`).join('\n')}\n\nWhen tool calls return results, they will be aggregated across all accounts. Always label results by account name so the user knows which data belongs to which account.`,
-          },
-        ]
-      : []),
-    ...(existingContext
-      ? [
-          {
-            type: 'text' as const,
-            text: `\nPrevious conversation context (update this in your <context> block):\n${existingContext}`,
-          },
-        ]
-      : []),
-  ];
-}
-
-export async function runChat(
-  ctx: TenantContext | TenantContext[],
-  messages: Anthropic.MessageParam[],
-  persist?: PersistenceContext,
-  accountNames?: AccountLabel[],
-  attachmentStore?: AttachmentStore,
+/**
+ * Run one chat turn, emitting events as it goes. Refunds the reserved credit
+ * if the turn fails or the model never produced anything.
+ */
+export async function runChatTurn(
+  prepared: PreparedTurn,
+  reservation: Reservation | null,
+  req: ParsedChatRequest,
+  emit: (event: StreamEvent) => void,
   signal?: AbortSignal,
-): Promise<Response> {
-  const client = getAnthropicClient();
-  const isMultiAccount = Array.isArray(ctx);
+): Promise<{ conversationId: string | null; output: TurnOutput }> {
+  const { user, tenants, multiAccount } = prepared;
 
-  const systemBlocks = buildSystemBlocks(isMultiAccount, accountNames, persist?.existingContext);
+  try {
+    let conversation = prepared.conversation;
+    if (user && !conversation) {
+      conversation = await createConversation(
+        user.id,
+        multiAccount ? null : tenants[0].id,
+        req.message || 'Attachment',
+      );
+    }
+    const conversationId = conversation?.id ?? null;
+    if (conversationId) emit({ type: 'start', conversationId });
 
-  let currentMessages: Anthropic.MessageParam[] = truncateOldToolResults([...messages]);
-  let finalText = '';
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
-  let totalCacheCreationTokens = 0;
-  let totalCacheReadTokens = 0;
-  const toolCalls: { id: string; name: string; input: any; result: string }[] = [];
+    const saved =
+      user && conversationId ? await saveAttachments(user.id, conversationId, req.attachments) : [];
+    const attachmentStore =
+      user && conversationId ? await loadAttachmentStore(user.id, conversationId) : new Map();
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    if (signal?.aborted) break;
+    const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
+      ...attachmentBlocks(saved),
+      ...(req.message ? [{ type: 'text' as const, text: req.message }] : []),
+    ];
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 16384,
-      system: systemBlocks,
-      tools: getAnthropicTools(),
-      messages: currentMessages,
+    const output = await runAgentTurn({
+      userId: user?.id ?? null,
+      conversationId,
+      tenants,
+      multiAccount,
+      history: (conversation?.transcript ?? []) as Anthropic.Beta.BetaMessageParam[],
+      legacyContext: conversation?.context ?? null,
+      userContent,
+      attachmentStore,
+      signal,
+      emit,
     });
 
-    const cacheRead = (response.usage as any).cache_read_input_tokens ?? 0;
-    const cacheCreate = (response.usage as any).cache_creation_input_tokens ?? 0;
-    console.log(
-      `[chat] round=${round} stop=${response.stop_reason} cache_read=${cacheRead} cache_create=${cacheCreate} input=${response.usage.input_tokens}`,
-    );
-
-    totalInputTokens += response.usage.input_tokens;
-    totalOutputTokens += response.usage.output_tokens;
-    totalCacheCreationTokens += cacheCreate;
-    totalCacheReadTokens += cacheRead;
-
-    const textParts: string[] = [];
-    const toolUseBlocks: Anthropic.ContentBlockParam[] = [];
-
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        textParts.push(block.text);
-      } else if (block.type === 'tool_use') {
-        toolUseBlocks.push(block);
-      }
-    }
-
-    if (textParts.length > 0) {
-      finalText = textParts.join('\n');
-    }
-
-    if (toolUseBlocks.length === 0) {
-      break;
-    }
-
-    const toolResults = await Promise.all(
-      toolUseBlocks.map(async (block) => {
-        if (block.type !== 'tool_use') return null;
-
-        let result: string;
-
-        if (isMultiAccount && accountNames) {
-          // Execute against all accounts and aggregate
-          const perAccount = await Promise.all(
-            (ctx as TenantContext[]).map(async (tenantCtx, i) => {
-              const r = await executeTool(
-                tenantCtx,
-                block.name,
-                block.input as Record<string, any>,
-                attachmentStore,
-              );
-              return { account: accountNames[i].name, result: r };
-            }),
-          );
-          result = JSON.stringify(perAccount);
+    if (user && conversationId) {
+      const now = new Date().toISOString();
+      await appendTurn(conversationId, user.id, output.newEntries, [
+        {
+          role: 'user',
+          content: req.message,
+          timestamp: now,
+          attachments: saved.map((a) => ({ id: a.id, name: a.name, media_type: a.mediaType })),
+        },
+        {
+          role: 'assistant',
+          content: output.text,
+          timestamp: now,
+          toolCalls: output.toolCalls,
+          actions: output.actions,
+        },
+      ]);
+      if (reservation?.ok) {
+        if (!output.producedOutput) {
+          await refundCredit(user.id, reservation);
         } else {
-          result = await executeTool(
-            ctx as TenantContext,
-            block.name,
-            block.input as Record<string, any>,
-            attachmentStore,
+          await recordTokenUsage(
+            user.id,
+            reservation.month,
+            output.usage.inputTokens,
+            output.usage.outputTokens,
+            Math.round(output.usage.costCents),
           );
         }
-
-        toolCalls.push({
-          id: block.id,
-          name: block.name,
-          input: block.input,
-          result,
-        });
-        return {
-          type: 'tool_result' as const,
-          tool_use_id: block.id,
-          content: result,
-        };
-      }),
-    );
-
-    currentMessages = [
-      ...currentMessages,
-      { role: 'assistant', content: response.content },
-      {
-        role: 'user',
-        content: toolResults.filter(Boolean) as Anthropic.ToolResultBlockParam[],
-      },
-    ];
-  }
-
-  // Extract context block from response before persisting/returning
-  const { cleanText, context: extractedContext } = extractAndStripContext(finalText);
-
-  // Persist conversation and usage to DB — await to get conversationId
-  let returnedConversationId: string | undefined;
-  if (persist) {
-    try {
-      returnedConversationId = await persistChatData(
-        persist,
-        messages,
-        cleanText,
-        totalInputTokens,
-        totalOutputTokens,
-        totalCacheCreationTokens,
-        totalCacheReadTokens,
-        extractedContext,
-      );
-
-      // Decrement bonus calls if this call consumed a bonus credit
-      if (persist.useBonusCall) {
-        await db
-          .update(users)
-          .set({ bonusCalls: sql`bonus_calls - 1` })
-          .where(eq(users.id, persist.userId));
       }
-    } catch (err) {
-      console.error('[chat/route] Persistence error:', err);
     }
+
+    return { conversationId, output };
+  } catch (err) {
+    if (user && reservation?.ok) await refundCredit(user.id, reservation).catch(() => {});
+    throw err;
   }
+}
 
-  return Response.json({
-    text: cleanText,
-    toolCalls,
-    conversationId: returnedConversationId ?? persist?.conversationId,
+// ── Response adapters ─────────────────────────────────────────────────────
+
+export function sseResponse(
+  run: (emit: (event: StreamEvent) => void) => Promise<{ conversationId: string | null }>,
+): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const write = (event: StreamEvent) => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } catch {
+          // client went away
+        }
+      };
+      try {
+        const { conversationId } = await run(write);
+        write({ type: 'done', conversationId: conversationId ?? undefined });
+      } catch (err) {
+        const e = err as ChatError;
+        console.error('[chat] turn failed:', err);
+        write({
+          type: 'error',
+          message: err instanceof ChatError ? e.message : 'Something went wrong. Please try again.',
+          code: e?.code,
+        });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
+      }
+    },
   });
-}
-
-// ── Exported helpers (also used by chat-streaming.ts) ─────────────────
-
-export function extractAndStripContext(text: string): {
-  cleanText: string;
-  context: string | null;
-} {
-  const match = text.match(CONTEXT_REGEX);
-  if (!match) return { cleanText: text, context: null };
-  let context = match[1].trim();
-  if (context.length > 2000) context = context.slice(0, 2000);
-  return { cleanText: text.replace(CONTEXT_REGEX, '').trimEnd(), context };
-}
-
-/**
- * Replace tool_result content blocks in older messages with a placeholder.
- * Keeps the last `recentToKeep` messages fully intact; older tool results
- * are replaced entirely since conversation context carries the key data.
- */
-export function truncateOldToolResults(
-  messages: Anthropic.MessageParam[],
-  recentToKeep = 6,
-): Anthropic.MessageParam[] {
-  const cutoff = Math.max(0, messages.length - recentToKeep);
-  return messages.map((msg, i) => {
-    if (i >= cutoff || msg.role !== 'user' || !Array.isArray(msg.content)) return msg;
-    return {
-      ...msg,
-      content: (msg.content as any[]).map((block) => {
-        if (block.type !== 'tool_result' || typeof block.content !== 'string') return block;
-        return { ...block, content: '[Result available in conversation context]' };
-      }),
-    };
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
   });
-}
-
-export async function persistChatData(
-  persist: PersistenceContext,
-  messages: Anthropic.MessageParam[],
-  assistantText: string,
-  inputTokens: number,
-  outputTokens: number,
-  cacheCreationTokens = 0,
-  cacheReadTokens = 0,
-  context?: string | null,
-): Promise<string> {
-  const now = new Date();
-
-  // 1. Upsert conversation
-  const userMessage = messages[messages.length - 1];
-  const userText =
-    typeof userMessage?.content === 'string'
-      ? userMessage.content
-      : Array.isArray(userMessage?.content)
-        ? userMessage.content
-            .filter((b: any) => b.type === 'text')
-            .map((b: any) => b.text)
-            .join(' ')
-        : '';
-
-  const newMessages = [
-    { role: 'user', content: userText, timestamp: now.toISOString() },
-    { role: 'assistant', content: assistantText, timestamp: now.toISOString() },
-  ];
-
-  let conversationId = persist.conversationId;
-
-  if (conversationId) {
-    // Append to existing conversation, trimming oldest if over threshold
-    await db
-      .update(conversations)
-      .set({
-        messages: sql`(
-          CASE WHEN jsonb_array_length(${conversations.messages}) + ${newMessages.length} > ${MAX_STORED_MESSAGES}
-          THEN (SELECT jsonb_agg(elem) FROM (
-            SELECT elem FROM jsonb_array_elements(${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb) AS elem
-            ORDER BY elem->>'timestamp' DESC
-            LIMIT ${MAX_STORED_MESSAGES}
-          ) sub)
-          ELSE ${conversations.messages} || ${JSON.stringify(newMessages)}::jsonb
-          END
-        )`,
-        updatedAt: now,
-        ...(context != null ? { context } : {}),
-      })
-      .where(and(eq(conversations.id, conversationId), eq(conversations.userId, persist.userId)));
-  } else {
-    // Create new conversation
-    const title = userText.slice(0, 100) || 'New conversation';
-    const [inserted] = await db
-      .insert(conversations)
-      .values({
-        userId: persist.userId,
-        adAccountId: persist.adAccountId,
-        title,
-        messages: newMessages,
-        context: context ?? undefined,
-      })
-      .returning({ id: conversations.id });
-    conversationId = inserted.id;
-  }
-
-  // 2. Upsert usage for this month
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-  await db
-    .insert(usage)
-    .values({
-      userId: persist.userId,
-      month,
-      apiCalls: 1,
-      inputTokens,
-      outputTokens,
-      estimatedCostCents: estimateCostCents(
-        inputTokens,
-        outputTokens,
-        cacheCreationTokens,
-        cacheReadTokens,
-      ),
-    })
-    .onConflictDoUpdate({
-      target: [usage.userId, usage.month],
-      set: {
-        apiCalls: sql`${usage.apiCalls} + 1`,
-        inputTokens: sql`${usage.inputTokens} + ${inputTokens}`,
-        outputTokens: sql`${usage.outputTokens} + ${outputTokens}`,
-        estimatedCostCents: sql`${usage.estimatedCostCents} + ${estimateCostCents(inputTokens, outputTokens, cacheCreationTokens, cacheReadTokens)}`,
-      },
-    });
-
-  return conversationId!;
 }

@@ -25,7 +25,7 @@ import {
   listPages,
   batchUpdateStatus,
 } from '../meta-client.js';
-import { graphGet } from '../utils/graph.js';
+import { graphGet, metaFetch } from '../utils/graph.js';
 import { buildTargetingSpec } from '../utils/targeting.js';
 import { resolveRange, type TimeRangeKey } from '../utils/date-ranges.js';
 import { computeMetrics, type RawInsightRow } from '../utils/metrics.js';
@@ -1079,7 +1079,7 @@ async function handleGetAdImage(ctx: TenantContext, args: any): Promise<any> {
       access_token: ctx.accessToken,
       fields: 'creative{id,thumbnail_url,image_url}',
     });
-    const response = await fetch(
+    const response = await metaFetch(ctx, 
       `https://graph.facebook.com/${ctx.apiVersion}/${args.ad_id}?${qp.toString()}`,
     );
     const data = (await response.json()) as any;

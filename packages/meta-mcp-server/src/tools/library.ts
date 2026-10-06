@@ -1,6 +1,15 @@
 import type { TenantContext } from '../tenant-context.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
-import { graphGet, graphPostMultipart } from '../utils/graph.js';
+import { graphGet, graphPost, graphPostMultipart } from '../utils/graph.js';
+
+/** Attachment bytes from inline base64 or a hosted URL (Vercel Blob). */
+async function attachmentBytes(attachment: { base64?: string; url?: string }): Promise<Buffer> {
+  if (attachment.base64) return Buffer.from(attachment.base64, 'base64');
+  if (!attachment.url) throw new Error('Attachment has no data');
+  const res = await fetch(attachment.url, { signal: AbortSignal.timeout(60_000) });
+  if (!res.ok) throw new Error(`Failed to fetch attachment: HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
 
 // ── Tool definitions ──
 
@@ -109,7 +118,7 @@ async function uploadImage(ctx: TenantContext, args: any, attachmentStore?: Map<
     throw new Error(`Attachment is not an image (type: ${attachment.media_type})`);
   }
 
-  const buffer = Buffer.from(attachment.base64, 'base64');
+  const buffer = await attachmentBytes(attachment);
   const filename = args.name || attachment.name || 'image.jpg';
 
   const result = await rateLimitedCall(() =>
@@ -139,21 +148,26 @@ async function uploadVideo(ctx: TenantContext, args: any, attachmentStore?: Map<
     throw new Error(`Attachment is not a video (type: ${attachment.media_type})`);
   }
 
-  const buffer = Buffer.from(attachment.base64, 'base64');
   const title = args.title || attachment.name || 'video.mp4';
 
   const fields: Record<string, string> = {};
   if (args.title) fields.title = args.title;
   if (args.description) fields.description = args.description;
 
-  const result = await rateLimitedCall(() =>
-    graphPostMultipart(ctx, `${ctx.adAccountId}/advideos`, fields, {
-      name: 'source',
-      data: buffer,
-      filename: attachment.name || 'video.mp4',
-      contentType: attachment.media_type,
-    }),
-  );
+  // Hosted attachments: let Meta pull the file itself instead of streaming
+  // up to 100 MB through this function.
+  const result = attachment.url
+    ? await rateLimitedCall(() =>
+        graphPost(ctx, `${ctx.adAccountId}/advideos`, { ...fields, file_url: attachment.url }),
+      )
+    : await rateLimitedCall(async () =>
+        graphPostMultipart(ctx, `${ctx.adAccountId}/advideos`, fields, {
+          name: 'source',
+          data: await attachmentBytes(attachment),
+          filename: attachment.name || 'video.mp4',
+          contentType: attachment.media_type,
+        }),
+      );
 
   return {
     success: true,

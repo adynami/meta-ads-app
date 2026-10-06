@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { Check, AlertTriangle, Lock, Plus, Copy } from 'lucide-react';
+import { AlertsSettings } from '@/components/settings/AlertsSettings';
 
 interface ApiKey {
   id: string;
@@ -354,6 +355,10 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
+
+        <div className="h-px bg-white/10 mb-12"></div>
+
+        <AlertsSettings />
 
         <div className="h-px bg-white/10 mb-12"></div>
 

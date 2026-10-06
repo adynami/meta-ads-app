@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { metaFetch } from '../utils/graph.js';
 import type { TenantContext } from '../tenant-context.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
 
@@ -250,7 +251,7 @@ async function sendConversionsEvent(ctx: TenantContext, args: any): Promise<any>
 
   const result = await rateLimitedCall(async () => {
     const url = `https://graph.facebook.com/${ctx.apiVersion}/${args.pixel_id}/events`;
-    const response = await fetch(url, {
+    const response = await metaFetch(ctx, url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

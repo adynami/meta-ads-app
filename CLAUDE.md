@@ -1,6 +1,6 @@
 # meta-ads-app
 
-Conversational AI for Meta Ads management. Users chat with Claude to manage campaigns, audiences, creatives, and analytics across their Meta ad accounts using 76+ MCP tools.
+Conversational AI for Meta Ads management. Users chat with Claude to manage campaigns, audiences, creatives, and analytics across their Meta ad accounts using 75 Meta tools. Every account change is proposed by the agent and executed only after the user approves it.
 
 **Stack**: Next.js 16, React 19, TypeScript, Drizzle ORM + Neon Postgres, Anthropic SDK, Stripe, NextAuth v5 (beta)
 **Monorepo**: root app + `packages/meta-mcp-server` (local workspace dependency)
@@ -40,19 +40,40 @@ npm run dev          # tsx src/index.ts (stdio mode)
 ## Architecture
 
 ### Chat flow
-`ChatWindow.tsx` -> `POST /api/chat` -> Claude agentic loop (max 10 tool rounds) -> `tool-executor.ts` dispatches to MCP tool handlers -> Meta Marketing API
+`ChatWindow.tsx` sends ONLY the new message (+ conversationId, accountId, attachment refs) -> `POST /api/chat` -> `lib/chat.ts` (auth, trial, tenants, atomic credit reservation) -> `lib/agent/engine.ts` `runAgentTurn` (single streaming loop, max 12 rounds, per-turn cost cap) -> `tool-executor.ts` -> Meta Marketing API. History is loaded server-side from `conversations.transcript`; the client never supplies it.
+
+### Agent (`src/lib/agent/`)
+- `config.ts` — model (`CHAT_MODEL`, default `claude-opus-5-5`), effort, round/cost/token limits, betas. One model + one effort per conversation on purpose: changing either between requests breaks the prompt cache.
+- `prompt.ts` — stable system prompt (cache prefix) + per-conversation account scope block.
+- `tools.ts` — tool list: BM25 tool search + 5 core tools loaded; everything else `defer_loading`. Must be deterministic per conversation.
+- `engine.ts` — the loop. Reads run immediately; writes become proposals (see below). Adaptive thinking, server-side compaction, `fallbacks: 'default'`, task budget.
+- `actions.ts` — write approvals: propose -> user approves in UI (`POST /api/actions/:id`) -> snapshot -> execute -> undo (`decision: 'undo'`). Approval outcomes are appended to the transcript as `[Approval update]` user messages.
+- `compact-result.ts` — every tool result is cleaned and size-capped before entering context.
+- `conversation.ts` — append-only transcript + display-message persistence.
+
+### Transcript rules (important)
+`conversations.transcript` is the exact API message history including thinking, compaction and tool blocks. **Append only — never edit or delete earlier entries.** Thinking blocks are bound to the exact prefix that produced them (preserved thinking); edits cause 400s on new accounts and break the prompt cache. `conversations.messages` is a separate, trimmed display copy for the UI. Approvals are disabled in the UI while a reply streams so approval notes can't land mid-turn.
+
+### Read/write policy
+`lib/tool-policy.ts` classifies every tool as READ or WRITE (unknown = write). A test fails if any tool is unclassified. Writes never run inside the chat loop except `meta_upload_image/video` (`APPROVAL_EXEMPT`). In multi-account mode reads fan out to all accounts; writes must carry `target_account_id`.
 
 ### Auth flow
-Meta OAuth (`/api/auth/[...nextauth]`) -> short-lived token -> `exchangeForLongLivedToken()` (~60 days) -> AES-256-GCM encrypt -> store in `ad_accounts.access_token_enc`
+Meta OAuth (`/api/auth/[...nextauth]`) -> short-lived token -> `exchangeForLongLivedToken()` (~60 days) -> AES-256-GCM encrypt -> store in `ad_accounts.access_token_enc`. `lib/tenants.ts` decrypts into a `TenantContext` with `appsecret_proof`. All Graph calls go through `metaFetch` (`packages/meta-mcp-server/src/utils/graph.ts`): token in the Authorization header, per-ad-account throttling from usage headers, `graphGetAll` pagination.
 
-### Billing
-Stripe Checkout (`/api/billing/checkout`) -> webhook (`/api/billing/webhook`) -> update `users.plan` + `bonusCalls`
+### Billing / credits
+Stripe Checkout (`/api/billing/checkout`) -> webhook (`/api/billing/webhook`) -> update `users.plan` + `bonusCalls`. Each turn reserves 1 credit BEFORE running via `lib/credits.ts` (single conditional SQL statements — no check-then-act race); refunded if the turn fails or the model produced nothing.
 
-### Context persistence
-Claude appends `<context>` blocks in responses. These are extracted via regex, stripped from the user-facing text, and persisted in `conversations.context` for continuity across messages.
+### Attachments
+Browser uploads directly to Vercel Blob (`/api/attachments/upload` issues a client token scoped to `attachments/<userId>/`); chat receives only `{url,name,media_type,size}`, validated by `isTrustedBlobUrl`. Rows persist in `attachments`, so later turns can still upload them to Meta. Without `BLOB_READ_WRITE_TOKEN` (dev) small images go inline.
 
 ### Multi-account mode
-When `accountId === 'all'`, each tool call executes against all connected accounts in parallel, results aggregated and labeled by account name.
+`accountId === 'all'`: read tools run against every connected account and results are labeled by account; write tools require `target_account_id`. Conversations in this mode have `adAccountId = null`. The dashboard also supports it (adds an Account column).
+
+### Daily alerts
+Vercel Cron (`vercel.json`, 07:00 UTC) -> `/api/cron/monitor` (Bearer `CRON_SECRET`) -> `lib/monitor.ts`: deterministic yesterday-vs-7-day checks per campaign (spend spike, CPA up, CTR down, delivery drop) -> user's Slack webhook (encrypted in `users.slack_webhook_enc`). No LLM, no credits.
+
+### Playbooks
+Built-ins in `lib/playbooks.ts`, user-saved in the `playbooks` table, run from the book icon in the chat input.
 
 ## Directory Map
 
@@ -78,16 +99,23 @@ src/
 │   ├── errors/             # NoAccount, TokenExpired, TrialExpired
 │   └── ui/                 # shadcn/ui components
 ├── lib/
-│   ├── anthropic.ts        # Client init + SYSTEM_PROMPT
+│   ├── anthropic.ts        # Anthropic client init
 │   ├── auth.ts             # NextAuth config (Meta OAuth provider)
-│   ├── chat.ts             # runChat agentic loop, message helpers, persistence
+│   ├── agent/              # engine, prompt, tools, actions (approvals/undo), compaction, persistence
+│   ├── chat.ts             # Chat request orchestration (auth, credits, tenants, SSE)
+│   ├── credits.ts          # Atomic credit reservation / refund
+│   ├── tenants.ts          # Ad account -> TenantContext (+ appsecret_proof), dev env tenant
+│   ├── tool-policy.ts      # READ/WRITE classification for every tool
+│   ├── attachment-store.ts # Blob attachment validation + persistence
+│   ├── monitor.ts          # Daily anomaly checks -> Slack
+│   ├── playbooks.ts        # Built-in playbooks
 │   ├── crypto.ts           # AES-256-GCM encrypt/decrypt
 │   ├── db/                 # Drizzle client + schema
 │   ├── meta-auth.ts        # Token exchange, ad account discovery, META_API_VERSION
 │   ├── plans.ts            # Plan limits, trial expiry check
 │   ├── stripe.ts           # Stripe client
 │   ├── tool-executor.ts    # Bridge: Claude tool_use -> MCP handlers
-│   ├── tools-schema.ts     # MCP-to-Anthropic tool format conversion
+│   ├── tools-schema.ts     # McpToolDef type
 │   └── attachments.ts      # Attachment type helpers
 ├── middleware.ts            # Auth middleware
 └── types/next-auth.d.ts    # Session type augmentation
@@ -105,7 +133,7 @@ packages/meta-mcp-server/
 
 ## Database Schema (Neon Postgres)
 
-5 tables in `src/lib/db/schema.ts`:
+Tables in `src/lib/db/schema.ts` (hand-written migrations in `drizzle/`, latest `0004_agent_v2.sql`):
 
 | Table | Key columns | Notes |
 |---|---|---|
@@ -115,6 +143,11 @@ packages/meta-mcp-server/
 | `usage` | userId (FK), month, apiCalls, inputTokens, outputTokens | Unique on (userId, month) |
 | `api_keys` | userId (FK), keyHash (SHA-256), label | Agency plan only |
 | `webhook_events` | id (text PK = Stripe event ID), processedAt | Idempotency dedup for webhooks |
+| `agent_actions` | userId, conversationId, adAccountId, toolName, input, status, before, result | Write approvals + undo log |
+| `attachments` | userId, conversationId, url (Blob) / dataBase64 (dev) | Chat attachments |
+| `playbooks` | userId, name, prompt | User-saved prompt templates |
+
+`conversations` also has `transcript` (jsonb, append-only API history). `users` also has `alertsEnabled`, `slackWebhookEnc`, `alertsLastRunAt`.
 
 All child table FKs use `onDelete: 'cascade'` except `conversations.adAccountId` which uses `onDelete: 'set null'`.
 
@@ -124,7 +157,9 @@ All child table FKs use `onDelete: 'cascade'` except `conversations.adAccountId`
 - **API routes**: Use `Response.json()`, call `await auth()` at top for session
 - **Single-row queries**: `const [result] = await db.select()...limit(1)`
 - **UI**: shadcn/ui (new-york style), dark theme, lucide-react icons
-- **MCP tool registration**: Add tool file in `packages/meta-mcp-server/src/tools/`, export from `exports.ts`, register handler in `tool-executor.ts`
+- **MCP tool registration**: Add tool file in `packages/meta-mcp-server/src/tools/`, export from `exports.ts`, register handler in `tool-executor.ts`, and classify it in `lib/tool-policy.ts` (READ or WRITE). If it's a reversible write, add a snapshot spec in `lib/agent/actions.ts`.
+- **Meta HTTP calls**: always via `metaFetch`/`graphGet`/`graphGetAll`/`graphPost` — never raw `fetch` to graph.facebook.com.
+- **Rate limiting**: `await rateLimit(...)` (Upstash in prod, in-memory fallback in dev/tests).
 - **Meta API version**: Single constant `META_API_VERSION` in `src/lib/meta-auth.ts` — update there only
 - **Commits**: Imperative present tense, descriptive
 - **Removals**: When intentionally removing a feature, route, component, or pattern, document it in the "Deliberately Removed" section below with a brief reason. Always check that section before building something that sounds like it may have existed before.
@@ -149,10 +184,21 @@ STRIPE_CREDIT_PACK_45_PRICE_ID=
 STRIPE_CREDIT_PACK_120_PRICE_ID=
 ```
 
+### Required in production (new)
+```
+UPSTASH_REDIS_REST_URL=    # Shared rate limiting across serverless instances
+UPSTASH_REDIS_REST_TOKEN=
+BLOB_READ_WRITE_TOKEN=     # Vercel Blob for attachments
+CRON_SECRET=               # Auth for /api/cron/monitor
+```
+
 ### Optional
 ```
-META_ACCESS_TOKEN=         # Dev/demo fallback (skip OAuth)
-META_AD_ACCOUNT_ID=        # Dev/demo fallback
+CHAT_MODEL=claude-opus-5-5 # Must support adaptive thinking, tool search, compaction
+CHAT_EFFORT=medium         # low|medium|high|xhigh|max
+MAX_TURN_COST_CENTS=60     # Hard model-spend ceiling per credit
+META_ACCESS_TOKEN=         # Dev-only fallback (NODE_ENV=development; ignored in prod)
+META_AD_ACCOUNT_ID=        # Dev-only fallback
 META_API_VERSION=          # Override default (currently v25.0)
 DRY_RUN=true              # Skip actual Meta API writes
 NEXT_PUBLIC_APP_URL=       # Base URL for OAuth redirects
@@ -233,7 +279,24 @@ Priority targets for first test suite:
 - [x] ~~Auto-refresh expiring Meta tokens~~ -> `refreshAccountTokenIfNeeded()` in `src/lib/meta-auth.ts`, fire-and-forget in chat route, manual `POST /api/accounts/refresh` endpoint
 - [x] ~~Conversation history sidebar~~ -> `ConversationList` component, `DELETE /api/conversations`, load-by-id in ChatWindow, sidebar integration in chat page
 - [x] ~~React error boundaries~~ -> `error.tsx` in root, chat, and (app) route groups with consistent dark styling
-- [ ] Attachment store uses in-memory Map -> won't work across serverless invocations in production
+- [x] ~~Attachment store uses in-memory Map~~ -> Vercel Blob direct uploads + `attachments` table (`lib/attachment-store.ts`)
+
+### P5 — Agent v2 (2026-10-07)
+- [x] Multi-account mode ran write tools on every account -> read/write policy, writes need `target_account_id` (`lib/tool-policy.ts`)
+- [x] Writes executed with only a prompt-level "confirm first" -> server-side approval queue + snapshot undo (`lib/agent/actions.ts`, `/api/actions`)
+- [x] Credit check-then-act race, bonus could go negative, unbounded per-turn spend -> atomic `reserveCredit`, refunds, `MAX_TURN_COST_CENTS`
+- [x] In-memory rate limiter on serverless; global Meta throttle across tenants; usage headers only read on errors -> Upstash + per-account `metaFetch` throttle
+- [x] Client-supplied history + `<context>` regex memory -> server-side append-only transcript + server-side compaction
+- [x] All 75 tool schemas sent every request -> tool search with deferred loading
+- [x] Hardcoded `claude-sonnet-4-6` in two duplicated loops -> single engine, Opus 5.5 config, adaptive thinking, refusal fallbacks
+- [x] Raw Graph JSON into context -> `compactResult`
+- [x] List fetchers returned only the first page -> `graphGetAll` pagination
+- [x] Token in GET query strings, no appsecret_proof -> Authorization header + proof
+- [x] Env-token fallback reachable in prod builds -> `devEnvTenant()` dev-only
+- [x] Dashboard cross-account view; daily Slack alerts; playbooks; tool calls persisted with display messages
+- [ ] Run migration `drizzle/0004_agent_v2.sql` on Neon before deploying
+- [ ] Verify against a live ad account: approval -> execute -> undo for budget/status changes
+- [ ] Pre-existing: `npm run lint` fails on ~660 `no-explicit-any` errors (the CI lint step was already red before v2)
 
 ## Deliberately Removed
 
@@ -242,5 +305,8 @@ Priority targets for first test suite:
 - **Settings "Upload photo" button** — No photo upload infrastructure exists; avatar uses initials (2026-03-05)
 - **Settings Preferences section (Theme, Email Summaries, Default Time Range)** — Saved to localStorage but nothing reads the values; app is hardcoded dark, no email system, dashboard ignores stored time range (2026-03-05)
 - **Chat route `export const config` (Pages Router body size config)** — Silently ignored in App Router; not needed (2026-03-05)
+- **`<context>` block memory + client-sent message history** — Replaced by the server-side transcript; the regex hack lost tool results and let clients forge history (2026-10-07)
+- **`lib/chat-streaming.ts` / duplicated non-streaming loop** — One engine (`lib/agent/engine.ts`) serves both (2026-10-07)
+- **Per-turn model/effort routing** — Deliberately not built: switching model or effort mid-conversation invalidates the prompt cache and drops thinking blocks (2026-10-07)
 
 <!-- Format: - **What was removed** — Why it was removed (YYYY-MM-DD) -->

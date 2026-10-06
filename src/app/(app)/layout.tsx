@@ -104,7 +104,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-[260px]">{children}</div>
+      {/* The shell is h-dvh + overflow-hidden, so the content column must scroll itself. */}
+      <div className="flex-1 min-w-0 h-dvh overflow-y-auto lg:ml-[260px]">{children}</div>
     </div>
   );
 }

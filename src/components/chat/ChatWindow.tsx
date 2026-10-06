@@ -13,21 +13,111 @@ import {
   Film,
   Plus,
 } from 'lucide-react';
+import { upload } from '@vercel/blob/client';
 import { MessageBubble } from './MessageBubble';
-import type { AttachmentMeta } from '@/lib/attachments';
-import { ALLOWED_MIME_TYPES, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, isImageType } from '@/lib/attachments';
-import type { Message } from '@/types/chat';
+import { PlaybookMenu } from './PlaybookMenu';
+import type { AttachmentMeta, AttachmentRef } from '@/lib/attachments';
+import {
+  ALLOWED_MIME_TYPES,
+  MAX_IMAGE_SIZE,
+  MAX_INLINE_SIZE,
+  MAX_VIDEO_SIZE,
+  isImageType,
+} from '@/lib/attachments';
+import type { ActionView, Message, StreamEvent, ToolCall } from '@/types/chat';
 
 export type { Message };
 
-/** Client-side attachment with base64 data for sending */
+/** Client-side attachment awaiting send */
 interface ClientAttachment {
   id: string;
+  file: File;
   name: string;
   media_type: string;
   size: number;
-  base64: string;
   preview_url?: string;
+}
+
+interface UploadConfig {
+  enabled: boolean;
+  prefix: string;
+}
+
+let uploadConfigPromise: Promise<UploadConfig> | null = null;
+function getUploadConfig(): Promise<UploadConfig> {
+  uploadConfigPromise ??= fetch('/api/attachments/upload')
+    .then((r) => (r.ok ? r.json() : { enabled: false, prefix: '' }))
+    .catch(() => ({ enabled: false, prefix: '' }));
+  return uploadConfigPromise;
+}
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Production: upload straight to Vercel Blob so file bytes never hit our
+ * serverless request-size limit. Local dev without BLOB_READ_WRITE_TOKEN:
+ * small images go inline.
+ */
+async function toAttachmentRef(att: ClientAttachment): Promise<AttachmentRef> {
+  const cfg = await getUploadConfig();
+  if (cfg.enabled) {
+    const blob = await upload(`${cfg.prefix}${att.name}`, att.file, {
+      access: 'public',
+      handleUploadUrl: '/api/attachments/upload',
+      multipart: att.size > 20 * 1024 * 1024,
+    });
+    return { name: att.name, media_type: att.media_type, size: att.size, url: blob.url };
+  }
+  if (!isImageType(att.media_type) || att.size > MAX_INLINE_SIZE) {
+    throw new Error(
+      `${att.name}: file storage isn't configured, so only images under 3 MB can be attached.`,
+    );
+  }
+  return {
+    name: att.name,
+    media_type: att.media_type,
+    size: att.size,
+    base64: await readAsBase64(att.file),
+  };
+}
+
+/** Patch an action's latest state into every message that shows it. */
+function mergeAction(messages: Message[], updated: ActionView): Message[] {
+  return messages.map((m) =>
+    m.actions?.some((a) => a.id === updated.id)
+      ? { ...m, actions: m.actions.map((a) => (a.id === updated.id ? updated : a)) }
+      : m,
+  );
+}
+
+function restoreMessages(raw: any[] | undefined): Message[] {
+  return (raw ?? []).map((m: any) => ({
+    role: m.role,
+    content: m.content,
+    toolCalls: m.toolCalls,
+    actions: m.actions,
+    attachments: m.attachments,
+  }));
+}
+
+/** Stored messages carry each action's state at proposal time; refresh it. */
+async function refreshActions(conversationId: string, messages: Message[]): Promise<Message[]> {
+  if (!messages.some((m) => m.actions?.length)) return messages;
+  try {
+    const res = await fetch(`/api/actions?conversationId=${encodeURIComponent(conversationId)}`);
+    if (!res.ok) return messages;
+    const { actions } = (await res.json()) as { actions: ActionView[] };
+    return actions.reduce(mergeAction, messages);
+  } catch {
+    return messages;
+  }
 }
 
 const suggestions = [
@@ -64,26 +154,28 @@ export function ChatWindow({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Track the id locally too: the server assigns it at the start of the first turn.
+  const conversationIdRef = useRef<string | null>(conversationId);
+
+  const setConversation = useCallback(
+    (id: string) => {
+      conversationIdRef.current = id;
+      onConversationId(id);
+    },
+    [onConversationId],
+  );
 
   // Load conversation on mount: by ID if provided, or most recent if loadRecent
   useEffect(() => {
     if (conversationId) {
-      // Load specific conversation by ID (sidebar click)
       setIsLoadingHistory(true);
       fetch(`/api/conversations?id=${encodeURIComponent(conversationId)}`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.conversation) {
-            const conv = data.conversation;
-            const restored: Message[] = (conv.messages || []).map((m: any) => ({
-              role: m.role,
-              content: m.content,
-              toolCalls: m.toolCalls,
-            }));
-            if (restored.length > 0) {
-              setMessages(restored);
-            }
-          }
+        .then(async (data) => {
+          const conv = data?.conversation;
+          if (!conv) return;
+          const restored = await refreshActions(conv.id, restoreMessages(conv.messages));
+          if (restored.length > 0) setMessages(restored);
         })
         .catch(() => {})
         .finally(() => setIsLoadingHistory(false));
@@ -97,23 +189,18 @@ export function ChatWindow({
 
     fetch(`/api/conversations?accountId=${encodeURIComponent(accountId)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.conversations?.[0]) {
-          const conv = data.conversations[0];
-          const restored: Message[] = (conv.messages || []).map((m: any) => ({
-            role: m.role,
-            content: m.content,
-            toolCalls: m.toolCalls,
-          }));
-          if (restored.length > 0) {
-            setMessages(restored);
-            onConversationId(conv.id);
-          }
+      .then(async (data) => {
+        const conv = data?.conversations?.[0];
+        if (!conv) return;
+        const restored = await refreshActions(conv.id, restoreMessages(conv.messages));
+        if (restored.length > 0) {
+          setMessages(restored);
+          setConversation(conv.id);
         }
       })
       .catch(() => {})
       .finally(() => setIsLoadingHistory(false));
-  }, []); // runs once on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- runs once on mount
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -135,34 +222,21 @@ export function ChatWindow({
   }, [initialPrompt, isLoadingHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const processFiles = useCallback((files: FileList | File[]) => {
-    const fileArray = Array.from(files);
-    for (const file of fileArray) {
-      if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
-        continue; // skip unsupported types
-      }
+    for (const file of Array.from(files)) {
+      if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) continue;
       const maxSize = isImageType(file.type) ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
-      if (file.size > maxSize) {
-        continue; // skip oversized files
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        // dataUrl is "data:<mime>;base64,<data>"
-        const base64 = dataUrl.split(',')[1];
-        const previewUrl = isImageType(file.type) ? dataUrl : undefined;
-
-        const attachment: ClientAttachment = {
+      if (file.size > maxSize) continue;
+      setAttachments((prev) => [
+        ...prev,
+        {
           id: crypto.randomUUID(),
+          file,
           name: file.name,
           media_type: file.type,
           size: file.size,
-          base64,
-          preview_url: previewUrl,
-        };
-        setAttachments((prev) => [...prev, attachment]);
-      };
-      reader.readAsDataURL(file);
+          preview_url: isImageType(file.type) ? URL.createObjectURL(file) : undefined,
+        },
+      ]);
     }
   }, []);
 
@@ -180,49 +254,41 @@ export function ChatWindow({
     setIsLoading(false);
   }, []);
 
+  const patchLastAssistant = (patch: Partial<Message>) =>
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last?.role === 'assistant') updated[updated.length - 1] = { ...last, ...patch };
+      return updated;
+    });
+
   const sendMessage = async (text?: string) => {
     const trimmed = (text || input).trim();
     if ((!trimmed && attachments.length === 0) || isLoading) return;
 
-    // Build display metadata for attachments (no base64)
     const attachmentMetas: AttachmentMeta[] = attachments.map((a) => ({
       id: a.id,
       name: a.name,
       media_type: a.media_type,
       preview_url: a.preview_url,
     }));
+    const pending = attachments;
 
-    const userMessage: Message = {
-      role: 'user',
-      content: trimmed,
-      attachments: attachmentMetas.length > 0 ? attachmentMetas : undefined,
-    };
-    const updated = [...messages, userMessage];
-    setMessages(updated);
-
-    // Capture attachments for the request before clearing state
-    const attachmentsToSend = attachments.map((a) => ({
-      id: a.id,
-      name: a.name,
-      media_type: a.media_type,
-      size: a.size,
-      base64: a.base64,
-    }));
-
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'user',
+        content: trimmed,
+        attachments: attachmentMetas.length > 0 ? attachmentMetas : undefined,
+      },
+    ]);
     setInput('');
     setAttachments([]);
     setIsLoading(true);
-
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     try {
-      const apiMessages = updated.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const attachmentRefs = await Promise.all(pending.map(toAttachmentRef));
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -231,40 +297,39 @@ export function ChatWindow({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: apiMessages,
+          message: trimmed,
           accountId,
-          conversationId,
+          conversationId: conversationIdRef.current,
           stream: true,
-          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+          attachments: attachmentRefs.length > 0 ? attachmentRefs : undefined,
         }),
         signal: controller.signal,
       });
 
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         if (err.code === 'RATE_LIMITED' && err.canTopUp) {
-          const errorMessage: Message = {
-            role: 'assistant',
-            content: `You've used all your credits this month. [Buy a credit pack](/billing) to keep going, or upgrade your plan.`,
-          };
-          setMessages((prev) => [...prev, errorMessage]);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `You've used all your credits this month. [Buy a credit pack](/billing) to keep going, or upgrade your plan.`,
+            },
+          ]);
           return;
         }
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
-      // SSE streaming response
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
-      const CONTEXT_REGEX = /<context>[\s\S]*?<\/context>/gi;
-      const PARTIAL_CONTEXT_REGEX = /<context>[\s\S]*$/i;
-      const streamToolCalls: { id: string; name: string; input: any; result: string }[] = [];
+      const toolCalls: ToolCall[] = [];
+      const actions: ActionView[] = [];
 
-      // Add empty assistant message that will be updated as stream arrives
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
@@ -272,79 +337,52 @@ export function ChatWindow({
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() || '';
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6);
-          let event: any;
+        for (const frame of frames) {
+          if (!frame.startsWith('data: ')) continue;
+          let event: StreamEvent;
           try {
-            event = JSON.parse(jsonStr);
+            event = JSON.parse(frame.slice(6));
           } catch {
             continue;
           }
 
           switch (event.type) {
+            case 'start':
+              setConversation(event.conversationId);
+              break;
+
             case 'text-delta':
               accumulatedText += event.text;
-              {
-                const displayText = accumulatedText
-                  .replace(CONTEXT_REGEX, '')
-                  .replace(PARTIAL_CONTEXT_REGEX, '')
-                  .trimEnd();
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  const last = updated[updated.length - 1];
-                  if (last?.role === 'assistant') {
-                    updated[updated.length - 1] = { ...last, content: displayText };
-                  }
-                  return updated;
-                });
-              }
+              patchLastAssistant({ content: accumulatedText.trimEnd() });
+              break;
+
+            case 'notice':
+              accumulatedText += `\n\n_${event.message}_`;
+              patchLastAssistant({ content: accumulatedText.trimEnd() });
               break;
 
             case 'tool-start':
-              streamToolCalls.push({
-                id: event.id,
-                name: event.name,
-                input: event.input,
-                result: '...',
-              });
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last?.role === 'assistant') {
-                  updated[updated.length - 1] = {
-                    ...last,
-                    toolCalls: [...streamToolCalls],
-                  };
-                }
-                return updated;
-              });
+              toolCalls.push({ id: event.id, name: event.name, input: event.input, result: '...' });
+              patchLastAssistant({ toolCalls: [...toolCalls] });
               break;
 
             case 'tool-result': {
-              const tc = streamToolCalls.find((t) => t.id === event.id);
+              const tc = toolCalls.find((t) => t.id === event.id);
               if (tc) tc.result = event.result;
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last?.role === 'assistant') {
-                  updated[updated.length - 1] = {
-                    ...last,
-                    toolCalls: [...streamToolCalls],
-                  };
-                }
-                return updated;
-              });
+              patchLastAssistant({ toolCalls: [...toolCalls] });
               break;
             }
 
+            case 'action-proposed':
+              actions.push(event.action);
+              patchLastAssistant({ actions: [...actions] });
+              break;
+
             case 'done':
-              if (event.conversationId) {
-                onConversationId(event.conversationId);
-              }
+              if (event.conversationId) setConversation(event.conversationId);
               break;
 
             case 'error':
@@ -354,11 +392,7 @@ export function ChatWindow({
       }
     } catch (error: any) {
       if (error.name === 'AbortError') return; // user cancelled — no error message
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: `Error: ${error.message}`,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     } finally {
       abortRef.current = null;
       setIsLoading(false);
@@ -375,7 +409,6 @@ export function ChatWindow({
 
   const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    // Auto-resize
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
@@ -395,9 +428,7 @@ export function ChatWindow({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
-      if (e.dataTransfer.files.length > 0) {
-        processFiles(e.dataTransfer.files);
-      }
+      if (e.dataTransfer.files.length > 0) processFiles(e.dataTransfer.files);
     },
     [processFiles],
   );
@@ -456,7 +487,12 @@ export function ChatWindow({
         ) : (
           <div className="max-w-4xl mx-auto space-y-6">
             {messages.map((msg, i) => (
-              <MessageBubble key={i} message={msg} />
+              <MessageBubble
+                key={i}
+                message={msg}
+                busy={isLoading}
+                onActionChange={(a) => setMessages((prev) => mergeAction(prev, a))}
+              />
             ))}
           </div>
         )}
@@ -518,7 +554,6 @@ export function ChatWindow({
             )}
 
             <div className="flex items-end gap-3">
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -531,7 +566,8 @@ export function ChatWindow({
                 }}
               />
 
-              {/* Paperclip button */}
+              <PlaybookMenu disabled={isLoading} onRun={(prompt) => sendMessage(prompt)} />
+
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
@@ -573,7 +609,7 @@ export function ChatWindow({
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
             <p className="text-[10px] sm:text-xs text-gray-500">
-              Adynami reads and writes your live Meta account. Actions execute immediately.
+              Adynami reads your live Meta account. Changes run only after you approve them.
             </p>
             <p className="text-[10px] sm:text-xs text-gray-600 hidden sm:block">
               Enter to send · Shift+Enter for new line

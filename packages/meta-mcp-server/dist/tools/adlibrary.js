@@ -1,3 +1,4 @@
+import { metaFetch } from '../utils/graph.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
 // ── Tool definition ──────────────────────────────────────────────────────────
 export const adLibraryTools = [
@@ -83,7 +84,7 @@ async function searchAdLibrary(ctx, args) {
             qp.append('search_page_ids', JSON.stringify(args.search_page_ids));
         }
         const url = `https://graph.facebook.com/${ctx.apiVersion}/ads_archive?${qp.toString()}`;
-        const response = await fetch(url);
+        const response = await metaFetch(ctx, url);
         const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};

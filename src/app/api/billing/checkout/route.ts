@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { allowed } = rateLimit(`checkout:${session.user.email}`, {
+  const { allowed } = await rateLimit(`checkout:${session.user.email}`, {
     windowMs: 60_000,
     maxRequests: 5,
   });

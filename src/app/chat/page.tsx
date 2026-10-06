@@ -60,6 +60,23 @@ function isTokenExpiredCheck(account: AdAccount): boolean {
   return new Date(account.tokenExpiresAt) < new Date();
 }
 
+const LAST_ACCOUNT_KEY = 'adynami:lastAccountId';
+
+/** Last-used account if still connected and valid, else the first account with a valid token. */
+function pickInitialAccount(accounts: AdAccount[]): string | null {
+  if (accounts.length === 0) return null;
+  let last: string | null = null;
+  try {
+    last = localStorage.getItem(LAST_ACCOUNT_KEY);
+  } catch {
+    // storage unavailable
+  }
+  const valid = accounts.filter((a) => !isTokenExpiredCheck(a));
+  if (last === 'all' && valid.length > 1) return 'all';
+  const remembered = valid.find((a) => a.id === last);
+  return (remembered ?? valid[0] ?? accounts[0]).id;
+}
+
 function isTrialExpiredCheck(user: UserStatus | null): boolean {
   if (!user || user.plan !== 'trial') return false;
   if (!user.trialEndsAt) return true;
@@ -95,17 +112,27 @@ function ChatPageContent() {
     setNewChatKey((k) => k + 1);
   };
 
+  const selectAccount = (id: string) => {
+    setSelectedAccountId(id);
+    setConversationId(null);
+    setLoadRecent(true);
+    setNewChatKey((k) => k + 1);
+    try {
+      localStorage.setItem(LAST_ACCOUNT_KEY, id);
+    } catch {
+      // storage unavailable — selection just isn't remembered
+    }
+  };
+
   useEffect(() => {
     Promise.all([
       fetch('/api/accounts').then((r) => (r.ok ? r.json() : { accounts: [] })),
       fetch('/api/user').then((r) => (r.ok ? r.json() : { user: null })),
     ])
       .then(([accountsData, userData]) => {
-        const accts = accountsData.accounts || [];
+        const accts: AdAccount[] = accountsData.accounts || [];
         setAccounts(accts);
-        if (accts.length > 0) {
-          setSelectedAccountId(accts[0].id);
-        }
+        setSelectedAccountId(pickInitialAccount(accts));
         setUserStatus(userData.user || null);
       })
       .catch(() => {})
@@ -114,6 +141,28 @@ function ChatPageContent() {
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
   const tokenExpired = selectedAccount && isTokenExpiredCheck(selectedAccount);
+  const workingAccounts = accounts.filter((a) => !isTokenExpiredCheck(a));
+
+  const switchAway = () => {
+    const next = workingAccounts.find((a) => a.id !== selectedAccountId);
+    if (next) selectAccount(next.id);
+  };
+
+  const disconnectSelected = async () => {
+    if (!selectedAccount) return;
+    const res = await fetch(`/api/accounts?id=${encodeURIComponent(selectedAccount.id)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? 'Could not disconnect the account');
+    }
+    const remaining = accounts.filter((a) => a.id !== selectedAccount.id);
+    setAccounts(remaining);
+    const next = pickInitialAccount(remaining);
+    if (next) selectAccount(next);
+    else setSelectedAccountId(null);
+  };
 
   // Full-page error states (shown instead of chat)
   if (!loading && isTrialExpiredCheck(userStatus)) {
@@ -133,6 +182,10 @@ function ChatPageContent() {
       {tokenExpired && (
         <TokenExpired
           accountName={selectedAccount!.metaAccountName || selectedAccount!.metaAdAccountId}
+          onSwitch={
+            workingAccounts.some((a) => a.id !== selectedAccountId) ? switchAway : undefined
+          }
+          onDisconnect={disconnectSelected}
         />
       )}
 
@@ -178,10 +231,7 @@ function ChatPageContent() {
                   {accounts.length > 1 && (
                     <div
                       onClick={() => {
-                        setSelectedAccountId('all');
-                        setConversationId(null);
-                        setLoadRecent(true);
-                        setNewChatKey((k) => k + 1);
+                        selectAccount('all');
                         setActiveTab('chat');
                       }}
                       className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
@@ -207,12 +257,7 @@ function ChatPageContent() {
                   {accounts.map((account, i) => (
                     <div
                       key={account.id}
-                      onClick={() => {
-                        setSelectedAccountId(account.id);
-                        setConversationId(null);
-                        setLoadRecent(true);
-                        setNewChatKey((k) => k + 1);
-                      }}
+                      onClick={() => selectAccount(account.id)}
                       className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
                         selectedAccountId === account.id
                           ? 'bg-white/5 border-l-2 border-purple-500'
@@ -230,10 +275,20 @@ function ChatPageContent() {
                         </p>
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${account.isActive ? 'bg-green-500' : 'bg-gray-500'}`}
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isTokenExpiredCheck(account)
+                                ? 'bg-amber-400'
+                                : account.isActive
+                                  ? 'bg-green-500'
+                                  : 'bg-gray-500'
+                            }`}
                           ></span>
                           <span className="text-[10px] text-gray-500">
-                            {account.isActive ? 'Active' : 'Inactive'}
+                            {isTokenExpiredCheck(account)
+                              ? 'Needs reconnect'
+                              : account.isActive
+                                ? 'Active'
+                                : 'Inactive'}
                           </span>
                         </div>
                       </div>
@@ -344,20 +399,13 @@ function ChatPageContent() {
               <span className="hidden sm:inline">Chat</span>
             </button>
             <button
-              onClick={() => {
-                if (selectedAccountId !== 'all') setActiveTab('dashboard');
-              }}
-              disabled={selectedAccountId === 'all'}
+              onClick={() => setActiveTab('dashboard')}
               className={cn(
                 'flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
                 activeTab === 'dashboard'
                   ? 'bg-white/10 text-white'
                   : 'text-gray-400 hover:text-gray-200',
-                selectedAccountId === 'all' && 'opacity-40 cursor-not-allowed hover:text-gray-400',
               )}
-              title={
-                selectedAccountId === 'all' ? 'Select a single account to use Dashboard' : undefined
-              }
             >
               <LayoutDashboard className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>

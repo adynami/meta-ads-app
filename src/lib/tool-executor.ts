@@ -48,6 +48,7 @@ import {
 } from 'meta-mcp-server/tools';
 
 import type { McpToolDef } from './tools-schema';
+import { compactResult } from './agent/compact-result';
 
 // ── All tool definitions (MCP format) ────────────────────────────────────────
 
@@ -114,28 +115,45 @@ register(performanceTools as McpToolDef[], handlePerformanceTool);
 
 // ── Execute a single tool call ───────────────────────────────────────────────
 
+/** Run a tool and return its raw result object. Throws on failure. */
+export async function runTool(
+  ctx: TenantContext,
+  toolName: string,
+  args: Record<string, any>,
+  attachmentStore?: Map<string, any>,
+): Promise<any> {
+  const handler = dispatchMap.get(toolName);
+  if (!handler) throw new Error(`Unknown tool: ${toolName}`);
+  return handler(ctx, toolName, args, attachmentStore);
+}
+
+/**
+ * Run a tool for the agent: never throws, returns a compacted JSON string
+ * suitable for a tool_result block.
+ */
 export async function executeTool(
   ctx: TenantContext,
   toolName: string,
   args: Record<string, any>,
   attachmentStore?: Map<string, any>,
 ): Promise<string> {
-  const handler = dispatchMap.get(toolName);
-  if (!handler) {
+  if (!dispatchMap.has(toolName)) {
     return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
-
   try {
-    const result = await handler(ctx, toolName, args, attachmentStore);
-    return JSON.stringify(result);
+    return compactResult(await runTool(ctx, toolName, args, attachmentStore));
   } catch (error: unknown) {
-    const message = extractErrorMessage(error);
-    const code =
-      error instanceof Error && 'code' in error
-        ? String((error as Record<string, unknown>).code)
-        : undefined;
-    return JSON.stringify({ error: message, ...(code ? { code } : {}) });
+    return JSON.stringify(toolError(error));
   }
+}
+
+export function toolError(error: unknown): { error: string; code?: string } {
+  const message = extractErrorMessage(error);
+  const code =
+    error instanceof Error && 'code' in error
+      ? String((error as Record<string, unknown>).code)
+      : undefined;
+  return { error: message, ...(code ? { code } : {}) };
 }
 
 function extractErrorMessage(error: unknown): string {

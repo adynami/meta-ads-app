@@ -1,5 +1,5 @@
 import { rateLimitedCall } from './utils/rate-limiter.js';
-import { validateMetaId, graphGet, graphPost } from './utils/graph.js';
+import { validateMetaId, graphGet, graphGetAll, graphPost, metaFetch } from './utils/graph.js';
 // ── Account Context (cached per ad account) ──
 const accountContextCache = new Map();
 export async function getAccountContext(ctx) {
@@ -51,30 +51,30 @@ const INSIGHT_FIELDS = [
     'conversion_rate_ranking',
 ];
 export async function fetchCampaigns(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/campaigns`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${ctx.adAccountId}/campaigns`, { fields: fields.join(','), ...params });
 }
 export async function fetchAdSets(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/adsets`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${ctx.adAccountId}/adsets`, { fields: fields.join(','), ...params });
 }
 export async function fetchAds(ctx, fields, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${ctx.adAccountId}/ads`, { fields: fields.join(','), ...params });
 }
 export async function fetchAdSetAds(ctx, adSetId, fields, params) {
     validateMetaId(adSetId);
-    return rateLimitedCall(() => graphGet(ctx, `${adSetId}/ads`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${adSetId}/ads`, { fields: fields.join(','), ...params });
 }
 export async function fetchAccountInsights(ctx, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, {
+    return pagedRows(ctx, `${ctx.adAccountId}/insights`, {
         fields: [...INSIGHT_FIELDS, 'campaign_name', 'adset_name', 'ad_name'].join(','),
         ...params,
-    })).then((r) => r.data ?? []);
+    });
 }
 export async function fetchCampaignInsights(ctx, campaignId, params) {
-    return rateLimitedCall(() => graphGet(ctx, `${campaignId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${campaignId}/insights`, { fields: INSIGHT_FIELDS.join(','), ...params });
 }
 export async function fetchInsightsBreakdown(ctx, params) {
     const fields = [...INSIGHT_FIELDS, 'campaign_id', 'campaign_name'];
-    return rateLimitedCall(() => graphGet(ctx, `${ctx.adAccountId}/insights`, { fields: fields.join(','), ...params })).then((r) => r.data ?? []);
+    return pagedRows(ctx, `${ctx.adAccountId}/insights`, { fields: fields.join(','), ...params });
 }
 // ── Mutators ──
 export async function createCampaign(ctx, params) {
@@ -91,7 +91,7 @@ export async function deleteCampaign(ctx, id) {
     await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${id}`;
         const formBody = new URLSearchParams({ access_token: ctx.accessToken });
-        const response = await fetch(url, {
+        const response = await metaFetch(ctx, url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -108,7 +108,7 @@ export async function deleteAdSet(ctx, id) {
     await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${id}`;
         const formBody = new URLSearchParams({ access_token: ctx.accessToken });
-        const response = await fetch(url, {
+        const response = await metaFetch(ctx, url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -125,7 +125,7 @@ export async function deleteAd(ctx, id) {
     await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${id}`;
         const formBody = new URLSearchParams({ access_token: ctx.accessToken });
-        const response = await fetch(url, {
+        const response = await metaFetch(ctx, url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -190,7 +190,7 @@ export async function deleteAudience(ctx, id) {
     (await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${id}`;
         const formBody = new URLSearchParams({ access_token: ctx.accessToken });
-        const response = await fetch(url, {
+        const response = await metaFetch(ctx, url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -411,7 +411,7 @@ export async function batchUpdateStatus(ctx, ids, status) {
             access_token: ctx.accessToken,
             batch: JSON.stringify(batch),
         });
-        const response = await fetch('https://graph.facebook.com/', {
+        const response = await metaFetch(ctx, 'https://graph.facebook.com/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),
@@ -470,5 +470,15 @@ function detectMime(buf) {
     if (buf[0] === 0x42 && buf[1] === 0x4d)
         return 'image/bmp';
     return 'image/png';
+}
+/**
+ * Fetch every page of an edge (capped). An explicit `limit` from the caller is
+ * treated as the total row cap rather than a page size, so "top 10" stays 10.
+ */
+async function pagedRows(ctx, path, params) {
+    const { limit, ...rest } = params;
+    const maxRows = typeof limit === 'number' && limit > 0 ? limit : 1000;
+    const { data } = await rateLimitedCall(() => graphGetAll(ctx, path, { ...rest, limit: Math.min(maxRows, 200) }, { maxRows }));
+    return data;
 }
 //# sourceMappingURL=meta-client.js.map

@@ -4,6 +4,19 @@ import { conversations, users } from '@/lib/db/schema';
 import { eq, desc, and, isNull } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 
+/**
+ * Columns safe to send to the browser. The API transcript (tool payloads,
+ * thinking and compaction blocks) stays server-side.
+ */
+const displayColumns = {
+  id: conversations.id,
+  title: conversations.title,
+  adAccountId: conversations.adAccountId,
+  messages: conversations.messages,
+  createdAt: conversations.createdAt,
+  updatedAt: conversations.updatedAt,
+};
+
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.email) {
@@ -53,7 +66,7 @@ export async function GET(req: NextRequest) {
   // Single conversation by ID (with messages)
   if (id) {
     const [conv] = await db
-      .select()
+      .select(displayColumns)
       .from(conversations)
       .where(and(eq(conversations.id, id), eq(conversations.userId, userId)))
       .limit(1);
@@ -73,7 +86,7 @@ export async function GET(req: NextRequest) {
         : and(eq(conversations.userId, userId), eq(conversations.adAccountId, accountId));
 
     const userConversations = await db
-      .select()
+      .select(displayColumns)
       .from(conversations)
       .where(accountFilter)
       .orderBy(desc(conversations.updatedAt))

@@ -8,7 +8,7 @@ function withSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://graph.facebook.com https://*.fbcdn.net https://www.googletagmanager.com; connect-src 'self' https://graph.facebook.com https://api.stripe.com https://www.google-analytics.com https://google-analytics.com https://www.googletagmanager.com https://googletagmanager.com; frame-src https://js.stripe.com; font-src 'self' data:;",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://graph.facebook.com https://*.fbcdn.net https://www.googletagmanager.com; connect-src 'self' https://vercel.com https://*.blob.vercel-storage.com https://graph.facebook.com https://api.stripe.com https://www.google-analytics.com https://google-analytics.com https://www.googletagmanager.com https://googletagmanager.com; frame-src https://js.stripe.com; font-src 'self' data:;",
   );
   return response;
 }
@@ -48,6 +48,7 @@ export default auth((req) => {
       '/api/auth',
       '/api/billing/webhook',
       '/api/meta/deletion',
+      '/api/cron', // authenticated by CRON_SECRET
     ];
     if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + '/'))) {
       return withSecurityHeaders(NextResponse.next());
@@ -67,6 +68,7 @@ export default auth((req) => {
     '/api/auth',
     '/api/billing/webhook',
     '/api/meta/deletion',
+    '/api/cron', // authenticated by CRON_SECRET
     '/privacy',
     '/terms',
   ];

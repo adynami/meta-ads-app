@@ -3,4 +3,6 @@ export interface TenantContext {
   adAccountId: string;
   apiVersion: string;  // default 'v25.0'
   dryRun: boolean;
+  /** HMAC-SHA256(accessToken, appSecret), hex. Sent as appsecret_proof when present. */
+  appSecretProof?: string;
 }

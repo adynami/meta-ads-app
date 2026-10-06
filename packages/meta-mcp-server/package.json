@@ -16,6 +16,14 @@
     "./tenant-context": {
       "types": "./dist/tenant-context.d.ts",
       "default": "./dist/tenant-context.js"
+    },
+    "./utils/graph": {
+      "types": "./dist/utils/graph.d.ts",
+      "default": "./dist/utils/graph.js"
+    },
+    "./utils/rate-limiter": {
+      "types": "./dist/utils/rate-limiter.d.ts",
+      "default": "./dist/utils/rate-limiter.js"
     }
   },
   "typesVersions": {

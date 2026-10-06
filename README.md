@@ -57,7 +57,8 @@ src/
 │   └── keys/         # API key management (Agency plan)
 ├── components/       # React components (shadcn/ui)
 ├── lib/              # Shared logic
-│   ├── chat.ts       # runChat agentic loop + message helpers
+│   ├── agent/        # Agent engine, prompt, tool search setup, approvals/undo
+│   ├── chat.ts       # Chat request orchestration
 │   ├── crypto.ts     # AES-256-GCM encrypt/decrypt
 │   ├── db/           # Drizzle ORM client + schema
 │   ├── plans.ts      # Plan limits + trial expiry
@@ -68,7 +69,9 @@ src/
 packages/meta-mcp-server/   # MCP server (76+ Meta API tools)
 ```
 
-**Chat flow:** User message → `POST /api/chat` → Claude agentic loop (max 10 tool rounds) → MCP tool handlers → Meta Marketing API
+**Chat flow:** User message → `POST /api/chat` → credit reserved → `runAgentTurn` (Claude Opus 5.5, tool search, server-side transcript) → read tools run immediately; write tools are queued for the user's approval (with undo) → Meta Marketing API
+
+**After pulling:** run `drizzle/0004_agent_v2.sql` against the database, and set `UPSTASH_REDIS_REST_*`, `BLOB_READ_WRITE_TOKEN` and `CRON_SECRET` in production. See `CLAUDE.md`.
 
 **Auth flow:** Meta OAuth → short-lived token → long-lived token (~60 days) → AES-256-GCM encrypted → stored in DB
 

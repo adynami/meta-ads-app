@@ -1,3 +1,4 @@
+import { metaFetch } from './graph.js';
 import { rateLimitedCall } from './rate-limiter.js';
 /**
  * Execute up to 50 Graph API operations in a single HTTP request.
@@ -14,7 +15,7 @@ export async function graphBatch(ctx, operations) {
         const formBody = new URLSearchParams();
         formBody.append('access_token', ctx.accessToken);
         formBody.append('batch', JSON.stringify(operations));
-        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/`, {
+        const response = await metaFetch(ctx, `https://graph.facebook.com/${ctx.apiVersion}/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formBody.toString(),

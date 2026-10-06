@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { metaFetch } from '../utils/graph.js';
 import { rateLimitedCall } from '../utils/rate-limiter.js';
 export const conversionsTools = [
     {
@@ -244,7 +245,7 @@ async function sendConversionsEvent(ctx, args) {
         body.test_event_code = args.test_event_code;
     const result = await rateLimitedCall(async () => {
         const url = `https://graph.facebook.com/${ctx.apiVersion}/${args.pixel_id}/events`;
-        const response = await fetch(url, {
+        const response = await metaFetch(ctx, url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),

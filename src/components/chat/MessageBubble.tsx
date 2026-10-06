@@ -4,8 +4,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { Film } from 'lucide-react';
-import type { Message } from '@/types/chat';
+import type { ActionView, Message } from '@/types/chat';
 import { ToolCallCard } from './ToolCallCard';
+import { ActionCard } from './ActionCard';
 
 const markdownComponents: Components = {
   h1: ({ children }) => <h1 className="text-xl font-bold text-white mt-4 mb-2">{children}</h1>,
@@ -55,7 +56,14 @@ function isImageMime(mime: string): boolean {
   return mime.startsWith('image/');
 }
 
-export function MessageBubble({ message }: { message: Message }) {
+interface MessageBubbleProps {
+  message: Message;
+  /** True while a reply is streaming — approvals wait until it finishes. */
+  busy?: boolean;
+  onActionChange?: (action: ActionView) => void;
+}
+
+export function MessageBubble({ message, busy, onActionChange }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
@@ -88,6 +96,18 @@ export function MessageBubble({ message }: { message: Message }) {
           <div className="space-y-2 mb-2">
             {message.toolCalls.map((tc) => (
               <ToolCallCard key={tc.id} toolCall={tc} />
+            ))}
+          </div>
+        )}
+        {!isUser && message.actions && message.actions.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {message.actions.map((a) => (
+              <ActionCard
+                key={a.id}
+                action={a}
+                disabled={busy}
+                onChange={(updated) => onActionChange?.(updated)}
+              />
             ))}
           </div>
         )}

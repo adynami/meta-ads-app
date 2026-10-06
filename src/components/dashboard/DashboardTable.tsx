@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { useColumnOrder } from '@/hooks/useColumnOrder';
 
 export interface DashboardRow {
+  /** Ad account name — set only in the cross-account ("All accounts") view. */
+  account?: string | null;
   name: string;
   campaign_name: string | null;
   adset_name: string | null;
@@ -75,6 +77,13 @@ function formatBudget(v: any): string {
 }
 
 const COLUMNS: Column[] = [
+  {
+    key: 'account',
+    label: 'Account',
+    align: 'left',
+    levels: ['campaign', 'adset', 'ad'],
+    format: (v) => v ?? '—',
+  },
   {
     key: 'name',
     label: 'Name',
@@ -261,7 +270,11 @@ export function DashboardTable({
   sortDir,
   onSort,
 }: DashboardTableProps) {
-  const visibleColumns = useMemo(() => COLUMNS.filter((c) => c.levels.includes(level)), [level]);
+  const multiAccount = rows.some((r) => r.account);
+  const visibleColumns = useMemo(
+    () => COLUMNS.filter((c) => c.levels.includes(level) && (c.key !== 'account' || multiAccount)),
+    [level, multiAccount],
+  );
   const { orderedColumns, moveColumn } = useColumnOrder(level, visibleColumns);
 
   // Drag state

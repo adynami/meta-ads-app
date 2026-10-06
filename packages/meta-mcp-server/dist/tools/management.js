@@ -1,6 +1,6 @@
 import { rateLimitedCall } from '../utils/rate-limiter.js';
 import { fetchCampaigns, fetchAdSets, fetchAds, fetchAdSetAds, fetchAccountInsights, fetchCampaignInsights, updateCampaignStatus as apiUpdateStatus, readCampaign, getAccountContext, createAd, searchTargeting, searchTargetingExtended, searchGeoLocations, getInterestSuggestions, estimateAudienceSize, getCreativeDetails, downloadImageAsBase64, getAdDetails as apiGetAdDetails, getAdSetDetails as apiGetAdSetDetails, listPages, batchUpdateStatus, } from '../meta-client.js';
-import { graphGet } from '../utils/graph.js';
+import { graphGet, metaFetch } from '../utils/graph.js';
 import { buildTargetingSpec } from '../utils/targeting.js';
 import { resolveRange } from '../utils/date-ranges.js';
 import { computeMetrics } from '../utils/metrics.js';
@@ -992,7 +992,7 @@ async function handleGetAdImage(ctx, args) {
             access_token: ctx.accessToken,
             fields: 'creative{id,thumbnail_url,image_url}',
         });
-        const response = await fetch(`https://graph.facebook.com/${ctx.apiVersion}/${args.ad_id}?${qp.toString()}`);
+        const response = await metaFetch(ctx, `https://graph.facebook.com/${ctx.apiVersion}/${args.ad_id}?${qp.toString()}`);
         const data = (await response.json());
         if (!response.ok || data.error) {
             const e = data.error ?? {};
